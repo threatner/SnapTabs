@@ -1,3 +1,282 @@
+import { defineBackground } from 'wxt/sandbox';
+import type { Session, SavedTab, SnapTabsSettings } from '../lib/types';
+import { uuid, formatSessionName } from '../lib/types';
+import { createSnapshot, restoreSession, getTabStats, toSavedTab, isRestorable } from '../lib/tabs';
+import {
+  KEYS,
+  getSessions,
+  getSettings,
+  updateSettings,
+  deleteSession,
+  saveSession,
+  getRecording,
+  startRecording,
+  addTabToRecording,
+  stopRecording,
+  cancelRecording,
+  getWindowMap,
+  saveWindowMap,
+  getIncognitoCache,
+  saveIncognitoCache,
+} from '../lib/storage';
+
 export default defineBackground(() => {
-  console.log('TabVault background service worker started');
+  const windowMap = new Map<number, boolean>();
+  const incognitoTabCache = new Map<number, SavedTab[]>();
+
+  // ── Persistence helpers ──
+
+  async function persistWindowMap() {
+    try { await saveWindowMap(Object.fromEntries(windowMap)); } catch {}
+  }
+
+  async function persistIncognitoCache() {
+    try {
+      const obj: Record<string, SavedTab[]> = {};
+      for (const [k, v] of incognitoTabCache) obj[String(k)] = v;
+      await saveIncognitoCache(obj);
+    } catch {}
+  }
+
+  async function restoreState() {
+    try {
+      const wm = await getWindowMap();
+      for (const [k, v] of Object.entries(wm)) windowMap.set(Number(k), v as boolean);
+      const cache = await getIncognitoCache();
+      for (const [k, v] of Object.entries(cache)) incognitoTabCache.set(Number(k), v as SavedTab[]);
+    } catch {}
+  }
+
+  async function refreshIncognitoWindow(windowId: number) {
+    try {
+      const tabs = await chrome.tabs.query({ windowId });
+      incognitoTabCache.set(windowId, tabs.map(toSavedTab));
+      await persistIncognitoCache();
+    } catch {}
+  }
+
+  // ── Badge ──
+
+  async function updateBadge() {
+    try {
+      if (isRecordingActive) {
+        await chrome.action.setBadgeText({ text: '●' });
+        await chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
+        return;
+      }
+      const sessions = await getSessions();
+      await chrome.action.setBadgeText({ text: sessions.length > 0 ? String(sessions.length) : '' });
+      await chrome.action.setBadgeBackgroundColor({ color: '#18181b' });
+    } catch {}
+  }
+
+  // ── Context menu ──
+
+  async function setupContextMenus() {
+    try {
+      await chrome.contextMenus.removeAll();
+      chrome.contextMenus.create({
+        id: 'snaptabs-save-all',
+        title: 'Save all tabs with SnapTabs',
+        contexts: ['action'],
+      });
+    } catch {}
+  }
+
+  // ── Event listeners ──
+
+  chrome.windows.onCreated.addListener(async (w) => {
+    if (w.id === undefined) return;
+    windowMap.set(w.id, w.incognito);
+    await persistWindowMap();
+    if (w.incognito) await refreshIncognitoWindow(w.id);
+  });
+
+  chrome.windows.onRemoved.addListener(async (windowId) => {
+    const wasIncognito = windowMap.get(windowId);
+    const cached = incognitoTabCache.get(windowId);
+    windowMap.delete(windowId);
+    incognitoTabCache.delete(windowId);
+    await Promise.all([persistWindowMap(), persistIncognitoCache()]);
+
+    if (wasIncognito && cached && cached.length > 0) {
+      try {
+        const settings = await getSettings();
+        if (!settings.autoSnapshotOnClose) return;
+        const remaining = await chrome.windows.getAll();
+        if (remaining.length === 0) return;
+
+        const session: Session = {
+          id: uuid(),
+          name: formatSessionName('Auto-save'),
+          timestamp: Date.now(),
+          tabs: cached,
+          tabGroups: [],
+          windowCount: 1,
+          hasIncognitoTabs: true,
+          isAutoSave: true,
+        };
+        await saveSession(session);
+        await updateBadge();
+      } catch {}
+    }
+  });
+
+  chrome.tabs.onCreated.addListener(async (tab) => {
+    if (tab.incognito && tab.windowId !== undefined) await refreshIncognitoWindow(tab.windowId);
+  });
+
+  chrome.tabs.onRemoved.addListener(async (_tabId, info) => {
+    if (!info.isWindowClosing && windowMap.get(info.windowId)) await refreshIncognitoWindow(info.windowId);
+  });
+
+  // ── Recording state (in-memory to avoid storage reads on every tab update) ──
+
+  let isRecordingActive = false;
+  let recordingWindowId = -1;
+  const recordedTabIds = new Set<number>();
+
+  chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
+    if (tab.incognito && tab.windowId !== undefined && changeInfo.status === 'complete') {
+      await refreshIncognitoWindow(tab.windowId);
+    }
+    if (changeInfo.status !== 'complete' || !tab.url) return;
+    if (!isRestorable(tab.url)) return;
+    if (!isRecordingActive) return;
+
+    try {
+      if (recordingWindowId !== -1 && tab.windowId !== recordingWindowId) return;
+      if (tab.id !== undefined && recordedTabIds.has(tab.id)) return;
+
+      if (tab.id !== undefined) recordedTabIds.add(tab.id);
+      await addTabToRecording(toSavedTab(tab));
+      await updateBadge();
+    } catch {}
+  });
+
+  chrome.runtime.onInstalled.addListener(async (details) => {
+    await setupContextMenus();
+    if (details.reason === 'install') await updateSettings({});
+    await updateBadge();
+  });
+
+  chrome.contextMenus.onClicked.addListener(async (info) => {
+    if (info.menuItemId === 'snaptabs-save-all') {
+      try { await createSnapshot(); await updateBadge(); } catch {}
+    }
+  });
+
+  if (chrome.commands?.onCommand) {
+    chrome.commands.onCommand.addListener(async (cmd) => {
+      if (cmd === 'snapshot-tabs') {
+        try { await createSnapshot(); await updateBadge(); } catch {}
+      }
+    });
+  }
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes[KEYS.sessions]) updateBadge();
+  });
+
+  // ── Message handler ──
+
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    handleMessage(msg).then(sendResponse).catch((e) => sendResponse({ error: String(e) }));
+    return true;
+  });
+
+  async function handleMessage(msg: { action: string; [k: string]: unknown }): Promise<unknown> {
+    switch (msg.action) {
+      case 'snapshot': {
+        const session = await createSnapshot(
+          typeof msg.name === 'string' ? msg.name : undefined,
+          false,
+          typeof msg.windowId === 'number' ? msg.windowId : undefined,
+        );
+        await updateBadge();
+        return session;
+      }
+      case 'restore': {
+        const sessions = await getSessions();
+        const session = sessions.find((s) => s.id === msg.sessionId);
+        if (!session) throw new Error('Session not found');
+        const settings = await getSettings();
+        await restoreSession(session, settings.restoreIncognitoToIncognito, settings.restoreInNewWindow);
+        if (settings.autoDeleteAfterRestore) await deleteSession(session.id);
+        await updateBadge();
+        return { success: true };
+      }
+      case 'delete': {
+        await deleteSession(msg.sessionId as string);
+        await updateBadge();
+        return { success: true };
+      }
+      case 'getSessions': return getSessions();
+      case 'getStats': return getTabStats();
+      case 'getSettings': return getSettings();
+      case 'updateSettings': {
+        await updateSettings(msg.settings as Partial<SnapTabsSettings>);
+        return { success: true };
+      }
+      case 'startRecording': {
+        recordedTabIds.clear();
+        recordingWindowId = typeof msg.windowId === 'number' ? msg.windowId : -1;
+        const rec = await startRecording(
+          typeof msg.name === 'string' ? msg.name : '',
+          recordingWindowId,
+        );
+        isRecordingActive = true;
+        await updateBadge();
+        return rec;
+      }
+      case 'stopRecording': {
+        isRecordingActive = false;
+        recordingWindowId = -1;
+        recordedTabIds.clear();
+        const session = await stopRecording();
+        await updateBadge();
+        return session;
+      }
+      case 'cancelRecording': {
+        isRecordingActive = false;
+        recordingWindowId = -1;
+        recordedTabIds.clear();
+        await cancelRecording();
+        await updateBadge();
+        return { success: true };
+      }
+      case 'getRecording': return getRecording();
+      default: throw new Error(`Unknown action: ${msg.action}`);
+    }
+  }
+
+  // ── Init ──
+
+  async function init() {
+    try {
+      await restoreState();
+      // Restore in-memory recording flags in case service worker restarted
+      const rec = await getRecording();
+      if (rec?.isActive) {
+        isRecordingActive = true;
+        recordingWindowId = rec.windowId;
+      }
+      const windows = await chrome.windows.getAll();
+      const incognitoRefreshes: Promise<void>[] = [];
+      for (const w of windows) {
+        if (w.id !== undefined) {
+          windowMap.set(w.id, w.incognito);
+          if (w.incognito) incognitoRefreshes.push(refreshIncognitoWindow(w.id));
+        }
+      }
+      await Promise.all(incognitoRefreshes);
+      await persistWindowMap();
+      await setupContextMenus();
+      await updateBadge();
+    } catch (e) {
+      console.error('[SnapTabs] Init error:', e);
+    }
+  }
+
+  init();
 });
