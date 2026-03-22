@@ -1,9 +1,28 @@
 {
   "name": "snaptabs",
-  "version": "0.1.0",
-  "description": "Snapshot and restore your browser tabs instantly. Works in incognito.",
+  "version": "1.0.0",
+  "description": "Chrome extension to snapshot and restore browser tabs — tab groups, incognito, session manager, live recording.",
   "private": true,
   "type": "module",
+  "author": "Rahul Chaudhary <rc22.rahul@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/rc22-rahul/SnapTabs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rc22-rahul/SnapTabs.git"
+  },
+  "keywords": [
+    "chrome-extension",
+    "tab-manager",
+    "session-manager",
+    "tab-groups",
+    "incognito",
+    "tab-saver",
+    "browser-tabs",
+    "snapshot",
+    "restore-tabs",
+    "productivity"
+  ],
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt --browser firefox",

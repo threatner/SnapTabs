@@ -1,8 +1,8 @@
-# SnapTabs
+# SnapTabs — Save & Restore Browser Tabs
 
-Snapshot and restore your browser tabs instantly. Works in incognito.
+> Chrome tab manager that snapshots and restores your tabs — including tab groups, pinned tabs, and incognito tabs.
 
-SnapTabs is a Chrome extension that saves your open tabs as sessions — including tab groups, pinned tabs, and incognito tabs — so you can close everything and restore them later.
+Too many tabs open? SnapTabs saves your entire browser session with one click so you can close everything and restore it later. Unlike other tab managers, SnapTabs preserves **tab group names and colors**, captures **incognito tabs**, and supports **live recording** of browsing sessions.
 
 <!-- TODO: Add Chrome Web Store badge once published -->
 <!-- [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/EXTENSION_ID)](https://chrome.google.com/webstore/detail/EXTENSION_ID) -->
@@ -21,9 +21,9 @@ SnapTabs is a Chrome extension that saves your open tabs as sessions — includi
 
 ## Screenshots
 
-| Main View | Settings |
-|---|---|
-| ![Main popup view](screenshots/popup-main.png) | ![Settings view](screenshots/settings.png) |
+| Main View | Session Detail | Settings |
+|---|---|---|
+| ![Main popup view](screenshots/popup-main.png) | ![Session detail with tab groups](screenshots/tab-detail.png) | ![Settings view](screenshots/settings.png) |
 
 ## Install
 

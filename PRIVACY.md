@@ -54,4 +54,4 @@ If this privacy policy changes, the updated version will be included with the ex
 
 ## Contact
 
-For questions about this privacy policy, please open an issue on the [SnapTabs GitHub repository](https://github.com).
+For questions about this privacy policy, please open an issue on the [SnapTabs GitHub repository](https://github.com/rc22-rahul/SnapTabs).
