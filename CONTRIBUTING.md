@@ -5,7 +5,7 @@ Thanks for your interest in contributing!
 ## Getting Started
 
 ```bash
-git clone https://github.com/user/snaptabs.git
+git clone https://github.com/rc22-rahul/SnapTabs.git
 cd snaptabs
 npm install
 npm run dev
