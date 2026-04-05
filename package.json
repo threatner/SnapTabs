@@ -6,10 +6,10 @@
   "type": "module",
   "author": "Rahul Chaudhary <rc22.rahul@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/rc22-rahul/SnapTabs",
+  "homepage": "https://github.com/threatner/SnapTabs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rc22-rahul/SnapTabs.git"
+    "url": "https://github.com/threatner/SnapTabs.git"
   },
   "keywords": [
     "chrome-extension",

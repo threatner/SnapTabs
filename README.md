@@ -4,7 +4,7 @@
 
 Too many tabs open? SnapTabs saves your entire browser session with one click so you can close everything and restore it later. Unlike other tab managers, SnapTabs preserves **tab group names and colors**, captures **incognito tabs**, and supports **live recording** of browsing sessions.
 
-[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/cgkpmhbpejmdjgeipmkbihbjcniflpnl)](https://chromewebstore.google.com/detail/snaptabs-%E2%80%94-save-restore-b/cgkpmhbpejmdjgeipmkbihbjcniflpnl)
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/cgkpmhbpejmdjgeipmkbihbjcniflpnl)](https://chromewebstore.google.com/detail/cgkpmhbpejmdjgeipmkbihbjcniflpnl)
 
 ## Features
 
@@ -28,12 +28,12 @@ Too many tabs open? SnapTabs saves your entire browser session with one click so
 
 ### Chrome Web Store
 
-**[Install SnapTabs from the Chrome Web Store](https://chromewebstore.google.com/detail/snaptabs-%E2%80%94-save-restore-b/cgkpmhbpejmdjgeipmkbihbjcniflpnl)**
+**[Install SnapTabs from the Chrome Web Store](https://chromewebstore.google.com/detail/cgkpmhbpejmdjgeipmkbihbjcniflpnl)**
 
 ### From Source
 
 ```bash
-git clone https://github.com/rc22-rahul/SnapTabs.git
+git clone https://github.com/threatner/SnapTabs.git
 cd snaptabs
 npm install
 npm run build
