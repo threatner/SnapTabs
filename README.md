@@ -65,7 +65,7 @@ No. Everything is stored in `chrome.storage.local` on your device. There is no c
 
 ### What happens to my tabs if Chrome crashes?
 
-If the "Save on browser close" setting is on (it is by default), your tabs are captured as the last window closes and saved as a session named "Browser close". On next launch, open the SnapTabs popup and restore it.
+Turn on **Settings > Auto-Save > Save on browser close** (off by default). While it's on, your tabs are captured as the last window closes and saved as a session named "Browser close". On next launch, open the SnapTabs popup and restore it.
 
 A hard crash that kills the service worker before the save completes can lose the most recent snapshot. For critical tab sets, take a manual snapshot (`Alt+Shift+S`).
 
