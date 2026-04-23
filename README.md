@@ -1,36 +1,98 @@
-# SnapTabs — Save & Restore Browser Tabs
+# SnapTabs - Save and Restore Browser Tabs
 
-> Chrome tab manager that snapshots and restores your tabs — including tab groups, pinned tabs, and incognito tabs.
-
-Too many tabs open? SnapTabs saves your entire browser session with one click so you can close everything and restore it later. Unlike other tab managers, SnapTabs preserves **tab group names and colors**, captures **incognito tabs**, and supports **live recording** of browsing sessions.
+Save every tab in your Chrome window with one click, then bring them all back days or weeks later. SnapTabs keeps tab groups intact, handles incognito tabs, and stores everything on your own machine. No accounts, no sync, no tracking.
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/cgkpmhbpejmdjgeipmkbihbjcniflpnl)](https://chromewebstore.google.com/detail/cgkpmhbpejmdjgeipmkbihbjcniflpnl)
 
+## What it does
+
+SnapTabs is a Chrome extension that captures the state of your tabs and saves them as named sessions. You can have a "Monday standup" session with 12 tabs, a "React project" with 40 tabs, and a "Tax research" you haven't touched in six months. One click restores any of them.
+
+The point is not to keep 200 tabs open. The point is to close them without losing them.
+
+## At a glance
+
+| | |
+|---|---|
+| Browser | Chrome 93+ |
+| Manifest | V3 |
+| Storage | Local only. No cloud sync |
+| Permissions | 4 (tabs, tabGroups, storage, contextMenus) |
+| Network requests | None |
+| Price | Free |
+| License | MIT |
+| Size quota | 10 MB (configurable max-sessions 1 to 500) |
+
 ## Features
 
-- **Snapshot tabs** — Save all open tabs from the current window or all windows with one click
-- **Tab group support** — Preserves tab group names, colors, and collapsed state
-- **Incognito support** — Captures incognito tabs (with extension enabled in incognito mode) and restores them to incognito windows
-- **Live recording** — Record new tabs as they open, then save the session
-- **Auto-save** — Optionally auto-save incognito tabs when an incognito window closes
-- **Search** — Filter saved sessions by name, tab title, or URL
-- **Keyboard shortcut** — `Alt+Shift+S` to snapshot all tabs instantly
-- **Context menu** — Right-click the extension icon to save all tabs
-- **Storage management** — Automatic pruning of old sessions, configurable limits, storage usage display
+### Core
+
+- **Snapshot tabs** from the current window or every window with one click.
+- **Tab group preservation** keeps the group name, color, and collapsed state.
+- **Incognito support** when the extension is permitted in incognito mode.
+- **Search** across session names, tab titles, and URLs.
+- **Keyboard shortcut** `Alt+Shift+S` saves a snapshot without opening the popup.
+- **Right-click menu** on the toolbar icon for a quick "Save all tabs".
+
+### Added in recent releases
+
+- **Auto-snapshot on browser close.** Quit Chrome with Cmd+Q or close the last window and your tabs are waiting for you on the next launch. Multi-window quits are captured as a single combined session.
+- **Session pinning.** Pin the sessions you use often so they stay at the top and survive auto-pruning when you hit the storage limit.
+- **Omnibox search.** Type `st` in the address bar, press space, then type a query to search every tab across every saved session without opening the popup.
+- **Import and export.** Download all sessions to JSON or load them from a previous export. Useful for moving between machines or keeping an off-device backup.
+
+### Also available
+
+- Live recording that captures new tabs as you open them, with URL deduplication.
+- Configurable max-sessions limit with auto-pruning of the oldest auto-saves first.
+- Restore into the current window or a fresh one, with optional auto-delete after restore.
+- Storage usage bar in settings so you can see where you are against the 10 MB quota.
 
 ## Screenshots
 
-| Main View | Session Detail | Settings |
+| Main view | Session detail | Settings |
 |---|---|---|
 | ![Main popup view](screenshots/popup-main.png) | ![Session detail with tab groups](screenshots/tab-detail.png) | ![Settings view](screenshots/settings.png) |
+
+## FAQ
+
+### Is any of my data uploaded?
+
+No. Everything is stored in `chrome.storage.local` on your device. There is no cloud sync, no backend service, no analytics. The extension does not make outbound network requests.
+
+### What happens to my tabs if Chrome crashes?
+
+If the "Save on browser close" setting is on (it is by default), your tabs are captured as the last window closes and saved as a session named "Browser close". On next launch, open the SnapTabs popup and restore it.
+
+A hard crash that kills the service worker before the save completes can lose the most recent snapshot. For critical tab sets, take a manual snapshot (`Alt+Shift+S`).
+
+### Does it restore tab groups correctly?
+
+Yes. Pinned tabs come back pinned. Tab groups come back with their original name, color, and collapsed state. The only thing SnapTabs cannot restore is the exact window layout, because Chrome does not expose window geometry to extensions.
+
+### Can I sync sessions between devices?
+
+Not automatically. Sessions stay on the device where they were created. Use **Settings > Data > Export** to download a JSON file, then **Import** it on another machine.
+
+### How is this different from "reopen closed window" in Chrome?
+
+Chrome's built-in history is time-limited, hard to search, and does not let you name or organize anything. SnapTabs gives you named, searchable, persistent sessions that survive Chrome restarts and updates.
+
+### Why isn't there cloud sync?
+
+Because adding a backend means handling your browsing data on somebody's server. SnapTabs is deliberately local-only. If you need cross-device sessions, export to JSON and share the file through a channel you already trust.
+
+### Does it work with Firefox or Edge?
+
+The current build targets Chrome MV3. It works in Chromium-based browsers that support MV3 (Brave, Arc, recent Edge). Firefox support would need a separate build because Manifest V3 differs on Firefox.
 
 ## Install
 
 ### Chrome Web Store
 
-**[Install SnapTabs from the Chrome Web Store](https://chromewebstore.google.com/detail/cgkpmhbpejmdjgeipmkbihbjcniflpnl)**
+[Install SnapTabs from the Chrome Web Store.](https://chromewebstore.google.com/detail/cgkpmhbpejmdjgeipmkbihbjcniflpnl)
 
-### From Source
+### From source
 
 ```bash
 git clone https://github.com/threatner/SnapTabs.git
@@ -39,34 +101,34 @@ npm install
 npm run build
 ```
 
-Then load the extension in Chrome:
+Then load the build:
 
 1. Open `chrome://extensions`
-2. Enable "Developer mode"
+2. Enable Developer mode (top right)
 3. Click "Load unpacked"
-4. Select the `.output/chrome-mv3` directory
+4. Pick the `.output/chrome-mv3` directory
 
 ## Development
 
 ```bash
-npm run dev            # Start dev server with hot reload
-npm run build          # Production build
-npm run zip            # Package for distribution
-npm test               # Run unit tests
-npm run test:watch     # Run unit tests in watch mode
-npm run test:coverage  # Run unit tests with coverage
-npm run test:e2e       # Run E2E tests (requires build first)
-npm run test:e2e:debug # Run E2E tests in debug mode
+npm run dev            # dev server with hot reload
+npm run build          # production build
+npm run zip            # package a .zip for distribution
+npm test               # unit tests (Vitest)
+npm run test:watch     # unit tests in watch mode
+npm run test:coverage  # coverage report
+npm run test:e2e       # E2E tests (Playwright, requires build first)
+npm run test:e2e:debug # E2E tests in debug mode
 ```
 
-## Tech Stack
+## Tech stack
 
-- [Svelte 5](https://svelte.dev) — UI framework
-- [WXT](https://wxt.dev) — Extension framework (Manifest V3)
-- [Tailwind CSS 4](https://tailwindcss.com) — Styling
-- [TypeScript](https://www.typescriptlang.org) — Type safety
-- [Vitest](https://vitest.dev) — Unit testing
-- [Playwright](https://playwright.dev) — E2E testing
+- [Svelte 5](https://svelte.dev) for the UI
+- [WXT](https://wxt.dev) for the MV3 build system
+- [Tailwind CSS 4](https://tailwindcss.com) for styles
+- [TypeScript](https://www.typescriptlang.org) for type safety
+- [Vitest](https://vitest.dev) for unit tests
+- [Playwright](https://playwright.dev) for E2E
 
 ## Architecture
 
@@ -78,23 +140,23 @@ Popup (Svelte UI)  ──sendMessage──►  Background (Service Worker)
                                     storage, tabGroups)
 ```
 
-All tab-creating operations go through the background service worker. The popup sends messages and receives responses — it never calls `chrome.tabs.create()` directly, because the popup closes the instant Chrome creates or focuses a tab.
+All tab-creating operations go through the background service worker via `chrome.runtime.sendMessage`. The popup sends a request and closes as soon as Chrome focuses the new tab; the real work finishes in the background.
 
-Data is stored locally using `chrome.storage.local` (persistent) and `chrome.storage.session` (ephemeral). Nothing is sent to external servers.
+Storage is split between `chrome.storage.local` (persistent sessions and settings) and `chrome.storage.session` (ephemeral state including live recordings, window map, proactive tab cache, and the pending-close buffer).
 
-## Project Structure
+## Project structure
 
 ```
 src/
 ├── assets/             # SVG icon source
 ├── components/         # Svelte UI components
 ├── entrypoints/
-│   ├── background.ts   # Service worker (message handler, events)
+│   ├── background.ts   # Service worker: message handler, events, omnibox
 │   └── popup/          # Extension popup (Svelte app)
 ├── lib/
 │   ├── types.ts        # Interfaces, constants, helpers
-│   ├── storage.ts      # Chrome storage CRUD
-│   └── tabs.ts         # Tab capture/restore logic
+│   ├── storage.ts      # Chrome storage CRUD (sessions, settings, caches)
+│   └── tabs.ts         # Tab capture and restore logic
 └── public/
     └── icon/           # Extension icons (16, 32, 48, 128 PNG)
 tests/                  # Unit tests (Vitest)
@@ -106,25 +168,23 @@ e2e/                    # E2E tests (Playwright)
 ├── playwright.config.ts
 ├── fixtures/           # Browser + extension launch fixture
 ├── helpers/            # Storage seeding utilities
-└── tests/              # Test specs (9 files, 54 tests)
+└── tests/              # Test specs
 ```
 
 ## Permissions
 
-| Permission | Why |
+| Permission | Reason |
 |---|---|
-| `tabs` | Query and create tabs for snapshot and restore |
-| `tabGroups` | Read and recreate tab group names, colors, and state |
-| `storage` | Persist sessions and settings locally |
-| `contextMenus` | Right-click "Save all tabs" option |
+| `tabs` | Read open tabs, create tabs when restoring |
+| `tabGroups` | Preserve and recreate tab group names, colors, state |
+| `storage` | Store sessions and settings on your device |
+| `contextMenus` | "Save all tabs" right-click item on the extension icon |
+
+No network, no history, no cookies, no identity. Full detail in [PRIVACY.md](PRIVACY.md).
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Privacy
-
-SnapTabs stores all data locally on your device. No data is sent to external servers. See [PRIVACY.md](PRIVACY.md) for details.
 
 ## License
 
