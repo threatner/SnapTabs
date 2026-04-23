@@ -179,6 +179,83 @@ export default defineBackground(() => {
     if (area === 'local' && changes[KEYS.sessions]) updateBadge();
   });
 
+  // ── Omnibox ──
+
+  if (chrome.omnibox) {
+    chrome.omnibox.setDefaultSuggestion({
+      description: 'Search your SnapTabs sessions and saved tabs',
+    });
+
+    chrome.omnibox.onInputChanged.addListener(async (text, suggest) => {
+      try {
+        suggest(await buildOmniboxSuggestions(text));
+      } catch {
+        suggest([]);
+      }
+    });
+
+    chrome.omnibox.onInputEntered.addListener(async (text, disposition) => {
+      try {
+        const url = text.startsWith('http://') || text.startsWith('https://')
+          ? text
+          : `https://www.google.com/search?q=${encodeURIComponent(text)}`;
+        await openOmniboxUrl(url, disposition);
+      } catch {}
+    });
+  }
+
+  function escapeXml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  }
+
+  async function buildOmniboxSuggestions(rawQuery: string): Promise<chrome.omnibox.SuggestResult[]> {
+    const q = rawQuery.trim().toLowerCase();
+    if (!q) return [];
+    const sessions = await getSessions();
+    const seenUrls = new Set<string>();
+    const scored: { score: number; result: chrome.omnibox.SuggestResult }[] = [];
+
+    for (const session of sessions) {
+      const sessionMatch = session.name.toLowerCase().includes(q);
+      for (const tab of session.tabs) {
+        const title = tab.title || tab.url;
+        const titleMatch = title.toLowerCase().includes(q);
+        const urlMatch = tab.url.toLowerCase().includes(q);
+        if (!titleMatch && !urlMatch && !sessionMatch) continue;
+        if (seenUrls.has(tab.url)) continue;
+        seenUrls.add(tab.url);
+
+        const score =
+          (titleMatch ? 100 : 0) +
+          (urlMatch ? 40 : 0) +
+          (sessionMatch ? 10 : 0) +
+          (session.pinned ? 5 : 0);
+
+        scored.push({
+          score,
+          result: {
+            content: tab.url,
+            description: `<match>${escapeXml(title)}</match> <dim>— ${escapeXml(session.name)}</dim>`,
+          },
+        });
+      }
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, 8).map((s) => s.result);
+  }
+
+  async function openOmniboxUrl(url: string, disposition: chrome.omnibox.OnInputEnteredDisposition): Promise<void> {
+    if (disposition === 'currentTab') {
+      const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (active?.id !== undefined) {
+        await chrome.tabs.update(active.id, { url });
+        return;
+      }
+    }
+    await chrome.tabs.create({ url, active: disposition !== 'newBackgroundTab' });
+  }
+
   // ── Message handler ──
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
