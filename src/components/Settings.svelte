@@ -8,11 +8,25 @@
     onBack: () => void;
     onUpdateSettings: (partial: Partial<SnapTabsSettings>) => void;
     onDeleteAll: () => void;
+    onExport: () => void;
+    onImport: (file: File) => void;
   }
 
-  let { settings, storageUsed, storageTotal, onBack, onUpdateSettings, onDeleteAll }: Props = $props();
+  let { settings, storageUsed, storageTotal, onBack, onUpdateSettings, onDeleteAll, onExport, onImport }: Props = $props();
 
   let confirmDeleteAll = $state(false);
+  let fileInput: HTMLInputElement | undefined = $state();
+
+  const version = typeof chrome !== 'undefined' && chrome.runtime?.getManifest
+    ? chrome.runtime.getManifest().version
+    : '';
+
+  function handleFileChange(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) onImport(file);
+    input.value = '';
+  }
 
   function fmtBytes(b: number): string {
     if (b < 1024) return `${b} B`;
@@ -42,6 +56,9 @@
       </svg>
     </button>
     <h2>Settings</h2>
+    {#if version}
+      <span class="version-pill">v{version}</span>
+    {/if}
   </div>
 
   <div class="settings-body">
@@ -120,23 +137,42 @@
           class="num-input"
         />
       </div>
+      <div class="storage-card">
+        <div class="storage-top">
+          <span class="storage-label">Storage Used</span>
+          <span class="storage-val">{fmtBytes(storageUsed)} / {fmtBytes(storageTotal)}</span>
+        </div>
+        <div class="storage-track">
+          <div class="storage-fill" class:storage-fill--warn={pct > 80} style="width: {pct}%"></div>
+        </div>
+        {#if pct > 80}
+          <p class="storage-warn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            Consider deleting old sessions
+          </p>
+        {/if}
+      </div>
     </div>
 
-    <!-- Storage usage + Danger zone -->
-    <div class="storage-card">
-      <div class="storage-top">
-        <span class="storage-label">Storage Used</span>
-        <span class="storage-val">{fmtBytes(storageUsed)} / {fmtBytes(storageTotal)}</span>
+    <!-- Data -->
+    <h3 class="section-label">Data</h3>
+    <div class="section data-section">
+      <div class="data-row">
+        <button class="data-btn" onclick={onExport}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export
+        </button>
+        <button class="data-btn" onclick={() => fileInput?.click()}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Import
+        </button>
       </div>
-      <div class="storage-track">
-        <div class="storage-fill" style="width: {pct}%"></div>
-      </div>
-      {#if pct > 80}
-        <p class="storage-warn">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-          Consider deleting old sessions
-        </p>
-      {/if}
+      <input bind:this={fileInput} type="file" accept="application/json,.json" class="file-input" onchange={handleFileChange} />
+      <p class="data-hint">Download all sessions as JSON, or restore from a previous export.</p>
     </div>
 
     <div class="danger-zone">
@@ -167,6 +203,16 @@
     font-weight: 500;
     color: var(--fg);
   }
+  .version-pill {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--fg-muted);
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    letter-spacing: 0.02em;
+  }
   .back-btn {
     width: 28px;
     height: 28px;
@@ -193,7 +239,10 @@
     border-radius: 8px;
     background: oklch(0.22 0.008 280 / 0.3);
     border: 1px solid var(--border);
-    margin-bottom: 20px;
+    margin-top: 8px;
+  }
+  .storage-fill--warn {
+    background: var(--warning);
   }
   .storage-top {
     display: flex;
@@ -283,6 +332,49 @@
   .num-input:focus {
     border-color: var(--ring);
     box-shadow: 0 0 0 2px oklch(0.65 0.19 255 / 0.15);
+  }
+
+  .data-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .data-row {
+    display: flex;
+    gap: 8px;
+  }
+  .data-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 1;
+    padding: 9px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--muted);
+    color: var(--fg);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .data-btn:hover {
+    background: var(--card);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  .data-btn:active {
+    transform: scale(0.98);
+  }
+  .file-input {
+    display: none;
+  }
+  .data-hint {
+    font-size: 11px;
+    color: var(--fg-muted);
+    margin-top: 2px;
+    line-height: 1.4;
   }
 
   .danger-zone {

@@ -42,23 +42,32 @@
   <!-- List -->
   {#if sessions.length === 0}
     <div class="empty">
-      <div class="empty-icon">
+      <div class="empty-icon" class:empty-icon--cta={!searchQuery}>
         {#if searchQuery}
           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="M8 11h6"/>
           </svg>
         {:else}
           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            <path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/><rect x="2" y="7" width="20" height="7" rx="1"/>
           </svg>
         {/if}
       </div>
-      <h3 class="empty-title">{searchQuery ? 'No results found' : 'No sessions saved'}</h3>
+      <h3 class="empty-title">{searchQuery ? 'No results found' : 'Ready for your first snapshot'}</h3>
       <p class="empty-desc">
-        {searchQuery
-          ? 'Try a different search term'
-          : 'Click the Snapshot button to save your current tabs, or enable recording to capture your browsing automatically.'}
+        {#if searchQuery}
+          Try a different search term
+        {:else}
+          Tap <strong>Snapshot</strong> above to save your open tabs, or start <strong>Recording</strong> to capture new tabs as you browse.
+        {/if}
       </p>
+      {#if !searchQuery}
+        <div class="empty-arrow" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>
+          </svg>
+        </div>
+      {/if}
     </div>
   {:else}
     <div class="list">
@@ -162,16 +171,39 @@
     color: var(--fg-muted);
     margin-bottom: 16px;
   }
+  .empty-icon--cta {
+    background: oklch(0.65 0.19 255 / 0.15);
+    color: var(--primary);
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+  }
   .empty-title {
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--fg);
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
   .empty-desc {
     font-size: 12px;
     color: var(--fg-muted);
-    max-width: 240px;
-    line-height: 1.5;
+    max-width: 260px;
+    line-height: 1.55;
+  }
+  .empty-desc :global(strong) {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  .empty-arrow {
+    margin-top: 14px;
+    color: var(--primary);
+    opacity: 0.6;
+    animation: nudge 1.6s ease-in-out infinite;
+  }
+  @keyframes nudge {
+    0%, 100% { transform: translateY(0); opacity: 0.5; }
+    50% { transform: translateY(-4px); opacity: 0.9; }
   }
 </style>
