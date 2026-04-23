@@ -19,6 +19,9 @@ import {
   getIncognitoCache,
   saveIncognitoCache,
   getStorageUsage,
+  buildExportPayload,
+  importSessions,
+  EXPORT_VERSION,
 } from '../src/lib/storage';
 import type { Session, SavedTab } from '../src/lib/types';
 
@@ -265,6 +268,133 @@ describe('Incognito Cache', () => {
     const cache = await getIncognitoCache();
     expect(cache['42']).toHaveLength(1);
     expect(cache['42'][0].isIncognito).toBe(true);
+  });
+});
+
+describe('Import / Export', () => {
+  beforeEach(() => resetChromeStorage());
+
+  it('builds export payload with all sessions', async () => {
+    await saveSession(makeSession({ id: 'a', name: 'One' }));
+    await saveSession(makeSession({ id: 'b', name: 'Two' }));
+    const payload = await buildExportPayload();
+    expect(payload.source).toBe('snaptabs');
+    expect(payload.version).toBe(EXPORT_VERSION);
+    expect(payload.sessions).toHaveLength(2);
+    expect(payload.exportedAt).toBeGreaterThan(0);
+  });
+
+  it('builds export payload when empty', async () => {
+    const payload = await buildExportPayload();
+    expect(payload.sessions).toEqual([]);
+  });
+
+  it('imports valid sessions into empty store', async () => {
+    const payload = {
+      version: 1,
+      exportedAt: Date.now(),
+      source: 'snaptabs',
+      sessions: [makeSession({ id: 'x', name: 'Imported' })],
+    };
+    const result = await importSessions(payload);
+    expect(result.imported).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(result.renamed).toBe(0);
+    const sessions = await getSessions();
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].name).toBe('Imported');
+  });
+
+  it('skips re-import of identical session (same id + timestamp)', async () => {
+    const session = makeSession({ id: 'dup', timestamp: 1000, name: 'Dup' });
+    await saveSession(session);
+    const result = await importSessions({
+      version: 1,
+      exportedAt: Date.now(),
+      source: 'snaptabs',
+      sessions: [{ ...session }],
+    });
+    expect(result.imported).toBe(0);
+    expect(result.skipped).toBe(1);
+    const sessions = await getSessions();
+    expect(sessions).toHaveLength(1);
+  });
+
+  it('renames on id collision when timestamps differ', async () => {
+    await saveSession(makeSession({ id: 'same', timestamp: 1000, name: 'Original' }));
+    const result = await importSessions({
+      version: 1,
+      exportedAt: Date.now(),
+      source: 'snaptabs',
+      sessions: [makeSession({ id: 'same', timestamp: 2000, name: 'Imported' })],
+    });
+    expect(result.imported).toBe(1);
+    expect(result.renamed).toBe(1);
+    const sessions = await getSessions();
+    expect(sessions).toHaveLength(2);
+    const ids = new Set(sessions.map((s) => s.id));
+    expect(ids.size).toBe(2);
+  });
+
+  it('rejects non-object payload', async () => {
+    await expect(importSessions(null)).rejects.toThrow(/Invalid file/);
+    await expect(importSessions('string')).rejects.toThrow(/Invalid file/);
+  });
+
+  it('rejects file without snaptabs source marker', async () => {
+    await expect(importSessions({ sessions: [] })).rejects.toThrow(/SnapTabs export/);
+    await expect(importSessions({ source: 'other', sessions: [] })).rejects.toThrow(/SnapTabs export/);
+  });
+
+  it('rejects file with no sessions array', async () => {
+    await expect(importSessions({ source: 'snaptabs' })).rejects.toThrow(/no sessions/);
+  });
+
+  it('rejects file where all sessions are malformed', async () => {
+    await expect(
+      importSessions({
+        source: 'snaptabs',
+        sessions: [{ id: 'x' }, { foo: 'bar' }],
+      })
+    ).rejects.toThrow(/No valid sessions/);
+  });
+
+  it('filters out malformed sessions but imports valid ones', async () => {
+    const result = await importSessions({
+      source: 'snaptabs',
+      sessions: [makeSession({ id: 'good' }), { id: 'bad' }, null],
+    });
+    expect(result.imported).toBe(1);
+    const sessions = await getSessions();
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].id).toBe('good');
+  });
+
+  it('enforces maxSessions when importing', async () => {
+    await updateSettings({ maxSessions: 2 });
+    await saveSession(makeSession({ id: 'a', timestamp: 1000, isAutoSave: true }));
+    const result = await importSessions({
+      source: 'snaptabs',
+      sessions: [
+        makeSession({ id: 'b', timestamp: 2000 }),
+        makeSession({ id: 'c', timestamp: 3000 }),
+      ],
+    });
+    expect(result.imported).toBe(2);
+    const sessions = await getSessions();
+    expect(sessions).toHaveLength(2);
+    expect(sessions.find((s) => s.id === 'a')).toBeUndefined();
+  });
+
+  it('round-trips export then import', async () => {
+    await saveSession(makeSession({ id: 'a', name: 'A' }));
+    await saveSession(makeSession({ id: 'b', name: 'B' }));
+    const payload = await buildExportPayload();
+    await deleteAllSessions();
+    const result = await importSessions(payload);
+    expect(result.imported).toBe(2);
+    const sessions = await getSessions();
+    expect(sessions).toHaveLength(2);
   });
 });
 

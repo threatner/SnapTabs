@@ -136,6 +136,94 @@ export async function saveIncognitoCache(cache: Record<string, SavedTab[]>): Pro
   await chrome.storage.session.set({ [KEYS.incognitoCache]: cache });
 }
 
+// ── Import / Export ──
+
+export const EXPORT_VERSION = 1;
+
+export interface ExportPayload {
+  version: number;
+  exportedAt: number;
+  source: 'snaptabs';
+  sessions: Session[];
+}
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+  renamed: number;
+}
+
+export async function buildExportPayload(): Promise<ExportPayload> {
+  const sessions = await getSessions();
+  return {
+    version: EXPORT_VERSION,
+    exportedAt: Date.now(),
+    source: 'snaptabs',
+    sessions,
+  };
+}
+
+export async function importSessions(payload: unknown): Promise<ImportResult> {
+  const validated = validateImportPayload(payload);
+  const result = await chrome.storage.local.get([KEYS.sessions, KEYS.settings]);
+  const existing: Session[] = result[KEYS.sessions] ?? [];
+  const settings: SnapTabsSettings = { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
+  const byId = new Map(existing.map((s) => [s.id, s]));
+
+  let imported = 0;
+  let skipped = 0;
+  let renamed = 0;
+
+  for (const session of validated.sessions) {
+    const existingSession = byId.get(session.id);
+    if (existingSession && existingSession.timestamp === session.timestamp) {
+      skipped++;
+      continue;
+    }
+    if (byId.has(session.id)) {
+      session.id = uuid();
+      renamed++;
+    }
+    existing.push(session);
+    byId.set(session.id, session);
+    imported++;
+  }
+
+  enforceLimit(existing, settings.maxSessions);
+  await chrome.storage.local.set({ [KEYS.sessions]: existing });
+  return { imported, skipped, renamed };
+}
+
+function validateImportPayload(data: unknown): ExportPayload {
+  if (!data || typeof data !== 'object') throw new Error('Invalid file: not a JSON object');
+  const d = data as Record<string, unknown>;
+  if (d.source !== 'snaptabs') throw new Error('Not a SnapTabs export file');
+  if (!Array.isArray(d.sessions)) throw new Error('Export file has no sessions');
+  const sessions = d.sessions.filter(isValidSession);
+  if (sessions.length === 0) throw new Error('No valid sessions found in file');
+  return {
+    version: typeof d.version === 'number' ? d.version : EXPORT_VERSION,
+    exportedAt: typeof d.exportedAt === 'number' ? d.exportedAt : Date.now(),
+    source: 'snaptabs',
+    sessions,
+  };
+}
+
+function isValidSession(value: unknown): value is Session {
+  if (!value || typeof value !== 'object') return false;
+  const s = value as Record<string, unknown>;
+  return (
+    typeof s.id === 'string' &&
+    typeof s.name === 'string' &&
+    typeof s.timestamp === 'number' &&
+    Array.isArray(s.tabs) &&
+    Array.isArray(s.tabGroups) &&
+    typeof s.windowCount === 'number' &&
+    typeof s.hasIncognitoTabs === 'boolean' &&
+    typeof s.isAutoSave === 'boolean'
+  );
+}
+
 // ── Storage Usage ──
 
 export async function getStorageUsage(): Promise<{ used: number; total: number }> {

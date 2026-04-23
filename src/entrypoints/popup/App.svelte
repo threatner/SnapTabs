@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import type { Session, SnapTabsSettings, LiveRecording } from '@/lib/types';
   import { DEFAULT_SETTINGS } from '@/lib/types';
-  import { getSessions, renameSession, deleteAllSessions, getSettings, updateSettings, getStorageUsage, getRecording } from '@/lib/storage';
+  import { getSessions, renameSession, deleteAllSessions, getSettings, updateSettings, getStorageUsage, getRecording, buildExportPayload, importSessions } from '@/lib/storage';
   import { getTabStats } from '@/lib/tabs';
   import Header from '@/components/Header.svelte';
   import SnapshotBar from '@/components/SnapshotBar.svelte';
@@ -135,6 +135,49 @@
     }
   }
 
+  async function handleExport() {
+    try {
+      const payload = await buildExportPayload();
+      if (payload.sessions.length === 0) {
+        toast('No sessions to export', 'warning');
+        return;
+      }
+      const json = JSON.stringify(payload, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const d = new Date();
+      const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `snaptabs-export-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast(`Exported ${payload.sessions.length} session${payload.sessions.length === 1 ? '' : 's'}`);
+    } catch {
+      toast('Export failed', 'error');
+    }
+  }
+
+  async function handleImport(file: File) {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const result = await importSessions(data);
+      await refresh();
+      if (result.imported === 0) {
+        toast('Nothing new to import', 'warning');
+      } else {
+        const noun = result.imported === 1 ? 'snapshot' : 'snapshots';
+        toast(`${result.imported} ${noun} imported`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Import failed';
+      toast(msg, 'error');
+    }
+  }
+
   async function handleUpdateSettings(partial: Partial<SnapTabsSettings>) {
     try {
       await updateSettings(partial);
@@ -218,6 +261,8 @@
       onBack={() => view = 'main'}
       onUpdateSettings={handleUpdateSettings}
       onDeleteAll={handleDeleteAll}
+      onExport={handleExport}
+      onImport={handleImport}
     />
   {:else if view === 'detail' && selectedSession}
     <SessionDetail

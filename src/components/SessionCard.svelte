@@ -175,12 +175,21 @@
     gap: 12px;
     padding: 12px 16px;
     cursor: pointer;
-    transition: background 0.1s;
+    transition: background 0.15s, box-shadow 0.15s;
     position: relative;
     outline: none;
+    box-shadow: inset 3px 0 0 transparent;
   }
-  .card:hover { background: oklch(0.25 0.012 280 / 0.5); }
-  .card:focus-visible { background: oklch(0.25 0.012 280 / 0.5); }
+  .card:hover {
+    background: oklch(0.26 0.014 280 / 0.75);
+    box-shadow: inset 3px 0 0 var(--primary);
+  }
+  .card:focus-visible {
+    background: oklch(0.26 0.014 280 / 0.75);
+    box-shadow: inset 3px 0 0 var(--primary);
+  }
+  .card:active { background: oklch(0.24 0.012 280 / 0.9); }
+  .card:hover .chevron { transform: translateX(2px); }
   .card-content {
     flex: 1;
     min-width: 0;
@@ -302,7 +311,11 @@
     transition: opacity 0.15s;
   }
   .card:hover .card-actions { opacity: 1; }
-  .chevron { color: var(--fg-muted); flex-shrink: 0; }
+  .chevron {
+    color: var(--fg-muted);
+    flex-shrink: 0;
+    transition: transform 0.15s;
+  }
 
   .action-btn {
     width: 28px;
