@@ -42,6 +42,7 @@ describe('formatSessionName', () => {
 describe('DEFAULT_SETTINGS', () => {
   it('has expected default values', () => {
     expect(DEFAULT_SETTINGS.autoSnapshotOnClose).toBe(false);
+    expect(DEFAULT_SETTINGS.autoSnapshotOnBrowserClose).toBe(true);
     expect(DEFAULT_SETTINGS.autoDeleteAfterRestore).toBe(false);
     expect(DEFAULT_SETTINGS.maxSessions).toBe(50);
     expect(DEFAULT_SETTINGS.showIncognitoWarning).toBe(true);
@@ -49,8 +50,8 @@ describe('DEFAULT_SETTINGS', () => {
     expect(DEFAULT_SETTINGS.restoreInNewWindow).toBe(false);
   });
 
-  it('has all six settings', () => {
-    expect(Object.keys(DEFAULT_SETTINGS)).toHaveLength(6);
+  it('has all seven settings', () => {
+    expect(Object.keys(DEFAULT_SETTINGS)).toHaveLength(7);
   });
 });
 

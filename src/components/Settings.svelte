@@ -67,6 +67,14 @@
     <div class="section">
       <label class="setting-row">
         <div class="setting-text">
+          <p class="setting-title">Save on browser close</p>
+          <p class="setting-desc">Snapshot open tabs when you quit Chrome so you can restore them later</p>
+        </div>
+        <input type="checkbox" class="tv-switch" checked={settings.autoSnapshotOnBrowserClose}
+          onchange={() => onUpdateSettings({ autoSnapshotOnBrowserClose: !settings.autoSnapshotOnBrowserClose })} />
+      </label>
+      <label class="setting-row">
+        <div class="setting-text">
           <p class="setting-title">Save incognito on close</p>
           <p class="setting-desc">Automatically save tabs when closing incognito windows</p>
         </div>

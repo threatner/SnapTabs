@@ -10,6 +10,9 @@ import {
   deleteSession,
   saveSession,
   togglePin,
+  getPendingClose,
+  savePendingClose,
+  clearPendingClose,
   getRecording,
   startRecording,
   addTabToRecording,
@@ -23,7 +26,7 @@ import {
 
 export default defineBackground(() => {
   const windowMap = new Map<number, boolean>();
-  const incognitoTabCache = new Map<number, SavedTab[]>();
+  const tabCache = new Map<number, SavedTab[]>();
 
   // ── Persistence helpers ──
 
@@ -31,10 +34,10 @@ export default defineBackground(() => {
     try { await saveWindowMap(Object.fromEntries(windowMap)); } catch {}
   }
 
-  async function persistIncognitoCache() {
+  async function persistTabCache() {
     try {
       const obj: Record<string, SavedTab[]> = {};
-      for (const [k, v] of incognitoTabCache) obj[String(k)] = v;
+      for (const [k, v] of tabCache) obj[String(k)] = v;
       await saveIncognitoCache(obj);
     } catch {}
   }
@@ -44,15 +47,15 @@ export default defineBackground(() => {
       const wm = await getWindowMap();
       for (const [k, v] of Object.entries(wm)) windowMap.set(Number(k), v as boolean);
       const cache = await getIncognitoCache();
-      for (const [k, v] of Object.entries(cache)) incognitoTabCache.set(Number(k), v as SavedTab[]);
+      for (const [k, v] of Object.entries(cache)) tabCache.set(Number(k), v as SavedTab[]);
     } catch {}
   }
 
-  async function refreshIncognitoWindow(windowId: number) {
+  async function refreshWindowCache(windowId: number) {
     try {
       const tabs = await chrome.tabs.query({ windowId });
-      incognitoTabCache.set(windowId, tabs.map(toSavedTab));
-      await persistIncognitoCache();
+      tabCache.set(windowId, tabs.map(toSavedTab));
+      await persistTabCache();
     } catch {}
   }
 
@@ -90,23 +93,26 @@ export default defineBackground(() => {
     if (w.id === undefined) return;
     windowMap.set(w.id, w.incognito);
     await persistWindowMap();
-    if (w.incognito) await refreshIncognitoWindow(w.id);
+    await refreshWindowCache(w.id);
   });
 
   chrome.windows.onRemoved.addListener(async (windowId) => {
     const wasIncognito = windowMap.get(windowId);
-    const cached = incognitoTabCache.get(windowId);
+    const cached = tabCache.get(windowId);
     windowMap.delete(windowId);
-    incognitoTabCache.delete(windowId);
-    await Promise.all([persistWindowMap(), persistIncognitoCache()]);
+    tabCache.delete(windowId);
+    await Promise.all([persistWindowMap(), persistTabCache()]);
 
-    if (wasIncognito && cached && cached.length > 0) {
-      try {
-        const settings = await getSettings();
+    if (!cached || cached.length === 0) return;
+
+    try {
+      const settings = await getSettings();
+      const remaining = await chrome.windows.getAll();
+
+      if (wasIncognito) {
+        // Incognito window closed while browser still open
         if (!settings.autoSnapshotOnClose) return;
-        const remaining = await chrome.windows.getAll();
         if (remaining.length === 0) return;
-
         const session: Session = {
           id: uuid(),
           name: formatSessionName('Auto-save'),
@@ -119,16 +125,47 @@ export default defineBackground(() => {
         };
         await saveSession(session);
         await updateBadge();
-      } catch {}
-    }
+      } else {
+        // Normal window close — accumulate into pending buffer so multi-window
+        // Cmd+Q captures every window's tabs, not just the last one.
+        if (!settings.autoSnapshotOnBrowserClose) return;
+
+        const STALE_MS = 5000;
+        const now = Date.now();
+        let pending = await getPendingClose();
+        if (now - pending.updatedAt > STALE_MS) {
+          pending = { tabs: [], windowCount: 0, updatedAt: now };
+        }
+        pending.tabs.push(...cached);
+        pending.windowCount += 1;
+        pending.updatedAt = now;
+        await savePendingClose(pending);
+
+        if (remaining.length === 0 && pending.tabs.length > 0) {
+          const session: Session = {
+            id: uuid(),
+            name: formatSessionName('Browser close'),
+            timestamp: now,
+            tabs: pending.tabs,
+            tabGroups: [],
+            windowCount: pending.windowCount,
+            hasIncognitoTabs: false,
+            isAutoSave: true,
+          };
+          await saveSession(session);
+          await clearPendingClose();
+          await updateBadge();
+        }
+      }
+    } catch {}
   });
 
   chrome.tabs.onCreated.addListener(async (tab) => {
-    if (tab.incognito && tab.windowId !== undefined) await refreshIncognitoWindow(tab.windowId);
+    if (tab.windowId !== undefined) await refreshWindowCache(tab.windowId);
   });
 
   chrome.tabs.onRemoved.addListener(async (_tabId, info) => {
-    if (!info.isWindowClosing && windowMap.get(info.windowId)) await refreshIncognitoWindow(info.windowId);
+    if (!info.isWindowClosing && windowMap.has(info.windowId)) await refreshWindowCache(info.windowId);
   });
 
   // ── Recording state (in-memory to avoid storage reads on every tab update) ──
@@ -138,8 +175,8 @@ export default defineBackground(() => {
   const recordedTabIds = new Set<number>();
 
   chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
-    if (tab.incognito && tab.windowId !== undefined && changeInfo.status === 'complete') {
-      await refreshIncognitoWindow(tab.windowId);
+    if (tab.windowId !== undefined && changeInfo.status === 'complete') {
+      await refreshWindowCache(tab.windowId);
     }
     if (changeInfo.status !== 'complete' || !tab.url) return;
     if (!isRestorable(tab.url)) return;
@@ -344,14 +381,14 @@ export default defineBackground(() => {
         recordingWindowId = rec.windowId;
       }
       const windows = await chrome.windows.getAll();
-      const incognitoRefreshes: Promise<void>[] = [];
+      const refreshes: Promise<void>[] = [];
       for (const w of windows) {
         if (w.id !== undefined) {
           windowMap.set(w.id, w.incognito);
-          if (w.incognito) incognitoRefreshes.push(refreshIncognitoWindow(w.id));
+          refreshes.push(refreshWindowCache(w.id));
         }
       }
-      await Promise.all(incognitoRefreshes);
+      await Promise.all(refreshes);
       await persistWindowMap();
       await setupContextMenus();
       await updateBadge();

@@ -19,6 +19,9 @@ import {
   saveWindowMap,
   getIncognitoCache,
   saveIncognitoCache,
+  getPendingClose,
+  savePendingClose,
+  clearPendingClose,
   getStorageUsage,
   buildExportPayload,
   importSessions,
@@ -458,6 +461,31 @@ describe('Import / Export', () => {
     expect(result.imported).toBe(2);
     const sessions = await getSessions();
     expect(sessions).toHaveLength(2);
+  });
+});
+
+describe('Pending Close Buffer', () => {
+  beforeEach(() => resetChromeStorage());
+
+  it('returns empty default when nothing stored', async () => {
+    const pc = await getPendingClose();
+    expect(pc).toEqual({ tabs: [], windowCount: 0, updatedAt: 0 });
+  });
+
+  it('saves and retrieves a pending close buffer', async () => {
+    const tabs = [makeTab({ url: 'https://a.com' }), makeTab({ url: 'https://b.com' })];
+    await savePendingClose({ tabs, windowCount: 2, updatedAt: 12345 });
+    const pc = await getPendingClose();
+    expect(pc.tabs).toHaveLength(2);
+    expect(pc.windowCount).toBe(2);
+    expect(pc.updatedAt).toBe(12345);
+  });
+
+  it('clearPendingClose removes the buffer', async () => {
+    await savePendingClose({ tabs: [makeTab()], windowCount: 1, updatedAt: 1 });
+    await clearPendingClose();
+    const pc = await getPendingClose();
+    expect(pc).toEqual({ tabs: [], windowCount: 0, updatedAt: 0 });
   });
 });
 
