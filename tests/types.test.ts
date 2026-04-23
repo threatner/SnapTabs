@@ -42,7 +42,7 @@ describe('formatSessionName', () => {
 describe('DEFAULT_SETTINGS', () => {
   it('has expected default values', () => {
     expect(DEFAULT_SETTINGS.autoSnapshotOnClose).toBe(false);
-    expect(DEFAULT_SETTINGS.autoSnapshotOnBrowserClose).toBe(true);
+    expect(DEFAULT_SETTINGS.autoSnapshotOnBrowserClose).toBe(false);
     expect(DEFAULT_SETTINGS.autoDeleteAfterRestore).toBe(false);
     expect(DEFAULT_SETTINGS.maxSessions).toBe(50);
     expect(DEFAULT_SETTINGS.showIncognitoWarning).toBe(true);

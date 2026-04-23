@@ -24,7 +24,7 @@ SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser
 - **Manual snapshot**: save all open tabs from the current window or all windows with one click. Optional custom name, keyboard shortcut (`Alt+Shift+S`), and right-click context menu.
 - **Tab group preservation**: captures and restores tab group names, colors, and collapsed state.
 - **Incognito support**: captures incognito tabs (when the extension is enabled in incognito mode) and restores them to incognito windows. Proactive caching ensures tabs are captured before the window closes.
-- **Auto-snapshot on browser close** (default ON): when the last window closes, SnapTabs saves the session as an auto-save named `Browser close - <date>`. Multi-window Cmd+Q is handled via a pending-close buffer persisted to `chrome.storage.session` with a 5-second staleness window, which accumulates each closing window's cached tabs and flushes a single combined session when `remaining.length === 0`.
+- **Auto-snapshot on browser close** (opt-in, default OFF): when enabled, saves the session as an auto-save named `Browser close - <date>` when the last window closes. Multi-window Cmd+Q is handled via a pending-close buffer persisted to `chrome.storage.session` with a 5-second staleness window, which accumulates each closing window's cached tabs and flushes a single combined session when `remaining.length === 0`.
 - **Auto-save on incognito close**: optionally auto-save incognito tabs when an incognito window is closed. Uses the same proactive tab cache.
 - **Live recording**: record new tabs as they open in a window (or all windows), then save the session. URL deduplication, pulsing badge indicator, real-time tab count.
 - **Session restore**: restore to current window or a new window. Incognito tabs go to an incognito window when the setting is enabled. Auto-delete after restore is optional.
@@ -33,7 +33,7 @@ SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser
 - **Omnibox search**: `st <query>` in Chrome's address bar fuzzy-matches tab titles and URLs across every saved session. Selecting a suggestion opens the tab (Alt+Enter for new tab); raw text with no selection falls back to Google search.
 - **Search** (popup): real-time filter across session names, tab titles, and URLs.
 - **Storage management**: 10 MB quota with automatic pruning (oldest auto-saves removed first, pinned sessions never pruned). Configurable session limit (1-500). Storage usage bar in settings.
-- **Settings**: 7 options: auto-snapshot on browser close (default true), auto-save on incognito close, auto-delete after restore, restore private to private, restore in new window, show incognito warning, max sessions limit.
+- **Settings**: 7 options: auto-snapshot on browser close (default false), auto-save on incognito close, auto-delete after restore, restore private to private, restore in new window, show incognito warning, max sessions limit.
 
 ### Permissions (minimal set)
 

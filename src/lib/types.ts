@@ -39,7 +39,7 @@ export interface SnapTabsSettings {
 
 export const DEFAULT_SETTINGS: SnapTabsSettings = {
   autoSnapshotOnClose: false,
-  autoSnapshotOnBrowserClose: true,
+  autoSnapshotOnBrowserClose: false,
   autoDeleteAfterRestore: false,
   maxSessions: 50,
   showIncognitoWarning: true,

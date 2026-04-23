@@ -75,8 +75,8 @@ Group names, group colors, collapsed state. All of it comes back exactly how you
 **Incognito support**
 Flip the switch in Chrome to let SnapTabs run in incognito, and your private tabs are captured and restored to an incognito window automatically.
 
-**Auto-snapshot on browser close** (on by default)
-Quit Chrome with Cmd+Q or close the last window. When you come back, your last session is waiting as a "Browser close" entry, ready to restore with one click. Multi-window quits are captured as a single combined session.
+**Auto-snapshot on browser close**
+Turn it on in Settings, and the next time you quit Chrome with Cmd+Q or close the last window, your tabs are captured as a "Browser close" session. Open SnapTabs on next launch and restore with one click. Multi-window quits are combined into a single session. Off by default so nothing is saved without your explicit opt-in.
 
 **Session pinning**
 Pin the sessions you rely on. Pinned sessions stay at the top of the list and are never pruned, even when storage fills up.
@@ -132,7 +132,7 @@ No network permission. No history permission. No cookie or identity access.
 No. Storage is local. The extension makes zero outbound requests. You can verify this in Chrome's network inspector, or in the source on GitHub.
 
 **What happens to my tabs if Chrome crashes?**
-If "Save on browser close" is enabled (default), your tabs are captured when the last window closes and saved as a "Browser close" session. Open SnapTabs after recovery and restore it.
+Turn on "Save on browser close" in Settings (it's off by default). While it's on, your tabs are captured when the last window closes and saved as a "Browser close" session. Open SnapTabs after recovery and restore it.
 
 **Will my tab groups come back?**
 Yes. Name, color, collapsed state. Pinned tabs come back pinned. The only thing SnapTabs cannot restore is the exact window position, because Chrome does not expose that to extensions.
