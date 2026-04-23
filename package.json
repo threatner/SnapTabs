@@ -35,7 +35,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
-    "test:e2e:debug": "playwright test --config=e2e/playwright.config.ts --debug"
+    "test:e2e:debug": "playwright test --config=e2e/playwright.config.ts --debug",
+    "promo": "npx --yes sharp-cli -i src/assets/promo-small.svg -o screenshots/store/promo-small-440x280.png && npx --yes sharp-cli -i src/assets/promo-marquee.svg -o screenshots/store/promo-marquee-1400x560.png"
   },
   "dependencies": {
     "svelte": "^5.0.0"
