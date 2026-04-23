@@ -1,4 +1,4 @@
-# CLAUDE.md — SnapTabs
+# CLAUDE.md - SnapTabs
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -17,19 +17,23 @@ npm run test:e2e:debug # Run E2E tests in debug mode
 
 ## What is SnapTabs
 
-SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser tabs — including tab groups, pinned tabs, and incognito tabs. Built with **Svelte 5**, **WXT 0.19**, **Tailwind CSS 4**, and **TypeScript**.
+SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser tabs, including tab groups, pinned tabs, and incognito tabs. Built with **Svelte 5**, **WXT 0.19**, **Tailwind CSS 4**, and **TypeScript**.
 
 ### Features
 
-- **Manual snapshot** — Save all open tabs from the current window or all windows with one click. Optional custom name, keyboard shortcut (`Alt+Shift+S`), and right-click context menu.
-- **Tab group preservation** — Captures and restores tab group names, colors, and collapsed state.
-- **Incognito support** — Captures incognito tabs (when extension is enabled in incognito mode) and restores them to incognito windows. Proactive caching ensures tabs are captured before the window closes.
-- **Auto-save on incognito close** — Optionally auto-save incognito tabs when an incognito window is closed (uses cached tab data since tabs are destroyed before the close event).
-- **Live recording** — Record new tabs as they open in a window (or all windows), then save the session. URL deduplication, pulsing badge indicator, and real-time tab count.
-- **Session restore** — Restore to current window or a new window. Incognito tabs go to an incognito window when setting is enabled. Auto-delete after restore is optional.
-- **Search** — Real-time filter across session names, tab titles, and URLs.
-- **Storage management** — 10 MB quota with automatic pruning (oldest auto-saves removed first). Configurable session limit (1–500). Storage usage bar in settings.
-- **Settings** — 6 toggles: auto-save on close, auto-delete after restore, restore private to private, restore in new window, show incognito warning, max sessions limit.
+- **Manual snapshot**: save all open tabs from the current window or all windows with one click. Optional custom name, keyboard shortcut (`Alt+Shift+S`), and right-click context menu.
+- **Tab group preservation**: captures and restores tab group names, colors, and collapsed state.
+- **Incognito support**: captures incognito tabs (when the extension is enabled in incognito mode) and restores them to incognito windows. Proactive caching ensures tabs are captured before the window closes.
+- **Auto-snapshot on browser close** (default ON): when the last window closes, SnapTabs saves the session as an auto-save named `Browser close - <date>`. Multi-window Cmd+Q is handled via a pending-close buffer persisted to `chrome.storage.session` with a 5-second staleness window, which accumulates each closing window's cached tabs and flushes a single combined session when `remaining.length === 0`.
+- **Auto-save on incognito close**: optionally auto-save incognito tabs when an incognito window is closed. Uses the same proactive tab cache.
+- **Live recording**: record new tabs as they open in a window (or all windows), then save the session. URL deduplication, pulsing badge indicator, real-time tab count.
+- **Session restore**: restore to current window or a new window. Incognito tabs go to an incognito window when the setting is enabled. Auto-delete after restore is optional.
+- **Session pinning**: pin sessions so they sort to the top and are exempt from auto-pruning. Available via the card context menu and the detail-view toolbar button.
+- **Import / Export**: download all sessions to a JSON file (`snaptabs-export-YYYY-MM-DD.json`) or load from a previous export. Import handles ID collisions by renaming on conflict and skipping exact re-imports (same id + timestamp).
+- **Omnibox search**: `st <query>` in Chrome's address bar fuzzy-matches tab titles and URLs across every saved session. Selecting a suggestion opens the tab (Alt+Enter for new tab); raw text with no selection falls back to Google search.
+- **Search** (popup): real-time filter across session names, tab titles, and URLs.
+- **Storage management**: 10 MB quota with automatic pruning (oldest auto-saves removed first, pinned sessions never pruned). Configurable session limit (1-500). Storage usage bar in settings.
+- **Settings**: 7 options: auto-snapshot on browser close (default true), auto-save on incognito close, auto-delete after restore, restore private to private, restore in new window, show incognito warning, max sessions limit.
 
 ### Permissions (minimal set)
 
@@ -58,17 +62,18 @@ Popup (Svelte UI)  ──sendMessage──►  Background (Service Worker)
 
 ### Data Flow
 
-- **Popup → Background**: Message protocol with action strings (`'snapshot'`, `'restore'`, `'delete'`, `'startRecording'`, `'stopRecording'`, `'cancelRecording'`, `'getSessions'`, `'getStats'`, `'getSettings'`, `'updateSettings'`, `'getRecording'`).
-- **Background → Storage**: `chrome.storage.local` for persistent data (sessions, settings), `chrome.storage.session` for ephemeral data (live recording, incognito tab cache, window map).
-- **Storage quota**: 10 MB. Automatic pruning removes oldest auto-saves first when `maxSessions` is exceeded.
+- **Popup → Background**: Message protocol with action strings (`'snapshot'`, `'restore'`, `'delete'`, `'togglePin'`, `'startRecording'`, `'stopRecording'`, `'cancelRecording'`, `'getSessions'`, `'getStats'`, `'getSettings'`, `'updateSettings'`, `'getRecording'`). Import/export is invoked directly from the popup (no message round-trip needed).
+- **Background → Storage**: `chrome.storage.local` for persistent data (sessions, settings), `chrome.storage.session` for ephemeral data (live recording, window map, proactive per-window tab cache, pending-close buffer).
+- **Storage quota**: 10 MB. Automatic pruning removes oldest auto-saves first when `maxSessions` is exceeded; pinned sessions are skipped. If all prunable sessions are pinned, `enforceLimit` breaks out and the list is allowed to exceed `maxSessions` as a soft cap.
+- **Omnibox**: `chrome.omnibox` `onInputChanged` / `onInputEntered` handlers live in `background.ts`. Suggestions are ranked by (title match 100 + url match 40 + session-name match 10 + pinned bonus 5), capped at 8 results, deduped by URL.
 
 ### Key Modules
 
-- `src/lib/types.ts` — All interfaces (`Session`, `SavedTab`, `SavedTabGroup`, `SnapTabsSettings`, `LiveRecording`), shared constants (`DEFAULT_SETTINGS`, `BLOCKED_URL_PREFIXES`, `TAB_GROUP_COLORS`), helper functions (`uuid()`, `formatSessionName()`).
-- `src/lib/storage.ts` — Chrome storage CRUD. Exports `KEYS` constant for storage key names (`snaptabs_sessions`, `snaptabs_settings`, etc.). `saveSession` batches storage reads into a single `chrome.storage.local.get()` call. Includes `enforceLimit()` for automatic pruning.
-- `src/lib/tabs.ts` — Tab capture/restore logic. Exports `toSavedTab()` (shared mapper from `chrome.tabs.Tab` → `SavedTab`), `isRestorable()` (URL filter), `captureWindow()`, `captureAllWindows()`, `createSnapshot()`, `restoreSession()`, `getTabStats()`.
-- `src/entrypoints/background.ts` — Service worker: event listeners, message router, badge management, incognito window tracking with proactive tab caching, live recording capture, context menu, keyboard shortcut (`Alt+Shift+S`).
-- `src/entrypoints/popup/App.svelte` — Root component managing views (`'main'` | `'detail'` | `'settings'`), global state, and all handler functions.
+- `src/lib/types.ts`: all interfaces (`Session` including optional `pinned`, `SavedTab`, `SavedTabGroup`, `SnapTabsSettings`, `LiveRecording`), shared constants (`DEFAULT_SETTINGS`, `BLOCKED_URL_PREFIXES`, `TAB_GROUP_COLORS`), helpers (`uuid()`, `formatSessionName()`).
+- `src/lib/storage.ts`: Chrome storage CRUD. Exports `KEYS` (`sessions`, `settings`, `recording`, `windowMap`, `incognitoCache`, `pendingClose`). Session helpers: `getSessions` (pinned-first sort via `compareSessions`), `saveSession`, `renameSession`, `togglePin`, `deleteSession`, `deleteAllSessions`. Settings: `getSettings`, `updateSettings`. Recording: `getRecording`, `startRecording`, `addTabToRecording`, `stopRecording`, `cancelRecording`. Caches: `getWindowMap`, `saveWindowMap`, `getIncognitoCache`, `saveIncognitoCache`. Browser-close buffer: `getPendingClose`, `savePendingClose`, `clearPendingClose`. Import/Export: `buildExportPayload`, `importSessions`, `EXPORT_VERSION`. Utility: `getStorageUsage`, `enforceLimit` (auto-save-first, never prunes pinned).
+- `src/lib/tabs.ts`: tab capture/restore logic. Exports `toSavedTab()` (shared mapper from `chrome.tabs.Tab` to `SavedTab`), `isRestorable()`, `captureWindow()`, `captureAllWindows()`, `createSnapshot()`, `restoreSession()`, `getTabStats()`.
+- `src/entrypoints/background.ts`: service worker. Message router, badge management, proactive per-window tab cache (`tabCache` Map, unified for incognito and normal windows), window map, window lifecycle listeners, browser-close logic with pending-close buffer, live recording capture, context menu, keyboard shortcut (`Alt+Shift+S`), and omnibox handlers.
+- `src/entrypoints/popup/App.svelte`: root component managing views (`'main'` | `'detail'` | `'settings'`), global state, and handler functions including `handleTogglePin`, `handleExport`, `handleImport`.
 
 ### Popup Views
 
@@ -92,9 +97,9 @@ The popup is a fixed 400×600px window with three views:
 
 ## Svelte 5 Constraints
 
-- **No `$effect`** — causes infinite loops in this codebase. Use `$derived` or `$derived.by()` instead.
-- **No `$bindable`** — was removed due to prior issues.
-- Use `$derived.by(() => { ... })` (not `$derived(() => { ... })`) when the derived value needs a function body. `$derived(() => expr)` creates a derived function, not a derived value — it won't cache and will re-execute on every template access.
+- **No `$effect`**: causes infinite loops in this codebase. Use `$derived` or `$derived.by()` instead.
+- **No `$bindable`**: was removed due to prior issues.
+- Use `$derived.by(() => { ... })` (not `$derived(() => { ... })`) when the derived value needs a function body. `$derived(() => expr)` creates a derived function, not a derived value; it won't cache and will re-execute on every template access.
 - Flex scroll chains: every flex column ancestor needs `min-h-0` for `overflow-y-auto` to work.
 
 ## UI Theme
@@ -121,10 +126,10 @@ npx sharp-cli -i src/assets/icon.svg -o src/public/icon/16.png -- resize 16 16
 
 ### Unit Tests (Vitest)
 
-Tests use **Vitest** with a Chrome API mock (`tests/setup.ts`). 60 tests across 3 files:
-- `tests/types.test.ts` — `uuid()`, `formatSessionName()`, constants
-- `tests/storage.test.ts` — Full CRUD: sessions, settings, recordings, window map, incognito cache, limit enforcement
-- `tests/tabs.test.ts` — `isRestorable()`, `toSavedTab()`, capture, snapshot, restore logic
+Tests use **Vitest** with a Chrome API mock (`tests/setup.ts`). 81 tests across 3 files:
+- `tests/types.test.ts`: `uuid()`, `formatSessionName()`, constants, `DEFAULT_SETTINGS` shape (7 fields).
+- `tests/storage.test.ts`: sessions CRUD, settings, recordings, window map, incognito cache, pending-close buffer, pinning (sort + enforce), import/export (valid/invalid payloads, collisions, limit enforcement), limit enforcement.
+- `tests/tabs.test.ts`: `isRestorable()`, `toSavedTab()`, capture, snapshot, restore logic.
 
 Coverage: storage.ts 100%, tabs.ts ~70% (uncovered lines are Chrome group recreation internals).
 
