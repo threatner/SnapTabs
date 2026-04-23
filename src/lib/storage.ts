@@ -7,7 +7,14 @@ export const KEYS = {
   recording: 'snaptabs_live_recording',
   windowMap: 'snaptabs_window_map',
   incognitoCache: 'snaptabs_incognito_tab_cache',
+  pendingClose: 'snaptabs_pending_close',
 } as const;
+
+export interface PendingClose {
+  tabs: SavedTab[];
+  windowCount: number;
+  updatedAt: number;
+}
 
 // ── Sessions ──
 
@@ -150,6 +157,23 @@ export async function getIncognitoCache(): Promise<Record<string, SavedTab[]>> {
 
 export async function saveIncognitoCache(cache: Record<string, SavedTab[]>): Promise<void> {
   await chrome.storage.session.set({ [KEYS.incognitoCache]: cache });
+}
+
+// ── Pending Close Buffer ──
+// Accumulates tabs from windows closed in rapid succession so that a Cmd+Q
+// across multiple windows produces a single combined session.
+
+export async function getPendingClose(): Promise<PendingClose> {
+  const result = await chrome.storage.session.get(KEYS.pendingClose);
+  return (result[KEYS.pendingClose] as PendingClose | undefined) ?? { tabs: [], windowCount: 0, updatedAt: 0 };
+}
+
+export async function savePendingClose(data: PendingClose): Promise<void> {
+  await chrome.storage.session.set({ [KEYS.pendingClose]: data });
+}
+
+export async function clearPendingClose(): Promise<void> {
+  await chrome.storage.session.remove(KEYS.pendingClose);
 }
 
 // ── Import / Export ──

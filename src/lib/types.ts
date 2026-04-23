@@ -29,6 +29,7 @@ export interface Session {
 
 export interface SnapTabsSettings {
   autoSnapshotOnClose: boolean;
+  autoSnapshotOnBrowserClose: boolean;
   autoDeleteAfterRestore: boolean;
   maxSessions: number;
   showIncognitoWarning: boolean;
@@ -38,6 +39,7 @@ export interface SnapTabsSettings {
 
 export const DEFAULT_SETTINGS: SnapTabsSettings = {
   autoSnapshotOnClose: false,
+  autoSnapshotOnBrowserClose: true,
   autoDeleteAfterRestore: false,
   maxSessions: 50,
   showIncognitoWarning: true,
