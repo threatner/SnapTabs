@@ -14,7 +14,14 @@ export const KEYS = {
 export async function getSessions(): Promise<Session[]> {
   const result = await chrome.storage.local.get(KEYS.sessions);
   const sessions: Session[] = result[KEYS.sessions] ?? [];
-  return sessions.sort((a, b) => b.timestamp - a.timestamp);
+  return sessions.sort(compareSessions);
+}
+
+function compareSessions(a: Session, b: Session): number {
+  const pa = a.pinned ? 1 : 0;
+  const pb = b.pinned ? 1 : 0;
+  if (pa !== pb) return pb - pa;
+  return b.timestamp - a.timestamp;
 }
 
 export async function saveSession(session: Session): Promise<void> {
@@ -33,6 +40,15 @@ export async function renameSession(id: string, name: string): Promise<void> {
     session.name = name;
     await chrome.storage.local.set({ [KEYS.sessions]: sessions });
   }
+}
+
+export async function togglePin(id: string): Promise<boolean> {
+  const sessions = await getSessions();
+  const session = sessions.find((s) => s.id === id);
+  if (!session) return false;
+  session.pinned = !session.pinned;
+  await chrome.storage.local.set({ [KEYS.sessions]: sessions });
+  return session.pinned;
 }
 
 export async function deleteSession(id: string): Promise<void> {
@@ -241,8 +257,10 @@ export async function getStorageUsage(): Promise<{ used: number; total: number }
 function enforceLimit(sessions: Session[], max: number): void {
   sessions.sort((a, b) => a.timestamp - b.timestamp);
   while (sessions.length > max) {
-    const autoIdx = sessions.findIndex((s) => s.isAutoSave);
-    sessions.splice(autoIdx !== -1 ? autoIdx : 0, 1);
+    let idx = sessions.findIndex((s) => s.isAutoSave && !s.pinned);
+    if (idx === -1) idx = sessions.findIndex((s) => !s.pinned);
+    if (idx === -1) break;
+    sessions.splice(idx, 1);
   }
-  sessions.sort((a, b) => b.timestamp - a.timestamp);
+  sessions.sort(compareSessions);
 }

@@ -24,6 +24,7 @@ export interface Session {
   windowCount: number;
   hasIncognitoTabs: boolean;
   isAutoSave: boolean;
+  pinned?: boolean;
 }
 
 export interface SnapTabsSettings {

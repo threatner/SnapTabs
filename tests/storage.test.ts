@@ -5,6 +5,7 @@ import {
   getSessions,
   saveSession,
   renameSession,
+  togglePin,
   deleteSession,
   deleteAllSessions,
   getSettings,
@@ -269,6 +270,68 @@ describe('Incognito Cache', () => {
     expect(cache['42']).toHaveLength(1);
     expect(cache['42'][0].isIncognito).toBe(true);
   });
+});
+
+describe('Pinning', () => {
+  beforeEach(() => resetChromeStorage());
+
+  it('togglePin sets and clears pinned flag', async () => {
+    await saveSession(makeSession({ id: 'a' }));
+    const pinned = await togglePin('a');
+    expect(pinned).toBe(true);
+    const sessions1 = await getSessions();
+    expect(sessions1[0].pinned).toBe(true);
+    const unpinned = await togglePin('a');
+    expect(unpinned).toBe(false);
+    const sessions2 = await getSessions();
+    expect(sessions2[0].pinned).toBe(false);
+  });
+
+  it('togglePin returns false for missing session', async () => {
+    const result = await togglePin('nope');
+    expect(result).toBe(false);
+  });
+
+  it('pinned sessions sort before unpinned regardless of timestamp', async () => {
+    await saveSession(makeSession({ id: 'old-pinned', timestamp: 1000 }));
+    await saveSession(makeSession({ id: 'new-unpinned', timestamp: 5000 }));
+    await togglePin('old-pinned');
+    const sessions = await getSessions();
+    expect(sessions[0].id).toBe('old-pinned');
+    expect(sessions[1].id).toBe('new-unpinned');
+  });
+
+  it('pinned sessions sort by timestamp among themselves', async () => {
+    await saveSession(makeSession({ id: 'p1', timestamp: 1000 }));
+    await saveSession(makeSession({ id: 'p2', timestamp: 2000 }));
+    await togglePin('p1');
+    await togglePin('p2');
+    const sessions = await getSessions();
+    expect(sessions[0].id).toBe('p2');
+    expect(sessions[1].id).toBe('p1');
+  });
+
+  it('enforceLimit never prunes pinned sessions', async () => {
+    await updateSettings({ maxSessions: 2 });
+    await saveSession(makeSession({ id: 'pin', timestamp: 1000, isAutoSave: true }));
+    await togglePin('pin');
+    await saveSession(makeSession({ id: 'b', timestamp: 2000 }));
+    await saveSession(makeSession({ id: 'c', timestamp: 3000 }));
+    const sessions = await getSessions();
+    expect(sessions.find((s) => s.id === 'pin')).toBeDefined();
+    expect(sessions).toHaveLength(2);
+  });
+
+  it('enforceLimit prefers pruning auto-saves before manual saves', async () => {
+    await updateSettings({ maxSessions: 2 });
+    await saveSession(makeSession({ id: 'manual', timestamp: 1000, isAutoSave: false }));
+    await saveSession(makeSession({ id: 'auto', timestamp: 2000, isAutoSave: true }));
+    await saveSession(makeSession({ id: 'new', timestamp: 3000 }));
+    const sessions = await getSessions();
+    expect(sessions.find((s) => s.id === 'auto')).toBeUndefined();
+    expect(sessions.find((s) => s.id === 'manual')).toBeDefined();
+  });
+
 });
 
 describe('Import / Export', () => {

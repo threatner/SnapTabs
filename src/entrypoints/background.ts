@@ -9,6 +9,7 @@ import {
   updateSettings,
   deleteSession,
   saveSession,
+  togglePin,
   getRecording,
   startRecording,
   addTabToRecording,
@@ -210,6 +211,10 @@ export default defineBackground(() => {
         await deleteSession(msg.sessionId as string);
         await updateBadge();
         return { success: true };
+      }
+      case 'togglePin': {
+        const pinned = await togglePin(msg.sessionId as string);
+        return { pinned };
       }
       case 'getSessions': return getSessions();
       case 'getStats': return getTabStats();
