@@ -14,6 +14,7 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 | | |
 |---|---|
+| Latest version | 1.3.1 |
 | Browser | Chrome 93+ |
 | Manifest | V3 |
 | Storage | Local only. No cloud sync |
@@ -22,6 +23,8 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 | Price | Free |
 | License | MIT |
 | Size quota | 10 MB (configurable max-sessions 1 to 500) |
+
+> The Chrome Web Store badge above updates automatically after each published release. Until a new version passes CWS review, the badge may lag behind this repo's source version.
 
 ## Features
 
