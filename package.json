@@ -1,6 +1,6 @@
 {
   "name": "snaptabs",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Chrome extension to snapshot and restore browser tabs — tab groups, incognito, session manager, live recording.",
   "private": true,
   "type": "module",

@@ -7,6 +7,7 @@ export default defineConfig({
     name: 'SnapTabs — Save & Restore Browser Tabs',
     description: 'Save, restore & manage browser tabs — tab groups, incognito, session manager, live recording.',
     permissions: ['tabs', 'tabGroups', 'storage', 'contextMenus'],
+    omnibox: { keyword: 'st' },
     incognito: 'spanning',
     minimum_chrome_version: '93',
     icons: {
