@@ -9,9 +9,10 @@
     onRestore: (session: Session) => void;
     onDelete: (session: Session) => void;
     onRename: (session: Session, newName: string) => void;
+    onTogglePin: (session: Session) => void;
   }
 
-  let { session, onBack, onRestore, onDelete, onRename }: Props = $props();
+  let { session, onBack, onRestore, onDelete, onRename, onTogglePin }: Props = $props();
 
   let confirmDelete = $state(false);
   let renaming = $state(false);
@@ -133,6 +134,12 @@
         <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
       </svg>
       Restore
+    </button>
+    <button class="pin-btn" class:pin-active={session.pinned} onclick={() => onTogglePin(session)} aria-label={session.pinned ? 'Unpin' : 'Pin'} title={session.pinned ? 'Unpin' : 'Pin to top'}>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={session.pinned ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 17v5"/>
+        <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
+      </svg>
     </button>
     <button class="rename-btn" onclick={startRename} aria-label="Rename">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -289,6 +296,25 @@
     flex-shrink: 0;
   }
   .rename-btn:hover { background: var(--accent); color: var(--fg); }
+  .pin-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    color: var(--fg-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+    flex-shrink: 0;
+  }
+  .pin-btn:hover { background: var(--accent); color: var(--fg); }
+  .pin-active {
+    color: var(--primary) !important;
+    background: oklch(0.65 0.19 255 / 0.12);
+  }
   .del-btn {
     width: 28px;
     height: 28px;

@@ -111,6 +111,19 @@
     }
   }
 
+  async function handleTogglePin(session: Session) {
+    try {
+      const result = await chrome.runtime.sendMessage({ action: 'togglePin', sessionId: session.id }) as { pinned: boolean };
+      await refresh();
+      if (selectedSession?.id === session.id) {
+        selectedSession = { ...selectedSession, pinned: result.pinned };
+      }
+      toast(result.pinned ? 'Session pinned' : 'Session unpinned');
+    } catch {
+      toast('Failed to pin', 'error');
+    }
+  }
+
   async function handleRename(session: Session, newName: string) {
     try {
       await renameSession(session.id, newName);
@@ -271,6 +284,7 @@
       onRestore={handleRestore}
       onDelete={handleDelete}
       onRename={handleRename}
+      onTogglePin={handleTogglePin}
     />
   {:else}
     <Header
@@ -300,6 +314,7 @@
       onRestore={handleRestore}
       onDelete={handleDelete}
       onRename={handleRename}
+      onTogglePin={handleTogglePin}
       onSearchChange={(q) => searchQuery = q}
     />
   {/if}

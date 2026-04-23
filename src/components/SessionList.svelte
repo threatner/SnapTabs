@@ -9,10 +9,11 @@
     onRestore: (session: Session) => void;
     onDelete: (session: Session) => void;
     onRename: (session: Session, newName: string) => void;
+    onTogglePin: (session: Session) => void;
     onSearchChange: (query: string) => void;
   }
 
-  let { sessions, searchQuery, onSessionClick, onRestore, onDelete, onRename, onSearchChange }: Props = $props();
+  let { sessions, searchQuery, onSessionClick, onRestore, onDelete, onRename, onTogglePin, onSearchChange }: Props = $props();
 </script>
 
 <div class="list-area">
@@ -78,6 +79,7 @@
           {onRestore}
           {onDelete}
           {onRename}
+          {onTogglePin}
         />
       {/each}
     </div>
