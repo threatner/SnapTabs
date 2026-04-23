@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1400" y2="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="iconGrad" x1="0" y1="0" x2="280" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="260" cy="280" r="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="1200" cy="120" r="380" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1400" height="560" fill="url(#bg)"/>
+  <rect width="1400" height="560" fill="url(#glow)"/>
+  <rect width="1400" height="560" fill="url(#glow2)"/>
+
+  <!-- Icon tile -->
+  <g transform="translate(120, 140)">
+    <rect width="280" height="280" rx="60" fill="url(#iconGrad)"/>
+    <g transform="translate(52, 52) scale(7.33)" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M4 7V4h16v3"/>
+      <path d="M9 20h6"/>
+      <path d="M12 4v16"/>
+      <rect x="2" y="7" width="20" height="7" rx="1"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="460" y="248" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="104" font-weight="700" fill="#ffffff" letter-spacing="-3">SnapTabs</text>
+
+  <!-- Tagline -->
+  <text x="464" y="310" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" font-weight="500" fill="#cbd5e1">Save every tab with one click. Restore anytime.</text>
+
+  <!-- Feature chips -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="500" fill="#e2e8f0">
+    <g>
+      <rect x="464" y="360" width="170" height="40" rx="20" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <text x="549" y="387" text-anchor="middle">Tab groups</text>
+    </g>
+    <g>
+      <rect x="646" y="360" width="148" height="40" rx="20" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <text x="720" y="387" text-anchor="middle">Incognito</text>
+    </g>
+    <g>
+      <rect x="806" y="360" width="244" height="40" rx="20" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <text x="928" y="387" text-anchor="middle">Crash-safe auto-save</text>
+    </g>
+    <g>
+      <rect x="464" y="412" width="198" height="40" rx="20" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <text x="563" y="439" text-anchor="middle">Live recording</text>
+    </g>
+    <g>
+      <rect x="674" y="412" width="206" height="40" rx="20" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <text x="777" y="439" text-anchor="middle">Omnibox search</text>
+    </g>
+    <g>
+      <rect x="892" y="412" width="180" height="40" rx="20" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+      <text x="982" y="439" text-anchor="middle">100% local</text>
+    </g>
+  </g>
+</svg>

@@ -1,6 +1,42 @@
 # Chrome Web Store listing
 
-Source of truth for the SnapTabs listing copy. Update this file first, then paste into the Chrome Web Store dashboard.
+Source of truth for the SnapTabs listing copy **and** promotional assets. Update this file first, then upload to the Chrome Web Store Developer Dashboard.
+
+---
+
+## Required assets
+
+The Chrome Web Store uses different images in different surfaces. Missing any of these causes the listing to render incompletely (for example, name-only in search autocomplete with no icon).
+
+| Asset | Size | Source (in repo) | Dashboard field | Used by |
+|---|---|---|---|---|
+| Extension icon | 128×128 | `src/public/icon/128.png` | Manifest icon (auto) | Detail page, install button |
+| Small promo tile | **440×280** | `screenshots/store/promo-small-440x280.png` | "Small promo tile" | **Search autocomplete**, category lists, related items |
+| Marquee promo tile | 1400×560 | `screenshots/store/promo-marquee-1400x560.png` | "Marquee promo tile" | Featured placement, homepage carousel |
+| Screenshots (up to 5) | 1280×800 | `screenshots/store/1-main-view.png`, etc. | "Screenshots" | Detail page gallery |
+
+**If your listing shows the name with no icon in search suggestions, the small promo tile is most likely missing.** Upload `promo-small-440x280.png` in the dashboard under *Store listing → Graphic assets → Small promo tile*.
+
+### Regenerating promo tiles
+
+The SVG sources are in `src/assets/promo-small.svg` and `src/assets/promo-marquee.svg`. Edit them, then run:
+
+```bash
+npm run promo
+```
+
+This rasterizes both PNGs into `screenshots/store/`.
+
+### Upload steps
+
+1. Go to https://chrome.google.com/webstore/devconsole
+2. Open the SnapTabs item → **Store listing** tab
+3. Scroll to **Graphic assets**
+4. Upload the small promo tile (440×280) and marquee promo tile (1400×560)
+5. Replace screenshots if the UI has changed
+6. Click **Save draft** then **Submit for review**
+
+Reviews typically take 1-3 business days.
 
 ---
 
