@@ -4,6 +4,23 @@ All notable changes to SnapTabs are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-05-25
+
+### Added
+
+- **Duplicate snapshot warning.** Before saving a manual snapshot, SnapTabs compares the tabs about to be captured against your most recent session. If the URL set matches, a confirmation modal asks before saving another copy. The check is order-, fragment-, and trailing-slash-insensitive, and ignores non-restorable URLs (e.g. `chrome://newtab`) on both sides. New `warnOnDuplicateSnapshot` setting in **Settings > Snapshot** (default ON). Only fires from the popup; context-menu and keyboard-shortcut snapshots still save immediately.
+- **Excluded domains.** New list in **Settings > Snapshot > Excluded domains** for sites you never want captured (banking, email, internal tools). Tabs from these domains are skipped in manual snapshots, live recordings, and auto-saves on window close. Exact host or subdomain match — adding `github.com` also excludes `api.github.com`. Input accepts URLs and normalizes them (`https://www.GitHub.com/path` becomes `github.com`).
+
+### Changed
+
+- Settings screen reorganized with a new **Snapshot** section at the top. The excluded-domains UI is a unified card with a count pill, empty state, per-row globe icon with hover-revealed remove button, and an inline input bar whose `↵` hint becomes an **Add** button as you type.
+
+### Internal
+
+- Added `urlSetSignature()` and `findDuplicateSession()` helpers in `src/lib/tabs.ts`; `createSnapshot()` filters excluded domains and recomputes `hasIncognitoTabs` after filtering.
+- Added `normalizeDomain()`, `getHostname()`, `urlMatchesDomain()`, `isExcludedUrl()` helpers in `src/lib/types.ts`. Settings backward-compatible: legacy stored settings without the new fields fall back to defaults.
+- Test coverage: 131 unit tests (30 new), 73 e2e tests (19 new across `dedupe.spec.ts` and `excluded-domains.spec.ts`). Fixed two pre-existing stale-copy assertions in `popup-load.spec.ts` and `session-actions.spec.ts`.
+
 ## [1.3.1] - 2026-04-24
 
 ### Changed

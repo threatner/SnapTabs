@@ -1,9 +1,39 @@
 import type { SavedTab, SavedTabGroup, Session } from './types';
-import { BLOCKED_URL_PREFIXES, uuid, formatSessionName } from './types';
-import { saveSession } from './storage';
+import { BLOCKED_URL_PREFIXES, uuid, formatSessionName, isExcludedUrl } from './types';
+import { saveSession, getSettings } from './storage';
 
 export function isRestorable(url: string): boolean {
   return !BLOCKED_URL_PREFIXES.some((p) => url.startsWith(p));
+}
+
+// ── Duplicate detection ──
+
+// Strip trailing slash + fragment so trivial differences don't break the match.
+function normalizeUrlForSig(url: string): string {
+  let u = url.split('#')[0];
+  if (u.endsWith('/')) u = u.slice(0, -1);
+  return u;
+}
+
+export function urlSetSignature(urls: string[]): string {
+  return urls
+    .map(normalizeUrlForSig)
+    .filter((u) => u.length > 0)
+    .sort()
+    .join('|');
+}
+
+export function findDuplicateSession(urls: string[], sessions: Session[]): Session | null {
+  // Filter both sides identically: saved sessions include non-restorable URLs
+  // (chrome://newtab/, etc.), so we ignore those when comparing.
+  const sig = urlSetSignature(urls.filter(isRestorable));
+  if (!sig) return null;
+  // Only check the most recent session — that's the accidental-double-click case.
+  const sorted = [...sessions].sort((a, b) => b.timestamp - a.timestamp);
+  const recent = sorted[0];
+  if (!recent) return null;
+  const recentSig = urlSetSignature(recent.tabs.map((t) => t.url).filter(isRestorable));
+  return recentSig === sig ? recent : null;
 }
 
 export function toSavedTab(t: chrome.tabs.Tab): SavedTab {
@@ -90,6 +120,12 @@ export async function createSnapshot(name?: string, isAutoSave = false, windowId
     groups = result.groups;
     windowCount = result.windowCount;
     hasIncognitoTabs = result.hasIncognitoTabs;
+  }
+
+  const { excludedDomains } = await getSettings();
+  if (excludedDomains.length > 0) {
+    tabs = tabs.filter((t) => !isExcludedUrl(t.url, excludedDomains));
+    hasIncognitoTabs = tabs.some((t) => t.isIncognito);
   }
 
   const session: Session = {

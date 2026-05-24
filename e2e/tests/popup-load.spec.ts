@@ -33,6 +33,6 @@ test.describe('Popup Loading', () => {
   });
 
   test('empty state shown when no sessions exist', async ({ popupPage }) => {
-    await expect(popupPage.locator('.empty-title')).toHaveText('No sessions saved');
+    await expect(popupPage.locator('.empty-title')).toHaveText('Ready for your first snapshot');
   });
 });

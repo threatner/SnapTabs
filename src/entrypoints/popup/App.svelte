@@ -2,8 +2,9 @@
   import { onMount } from 'svelte';
   import type { Session, SnapTabsSettings, LiveRecording } from '@/lib/types';
   import { DEFAULT_SETTINGS } from '@/lib/types';
+  import { isExcludedUrl } from '@/lib/types';
   import { getSessions, renameSession, deleteAllSessions, getSettings, updateSettings, getStorageUsage, getRecording, buildExportPayload, importSessions } from '@/lib/storage';
-  import { getTabStats } from '@/lib/tabs';
+  import { getTabStats, findDuplicateSession } from '@/lib/tabs';
   import Header from '@/components/Header.svelte';
   import SnapshotBar from '@/components/SnapshotBar.svelte';
   import RecordingBar from '@/components/RecordingBar.svelte';
@@ -30,6 +31,10 @@
   let toastMessage = $state('');
   let toastType: 'success' | 'error' | 'warning' = $state('success');
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
+
+  let dupModalOpen = $state(false);
+  let dupSessionName = $state('');
+  let pendingSnapshot: { windowId: number | undefined } | null = $state(null);
 
   let filtered = $derived.by(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -80,12 +85,60 @@
         const w = await chrome.windows.getCurrent();
         windowId = w.id;
       }
-      await chrome.runtime.sendMessage({ action: 'snapshot', name: name || undefined, windowId });
-      await refresh();
-      toast('Snapshot saved!');
+
+      if (settings.warnOnDuplicateSnapshot) {
+        const dup = await checkDuplicateSnapshot(windowId);
+        if (dup) {
+          dupSessionName = dup.name;
+          pendingSnapshot = { windowId };
+          dupModalOpen = true;
+          return;
+        }
+      }
+
+      await runSnapshot(windowId, name);
     } catch {
       toast('Failed to take snapshot', 'error');
     }
+  }
+
+  async function checkDuplicateSnapshot(windowId: number | undefined): Promise<Session | null> {
+    try {
+      const query: chrome.tabs.QueryInfo = windowId !== undefined
+        ? { windowId }
+        : { windowType: 'normal' };
+      const tabs = await chrome.tabs.query(query);
+      const urls = tabs
+        .map((t) => t.url ?? t.pendingUrl ?? '')
+        .filter((u) => u && !isExcludedUrl(u, settings.excludedDomains));
+      if (urls.length === 0) return null;
+      return findDuplicateSession(urls, sessions);
+    } catch {
+      return null;
+    }
+  }
+
+  async function runSnapshot(windowId: number | undefined, name: string) {
+    await chrome.runtime.sendMessage({ action: 'snapshot', name: name || undefined, windowId });
+    await refresh();
+    toast('Snapshot saved!');
+  }
+
+  async function confirmDuplicateSnapshot() {
+    const pending = pendingSnapshot;
+    dupModalOpen = false;
+    pendingSnapshot = null;
+    if (!pending) return;
+    try {
+      await runSnapshot(pending.windowId, '');
+    } catch {
+      toast('Failed to take snapshot', 'error');
+    }
+  }
+
+  function cancelDuplicateSnapshot() {
+    dupModalOpen = false;
+    pendingSnapshot = null;
   }
 
   async function handleRestore(session: Session) {
@@ -253,6 +306,22 @@
 
 <Toast visible={toastVisible} message={toastMessage} type={toastType} />
 
+{#if dupModalOpen}
+  <div class="modal-backdrop" role="presentation" onclick={cancelDuplicateSnapshot} onkeydown={() => {}}>
+    <div class="modal" role="dialog" tabindex="-1" aria-labelledby="dup-title" onclick={(e) => e.stopPropagation()} onkeydown={() => {}}>
+      <h3 id="dup-title" class="modal-title">Looks like a duplicate</h3>
+      <p class="modal-body">
+        These tabs match your last snapshot
+        <span class="modal-emph">"{dupSessionName}"</span>. Save another copy?
+      </p>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn--ghost" onclick={cancelDuplicateSnapshot}>Cancel</button>
+        <button class="modal-btn modal-btn--primary" onclick={confirmDuplicateSnapshot}>Save anyway</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <main class="popup">
   {#if loading}
     <div class="loader">
@@ -357,4 +426,76 @@
     font-weight: 500;
     color: var(--fg-muted);
   }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: oklch(0 0 0 / 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: backdrop-in 0.12s ease;
+  }
+  @keyframes backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .modal {
+    width: 320px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    animation: modal-in 0.15s ease;
+  }
+  @keyframes modal-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .modal-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--fg);
+    margin-bottom: 6px;
+  }
+  .modal-body {
+    font-size: 12px;
+    color: var(--fg-muted);
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+  .modal-emph {
+    color: var(--fg);
+    font-weight: 500;
+  }
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .modal-btn {
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid var(--border);
+  }
+  .modal-btn--ghost {
+    background: none;
+    color: var(--fg-muted);
+  }
+  .modal-btn--ghost:hover {
+    background: var(--accent);
+    color: var(--fg);
+  }
+  .modal-btn--primary {
+    background: var(--primary);
+    color: var(--primary-fg);
+    border-color: var(--primary);
+  }
+  .modal-btn--primary:hover { filter: brightness(1.1); }
 </style>

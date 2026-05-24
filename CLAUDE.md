@@ -32,8 +32,10 @@ SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser
 - **Import / Export**: download all sessions to a JSON file (`snaptabs-export-YYYY-MM-DD.json`) or load from a previous export. Import handles ID collisions by renaming on conflict and skipping exact re-imports (same id + timestamp).
 - **Omnibox search**: `st <query>` in Chrome's address bar fuzzy-matches tab titles and URLs across every saved session. Selecting a suggestion opens the tab (Alt+Enter for new tab); raw text with no selection falls back to Google search.
 - **Search** (popup): real-time filter across session names, tab titles, and URLs.
+- **Duplicate snapshot warning**: before saving a manual snapshot from the popup, compares the candidate tab set against the most recent session via a URL-set signature (order-, fragment-, trailing-slash-insensitive; `isRestorable`-filtered on both sides). If matched, shows a confirm modal with "Cancel" / "Save anyway". Context-menu and keyboard-shortcut snapshots bypass the check. Controlled by `warnOnDuplicateSnapshot` (default true).
+- **Excluded domains**: per-domain skip list applied at capture time (manual snapshot, live recording, auto-save on close). Exact host or subdomain match — `github.com` matches `api.github.com`. Input is normalized (strips protocol, `www.`, path, query, casing). Lives in `excludedDomains: string[]` setting.
 - **Storage management**: 10 MB quota with automatic pruning (oldest auto-saves removed first, pinned sessions never pruned). Configurable session limit (1-500). Storage usage bar in settings.
-- **Settings**: 7 options: auto-snapshot on browser close (default false), auto-save on incognito close, auto-delete after restore, restore private to private, restore in new window, show incognito warning, max sessions limit.
+- **Settings**: 9 options: warn on duplicate snapshot (default true), excluded domains (default []), auto-snapshot on browser close (default false), auto-save on incognito close, auto-delete after restore, restore private to private, restore in new window, show incognito warning, max sessions limit.
 
 ### Permissions (minimal set)
 
@@ -69,11 +71,11 @@ Popup (Svelte UI)  ──sendMessage──►  Background (Service Worker)
 
 ### Key Modules
 
-- `src/lib/types.ts`: all interfaces (`Session` including optional `pinned`, `SavedTab`, `SavedTabGroup`, `SnapTabsSettings`, `LiveRecording`), shared constants (`DEFAULT_SETTINGS`, `BLOCKED_URL_PREFIXES`, `TAB_GROUP_COLORS`), helpers (`uuid()`, `formatSessionName()`).
-- `src/lib/storage.ts`: Chrome storage CRUD. Exports `KEYS` (`sessions`, `settings`, `recording`, `windowMap`, `incognitoCache`, `pendingClose`). Session helpers: `getSessions` (pinned-first sort via `compareSessions`), `saveSession`, `renameSession`, `togglePin`, `deleteSession`, `deleteAllSessions`. Settings: `getSettings`, `updateSettings`. Recording: `getRecording`, `startRecording`, `addTabToRecording`, `stopRecording`, `cancelRecording`. Caches: `getWindowMap`, `saveWindowMap`, `getIncognitoCache`, `saveIncognitoCache`. Browser-close buffer: `getPendingClose`, `savePendingClose`, `clearPendingClose`. Import/Export: `buildExportPayload`, `importSessions`, `EXPORT_VERSION`. Utility: `getStorageUsage`, `enforceLimit` (auto-save-first, never prunes pinned).
-- `src/lib/tabs.ts`: tab capture/restore logic. Exports `toSavedTab()` (shared mapper from `chrome.tabs.Tab` to `SavedTab`), `isRestorable()`, `captureWindow()`, `captureAllWindows()`, `createSnapshot()`, `restoreSession()`, `getTabStats()`.
-- `src/entrypoints/background.ts`: service worker. Message router, badge management, proactive per-window tab cache (`tabCache` Map, unified for incognito and normal windows), window map, window lifecycle listeners, browser-close logic with pending-close buffer, live recording capture, context menu, keyboard shortcut (`Alt+Shift+S`), and omnibox handlers.
-- `src/entrypoints/popup/App.svelte`: root component managing views (`'main'` | `'detail'` | `'settings'`), global state, and handler functions including `handleTogglePin`, `handleExport`, `handleImport`.
+- `src/lib/types.ts`: all interfaces (`Session` including optional `pinned`, `SavedTab`, `SavedTabGroup`, `SnapTabsSettings`, `LiveRecording`), shared constants (`DEFAULT_SETTINGS`, `BLOCKED_URL_PREFIXES`, `TAB_GROUP_COLORS`), helpers (`uuid()`, `formatSessionName()`, plus domain helpers `normalizeDomain()`, `getHostname()`, `urlMatchesDomain()`, `isExcludedUrl()` used by the excluded-domains feature).
+- `src/lib/storage.ts`: Chrome storage CRUD. Exports `KEYS` (`sessions`, `settings`, `recording`, `windowMap`, `incognitoCache`, `pendingClose`). Session helpers: `getSessions` (pinned-first sort via `compareSessions`), `saveSession`, `renameSession`, `togglePin`, `deleteSession`, `deleteAllSessions`. Settings: `getSettings`, `updateSettings` (backward-compatible — legacy stored settings missing new fields fall back to defaults via `{ ...DEFAULT_SETTINGS, ...stored }`). Recording: `getRecording`, `startRecording`, `addTabToRecording`, `stopRecording`, `cancelRecording`. Caches: `getWindowMap`, `saveWindowMap`, `getIncognitoCache`, `saveIncognitoCache`. Browser-close buffer: `getPendingClose`, `savePendingClose`, `clearPendingClose`. Import/Export: `buildExportPayload`, `importSessions`, `EXPORT_VERSION`. Utility: `getStorageUsage`, `enforceLimit` (auto-save-first, never prunes pinned).
+- `src/lib/tabs.ts`: tab capture/restore logic. Exports `toSavedTab()` (shared mapper from `chrome.tabs.Tab` to `SavedTab`), `isRestorable()`, `captureWindow()`, `captureAllWindows()`, `createSnapshot()` (reads `excludedDomains` from settings and filters captured tabs before saving; recomputes `hasIncognitoTabs` post-filter), `restoreSession()`, `getTabStats()`, plus dedup helpers `urlSetSignature()` and `findDuplicateSession()` (filters non-restorable URLs on both sides; only compares against most-recent session).
+- `src/entrypoints/background.ts`: service worker. Message router, badge management, proactive per-window tab cache (`tabCache` Map, unified for incognito and normal windows), window map, window lifecycle listeners, browser-close logic with pending-close buffer (also filters `excludedDomains` from cached tabs before saving), live recording capture (filters `excludedDomains` per tab update), context menu, keyboard shortcut (`Alt+Shift+S`), and omnibox handlers.
+- `src/entrypoints/popup/App.svelte`: root component managing views (`'main'` | `'detail'` | `'settings'`), global state, and handler functions including `handleTogglePin`, `handleExport`, `handleImport`, plus duplicate-snapshot pre-check (`checkDuplicateSnapshot`) and confirm modal (`dupModalOpen` / `confirmDuplicateSnapshot` / `cancelDuplicateSnapshot`).
 
 ### Popup Views
 
@@ -126,34 +128,36 @@ npx sharp-cli -i src/assets/icon.svg -o src/public/icon/16.png -- resize 16 16
 
 ### Unit Tests (Vitest)
 
-Tests use **Vitest** with a Chrome API mock (`tests/setup.ts`). 81 tests across 3 files:
-- `tests/types.test.ts`: `uuid()`, `formatSessionName()`, constants, `DEFAULT_SETTINGS` shape (7 fields).
-- `tests/storage.test.ts`: sessions CRUD, settings, recordings, window map, incognito cache, pending-close buffer, pinning (sort + enforce), import/export (valid/invalid payloads, collisions, limit enforcement), limit enforcement.
-- `tests/tabs.test.ts`: `isRestorable()`, `toSavedTab()`, capture, snapshot, restore logic.
+Tests use **Vitest** with a Chrome API mock (`tests/setup.ts`). 131 tests across 3 files:
+- `tests/types.test.ts`: `uuid()`, `formatSessionName()`, constants, `DEFAULT_SETTINGS` shape (9 fields), domain helpers (`normalizeDomain`, `getHostname`, `urlMatchesDomain`, `isExcludedUrl`) with subdomain/substring/case edge cases.
+- `tests/storage.test.ts`: sessions CRUD, settings (including `warnOnDuplicateSnapshot`, `excludedDomains`, and backward compat with legacy stored settings), recordings, window map, incognito cache, pending-close buffer, pinning (sort + enforce), import/export (valid/invalid payloads, collisions, limit enforcement).
+- `tests/tabs.test.ts`: `isRestorable()`, `toSavedTab()`, capture, snapshot (including excluded-domain filtering, subdomain matching, post-filter `hasIncognitoTabs` recompute, empty-after-filter), restore logic, `urlSetSignature()`, `findDuplicateSession()`.
 
 Coverage: storage.ts 100%, tabs.ts ~70% (uncovered lines are Chrome group recreation internals).
 
 ### E2E Tests (Playwright)
 
-End-to-end tests use **Playwright** to launch real Chromium with the extension loaded. 54 tests across 9 files in `e2e/`:
+End-to-end tests use **Playwright** to launch real Chromium with the extension loaded. 73 tests across 11 files in `e2e/`:
 
 ```
 e2e/
-├── playwright.config.ts       # Config: headed Chromium, single worker
+├── playwright.config.ts            # Config: headed Chromium, single worker
 ├── fixtures/
-│   └── extension.ts           # Custom fixture: launches Chrome + extension, provides popupPage
+│   └── extension.ts                # Custom fixture: launches Chrome + extension, provides popupPage
 ├── helpers/
-│   └── storage.ts             # Seed chrome.storage.local via the service worker
+│   └── storage.ts                  # Seed chrome.storage.local via the service worker
 └── tests/
-    ├── popup-load.spec.ts     # Popup rendering, header, controls, empty state
-    ├── snapshot.spec.ts       # Opens real sites, snapshots, verifies capture
-    ├── restore.spec.ts        # Seeds sessions, restores, verifies tabs open
-    ├── recording.spec.ts      # Opens sites during recording, verifies capture & dedup
-    ├── session-list.spec.ts   # Session display, badges, metadata, search
-    ├── session-detail.spec.ts # Detail view, tab groups, collapse/expand
-    ├── session-actions.spec.ts# Context menu, rename, delete, confirmation flows
-    ├── settings.spec.ts       # Toggles, input, storage bar, persistence
-    └── toast.spec.ts          # Toast appearance and auto-dismiss
+    ├── popup-load.spec.ts          # Popup rendering, header, controls, empty state
+    ├── snapshot.spec.ts            # Opens real sites, snapshots, verifies capture
+    ├── restore.spec.ts             # Seeds sessions, restores, verifies tabs open
+    ├── recording.spec.ts           # Opens sites during recording, verifies capture & dedup
+    ├── session-list.spec.ts        # Session display, badges, metadata, search
+    ├── session-detail.spec.ts      # Detail view, tab groups, collapse/expand
+    ├── session-actions.spec.ts     # Context menu, rename, delete, confirmation flows
+    ├── settings.spec.ts            # Toggles, input, storage bar, persistence
+    ├── dedupe.spec.ts              # Duplicate-snapshot modal: trigger, Cancel, Save anyway, backdrop dismiss, bypass when setting off
+    ├── excluded-domains.spec.ts    # Settings UI (empty state, add/remove, normalization, persistence) + snapshot integration (filtering, subdomain match)
+    └── toast.spec.ts               # Toast appearance and auto-dismiss
 ```
 
 E2E tests require a build first (`npm run build`). They run headed (Chrome extensions cannot run headless). The `e2e/` directory is outside `src/` so it is never included in the extension build. `@playwright/test` is a devDependency only.
