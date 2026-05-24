@@ -57,7 +57,7 @@ test.describe('Session Actions', () => {
 
     await expect(popupPage.locator('.toast-text')).toHaveText('Session deleted');
     await expect(popupPage.locator('.card')).toHaveCount(0);
-    await expect(popupPage.locator('.empty-title')).toHaveText('No sessions saved');
+    await expect(popupPage.locator('.empty-title')).toHaveText('Ready for your first snapshot');
   });
 
   test('delete from detail view requires double click', async ({ popupPage }) => {

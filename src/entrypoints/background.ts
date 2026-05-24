@@ -1,6 +1,6 @@
 import { defineBackground } from 'wxt/sandbox';
 import type { Session, SavedTab, SnapTabsSettings } from '../lib/types';
-import { uuid, formatSessionName } from '../lib/types';
+import { uuid, formatSessionName, isExcludedUrl } from '../lib/types';
 import { createSnapshot, restoreSession, getTabStats, toSavedTab, isRestorable } from '../lib/tabs';
 import {
   KEYS,
@@ -108,6 +108,10 @@ export default defineBackground(() => {
     try {
       const settings = await getSettings();
       const remaining = await chrome.windows.getAll();
+      const filtered = settings.excludedDomains.length > 0
+        ? cached.filter((t) => !isExcludedUrl(t.url, settings.excludedDomains))
+        : cached;
+      if (filtered.length === 0) return;
 
       if (wasIncognito) {
         // Incognito window closed while browser still open
@@ -117,7 +121,7 @@ export default defineBackground(() => {
           id: uuid(),
           name: formatSessionName('Auto-save'),
           timestamp: Date.now(),
-          tabs: cached,
+          tabs: filtered,
           tabGroups: [],
           windowCount: 1,
           hasIncognitoTabs: true,
@@ -136,7 +140,7 @@ export default defineBackground(() => {
         if (now - pending.updatedAt > STALE_MS) {
           pending = { tabs: [], windowCount: 0, updatedAt: now };
         }
-        pending.tabs.push(...cached);
+        pending.tabs.push(...filtered);
         pending.windowCount += 1;
         pending.updatedAt = now;
         await savePendingClose(pending);
@@ -185,6 +189,9 @@ export default defineBackground(() => {
     try {
       if (recordingWindowId !== -1 && tab.windowId !== recordingWindowId) return;
       if (tab.id !== undefined && recordedTabIds.has(tab.id)) return;
+
+      const settings = await getSettings();
+      if (isExcludedUrl(tab.url, settings.excludedDomains)) return;
 
       if (tab.id !== undefined) recordedTabIds.add(tab.id);
       await addTabToRecording(toSavedTab(tab));

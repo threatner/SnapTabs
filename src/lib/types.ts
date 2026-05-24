@@ -35,6 +35,8 @@ export interface SnapTabsSettings {
   showIncognitoWarning: boolean;
   restoreIncognitoToIncognito: boolean;
   restoreInNewWindow: boolean;
+  warnOnDuplicateSnapshot: boolean;
+  excludedDomains: string[];
 }
 
 export const DEFAULT_SETTINGS: SnapTabsSettings = {
@@ -45,6 +47,8 @@ export const DEFAULT_SETTINGS: SnapTabsSettings = {
   showIncognitoWarning: true,
   restoreIncognitoToIncognito: true,
   restoreInNewWindow: false,
+  warnOnDuplicateSnapshot: true,
+  excludedDomains: [],
 };
 
 export interface LiveRecording {
@@ -78,6 +82,37 @@ export const BLOCKED_URL_PREFIXES = [
   'edge://',
   'brave://',
 ] as const;
+
+// ── Domain helpers (used by excluded-domains setting) ──
+
+export function getHostname(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+// Normalize user input ("https://www.Foo.com/path" → "foo.com").
+export function normalizeDomain(input: string): string {
+  let s = input.trim().toLowerCase();
+  if (!s) return '';
+  s = s.replace(/^https?:\/\//, '').replace(/^www\./, '');
+  s = s.split('/')[0].split('?')[0].split('#')[0];
+  return s;
+}
+
+// True when `url`'s hostname matches `domain` exactly or as a subdomain.
+export function urlMatchesDomain(url: string, domain: string): boolean {
+  const host = getHostname(url);
+  if (!host || !domain) return false;
+  return host === domain || host.endsWith('.' + domain);
+}
+
+export function isExcludedUrl(url: string, excludedDomains: string[]): boolean {
+  if (excludedDomains.length === 0) return false;
+  return excludedDomains.some((d) => urlMatchesDomain(url, d));
+}
 
 export const TAB_GROUP_COLORS: Record<string, string> = {
   blue: 'oklch(0.6 0.2 250)',

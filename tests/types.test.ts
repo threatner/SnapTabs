@@ -5,6 +5,10 @@ import {
   BLOCKED_URL_PREFIXES,
   DEFAULT_SETTINGS,
   TAB_GROUP_COLORS,
+  normalizeDomain,
+  urlMatchesDomain,
+  isExcludedUrl,
+  getHostname,
 } from '../src/lib/types';
 
 describe('uuid', () => {
@@ -48,10 +52,120 @@ describe('DEFAULT_SETTINGS', () => {
     expect(DEFAULT_SETTINGS.showIncognitoWarning).toBe(true);
     expect(DEFAULT_SETTINGS.restoreIncognitoToIncognito).toBe(true);
     expect(DEFAULT_SETTINGS.restoreInNewWindow).toBe(false);
+    expect(DEFAULT_SETTINGS.warnOnDuplicateSnapshot).toBe(true);
+    expect(DEFAULT_SETTINGS.excludedDomains).toEqual([]);
   });
 
-  it('has all seven settings', () => {
-    expect(Object.keys(DEFAULT_SETTINGS)).toHaveLength(7);
+  it('has all nine settings', () => {
+    expect(Object.keys(DEFAULT_SETTINGS)).toHaveLength(9);
+  });
+});
+
+describe('normalizeDomain', () => {
+  it('strips protocol, www, and path', () => {
+    expect(normalizeDomain('https://www.Example.com/path?x=1')).toBe('example.com');
+    expect(normalizeDomain('http://foo.bar')).toBe('foo.bar');
+    expect(normalizeDomain('  GitHub.com  ')).toBe('github.com');
+  });
+
+  it('returns empty string for blank input', () => {
+    expect(normalizeDomain('')).toBe('');
+    expect(normalizeDomain('   ')).toBe('');
+  });
+
+  it('strips query string and fragment', () => {
+    expect(normalizeDomain('example.com?foo=bar')).toBe('example.com');
+    expect(normalizeDomain('example.com#section')).toBe('example.com');
+    expect(normalizeDomain('example.com/path?q=1#h')).toBe('example.com');
+  });
+
+  it('preserves subdomains', () => {
+    expect(normalizeDomain('mail.google.com')).toBe('mail.google.com');
+    expect(normalizeDomain('https://a.b.c.example.com/')).toBe('a.b.c.example.com');
+  });
+
+  it('preserves port number', () => {
+    expect(normalizeDomain('localhost:3000')).toBe('localhost:3000');
+  });
+
+  it('only strips leading www., not embedded', () => {
+    expect(normalizeDomain('wwwsomething.com')).toBe('wwwsomething.com');
+    expect(normalizeDomain('foo.www.com')).toBe('foo.www.com');
+  });
+});
+
+describe('getHostname', () => {
+  it('extracts lowercase hostname', () => {
+    expect(getHostname('https://API.Example.com/v1')).toBe('api.example.com');
+  });
+
+  it('returns empty string for invalid URL', () => {
+    expect(getHostname('not a url')).toBe('');
+  });
+});
+
+describe('urlMatchesDomain', () => {
+  it('matches exact host', () => {
+    expect(urlMatchesDomain('https://github.com/repo', 'github.com')).toBe(true);
+  });
+
+  it('matches subdomain', () => {
+    expect(urlMatchesDomain('https://api.github.com/x', 'github.com')).toBe(true);
+  });
+
+  it('matches deeply nested subdomain', () => {
+    expect(urlMatchesDomain('https://a.b.c.example.com/x', 'example.com')).toBe(true);
+  });
+
+  it('does not match unrelated domain', () => {
+    expect(urlMatchesDomain('https://notgithub.com', 'github.com')).toBe(false);
+    expect(urlMatchesDomain('https://example.com', 'github.com')).toBe(false);
+  });
+
+  it('does not match when domain is a substring but not subdomain', () => {
+    expect(urlMatchesDomain('https://evilgithub.com', 'github.com')).toBe(false);
+    expect(urlMatchesDomain('https://github.com.evil.com', 'github.com')).toBe(false);
+  });
+
+  it('returns false on invalid url', () => {
+    expect(urlMatchesDomain('garbage', 'github.com')).toBe(false);
+  });
+
+  it('returns false for empty domain', () => {
+    expect(urlMatchesDomain('https://github.com', '')).toBe(false);
+  });
+
+  it('is case-insensitive on hostname', () => {
+    expect(urlMatchesDomain('https://GitHub.COM/repo', 'github.com')).toBe(true);
+  });
+
+  it('matches subdomain with specific subdomain target', () => {
+    expect(urlMatchesDomain('https://inbox.mail.google.com', 'mail.google.com')).toBe(true);
+    expect(urlMatchesDomain('https://drive.google.com', 'mail.google.com')).toBe(false);
+  });
+});
+
+describe('isExcludedUrl', () => {
+  it('matches against any domain in the list', () => {
+    expect(isExcludedUrl('https://mail.google.com/inbox', ['mail.google.com', 'bank.com'])).toBe(true);
+    expect(isExcludedUrl('https://example.com', ['mail.google.com'])).toBe(false);
+  });
+
+  it('returns false for empty list', () => {
+    expect(isExcludedUrl('https://example.com', [])).toBe(false);
+  });
+
+  it('returns false for invalid URL even with non-empty list', () => {
+    expect(isExcludedUrl('not a url', ['example.com'])).toBe(false);
+    expect(isExcludedUrl('', ['example.com'])).toBe(false);
+  });
+
+  it('matches subdomain via parent domain rule', () => {
+    expect(isExcludedUrl('https://api.github.com', ['github.com'])).toBe(true);
+  });
+
+  it('does not false-match similar-looking domains', () => {
+    expect(isExcludedUrl('https://github.com.attacker.com', ['github.com'])).toBe(false);
   });
 });
 

@@ -14,7 +14,7 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 | | |
 |---|---|
-| Latest version | 1.3.1 |
+| Latest version | 1.4.0 |
 | Browser | Chrome 93+ |
 | Manifest | V3 |
 | Storage | Local only. No cloud sync |
@@ -39,6 +39,8 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 ### Added in recent releases
 
+- **Duplicate snapshot warning.** If the tabs you are about to snapshot match your most recent session, SnapTabs asks before saving another copy. Skips trivial differences like trailing slashes and URL fragments. Turn off in Settings if you want every click to save unconditionally.
+- **Excluded domains.** Add domains you never want captured (banking, email, internal tools) in **Settings > Snapshot > Excluded domains**. Tabs from those domains are skipped in snapshots, recordings, and auto-saves. Subdomains match the parent rule.
 - **Auto-snapshot on browser close.** Quit Chrome with Cmd+Q or close the last window and your tabs are waiting for you on the next launch. Multi-window quits are captured as a single combined session.
 - **Session pinning.** Pin the sessions you use often so they stay at the top and survive auto-pruning when you hit the storage limit.
 - **Omnibox search.** Type `st` in the address bar, press space, then type a query to search every tab across every saved session without opening the popup.

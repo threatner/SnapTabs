@@ -163,6 +163,55 @@ describe('Settings', () => {
     expect(settings.maxSessions).toBe(100);
     expect(settings.autoDeleteAfterRestore).toBe(true);
   });
+
+  it('returns default for warnOnDuplicateSnapshot', async () => {
+    const settings = await getSettings();
+    expect(settings.warnOnDuplicateSnapshot).toBe(true);
+  });
+
+  it('returns empty array default for excludedDomains', async () => {
+    const settings = await getSettings();
+    expect(settings.excludedDomains).toEqual([]);
+  });
+
+  it('persists excludedDomains array', async () => {
+    await updateSettings({ excludedDomains: ['mail.google.com', 'bank.com'] });
+    const settings = await getSettings();
+    expect(settings.excludedDomains).toEqual(['mail.google.com', 'bank.com']);
+  });
+
+  it('can clear excludedDomains by setting empty array', async () => {
+    await updateSettings({ excludedDomains: ['a.com'] });
+    await updateSettings({ excludedDomains: [] });
+    const settings = await getSettings();
+    expect(settings.excludedDomains).toEqual([]);
+  });
+
+  it('can toggle warnOnDuplicateSnapshot off', async () => {
+    await updateSettings({ warnOnDuplicateSnapshot: false });
+    const settings = await getSettings();
+    expect(settings.warnOnDuplicateSnapshot).toBe(false);
+  });
+
+  it('backward compat: stored settings without new fields fall back to defaults', async () => {
+    // Simulate legacy storage from before the new fields existed.
+    await chrome.storage.local.set({
+      snaptabs_settings: {
+        autoSnapshotOnClose: true,
+        autoSnapshotOnBrowserClose: false,
+        autoDeleteAfterRestore: false,
+        maxSessions: 30,
+        showIncognitoWarning: true,
+        restoreIncognitoToIncognito: true,
+        restoreInNewWindow: false,
+      },
+    });
+    const settings = await getSettings();
+    expect(settings.autoSnapshotOnClose).toBe(true); // preserved
+    expect(settings.maxSessions).toBe(30);            // preserved
+    expect(settings.warnOnDuplicateSnapshot).toBe(true);  // defaulted
+    expect(settings.excludedDomains).toEqual([]);     // defaulted
+  });
 });
 
 describe('Live Recording', () => {
