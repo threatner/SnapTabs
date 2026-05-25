@@ -39,3 +39,6 @@ npm-debug.log*
 # Claude Code
 .claude/
 memory/
+
+# Local notes
+DEEP_DIVE.md
