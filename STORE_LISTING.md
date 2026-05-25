@@ -40,6 +40,25 @@ Reviews typically take 1-3 business days.
 
 ---
 
+## Release checklist
+
+Run through this for every CWS submission so the listing never lags the source again.
+
+1. **Bump version** in `package.json` and update `CHANGELOG.md` with the new entry.
+2. **Run tests + build**: `npm test` and `npm run build` both clean.
+3. **Regenerate listing screenshots**: `npm run screenshots` (builds, captures four popup views with the realistic demo data in `scripts/demo-data.ts`, composites onto branded 1280×800 canvases in `screenshots/store/`). Visually skim each PNG. If a new feature deserves a screenshot, edit `scripts/demo-data.ts` and add a slide in `scripts/compose-screenshots.ts`.
+4. **Regenerate promo tiles only if the SVGs changed**: `npm run promo`.
+5. **Update the listing copy** below (long description, features, FAQ) to reflect any new features in this release.
+6. **Build the upload zip**: `npm run zip` → produces `.output/snaptabs-<version>-chrome.zip`.
+7. **Upload to the CWS Developer Dashboard**:
+   - Item page → Package tab → upload the new zip.
+   - Store listing tab → Graphic assets → re-upload the 4 screenshots from `screenshots/store/`.
+   - Store listing tab → paste the updated long description / features / FAQ from this file.
+   - Save draft, then Submit for review.
+8. **Merge the release PR** to `main` once submitted.
+
+---
+
 ## Name (45 char max)
 
 SnapTabs - Save & Restore Browser Tabs

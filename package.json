@@ -37,7 +37,10 @@
     "test:e2e": "playwright test --config=e2e/playwright.config.ts --project=chromium",
     "test:e2e:debug": "playwright test --config=e2e/playwright.config.ts --project=chromium --debug",
     "test:e2e:brave": "playwright test --config=e2e/playwright.config.ts --project=brave",
-    "promo": "npx --yes sharp-cli -i src/assets/promo-small.svg -o screenshots/store/promo-small-440x280.png && npx --yes sharp-cli -i src/assets/promo-marquee.svg -o screenshots/store/promo-marquee-1400x560.png"
+    "promo": "npx --yes sharp-cli -i src/assets/promo-small.svg -o screenshots/store/promo-small-440x280.png && npx --yes sharp-cli -i src/assets/promo-marquee.svg -o screenshots/store/promo-marquee-1400x560.png",
+    "screenshots:capture": "tsx scripts/capture-screenshots.ts",
+    "screenshots:compose": "tsx scripts/compose-screenshots.ts",
+    "screenshots": "npm run build && npm run screenshots:capture && npm run screenshots:compose"
   },
   "dependencies": {
     "svelte": "^5.0.0"
@@ -50,7 +53,9 @@
     "@wxt-dev/module-svelte": "^2.0.0",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.0.0",
+    "tsx": "^4.22.3",
     "typescript": "^5.7.0",
     "vitest": "^4.1.0",
     "wxt": "^0.19.0"
