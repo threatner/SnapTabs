@@ -129,54 +129,30 @@
           {/if}
         </div>
 
-        <div class="domain-card">
-          {#if settings.excludedDomains.length === 0}
-            <div class="domain-empty">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="2" y1="12" x2="22" y2="12"/>
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-              </svg>
-              <p>No domains excluded yet</p>
-              <span>Add one below to skip it when capturing tabs</span>
-            </div>
-          {:else}
-            <ul class="domain-list">
-              {#each settings.excludedDomains as domain (domain)}
-                <li class="domain-item">
-                  <span class="domain-icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="10"/>
-                      <line x1="2" y1="12" x2="22" y2="12"/>
-                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                    </svg>
-                  </span>
-                  <span class="domain-text">{domain}</span>
-                  <button type="button" class="domain-remove" aria-label="Remove {domain}" onclick={() => removeExcludedDomain(domain)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
-                </li>
-              {/each}
-            </ul>
-          {/if}
-
-          <div class="domain-input-wrap" class:domain-input-wrap--filled={!!newDomain.trim()}>
-            <svg class="domain-input-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            <input
-              type="text"
-              class="domain-input"
-              placeholder="Add a domain — e.g. mail.google.com"
-              bind:value={newDomain}
-              onkeydown={handleDomainKeydown}
-            />
-            {#if newDomain.trim()}
-              <button type="button" class="domain-add" onclick={addExcludedDomain}>Add</button>
-            {:else}
-              <kbd class="domain-kbd">↵</kbd>
-            {/if}
+        {#if settings.excludedDomains.length > 0}
+          <div class="domain-chips">
+            {#each settings.excludedDomains as domain (domain)}
+              <span class="domain-chip">
+                {domain}
+                <button type="button" class="chip-remove" aria-label="Remove {domain}" onclick={() => removeExcludedDomain(domain)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </span>
+            {/each}
           </div>
+        {/if}
+
+        <div class="domain-input-wrap" class:domain-input-wrap--filled={!!newDomain.trim()}>
+          <input
+            type="text"
+            class="domain-input"
+            placeholder="Add domain (e.g. mail.google.com)"
+            bind:value={newDomain}
+            onkeydown={handleDomainKeydown}
+          />
+          {#if newDomain.trim()}
+            <button type="button" class="domain-add" onclick={addExcludedDomain}>Add</button>
+          {/if}
         </div>
       </div>
     </div>
@@ -470,121 +446,66 @@
     line-height: 1;
   }
 
-  .domain-card {
-    background: oklch(0.22 0.008 280 / 0.3);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  .domain-empty {
+  .domain-chips {
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    flex-wrap: wrap;
     gap: 4px;
-    padding: 20px 12px;
-    text-align: center;
-    color: var(--fg-muted);
-  }
-  .domain-empty svg {
-    opacity: 0.5;
-    margin-bottom: 4px;
-  }
-  .domain-empty p {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--fg);
-  }
-  .domain-empty span {
-    font-size: 11px;
-    color: var(--fg-muted);
-  }
-
-  .domain-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    max-height: 168px;
+    max-height: 90px;
     overflow-y: auto;
   }
-  .domain-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border-bottom: 1px solid oklch(0.3 0.008 280 / 0.4);
-    animation: domain-in 0.18s ease;
-  }
-  .domain-item:last-child { border-bottom: none; }
-  @keyframes domain-in {
-    from { opacity: 0; transform: translateY(-2px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .domain-icon {
+  .domain-chip {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    background: oklch(0.65 0.19 255 / 0.12);
-    color: var(--primary);
-    flex-shrink: 0;
-  }
-  .domain-text {
-    flex: 1;
-    font-size: 12px;
+    gap: 4px;
+    padding: 2px 4px 2px 8px;
+    font-size: 11px;
     font-weight: 500;
     color: var(--fg);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-feature-settings: "tnum";
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    max-width: 100%;
+    animation: chip-in 0.15s ease;
   }
-  .domain-remove {
+  @keyframes chip-in {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .chip-remove {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
     border: none;
     background: none;
     color: var(--fg-muted);
     cursor: pointer;
     transition: all 0.1s;
     flex-shrink: 0;
-    opacity: 0;
   }
-  .domain-item:hover .domain-remove { opacity: 1; }
-  .domain-remove:focus-visible { opacity: 1; }
-  .domain-remove:hover {
-    background: oklch(0.55 0.2 25 / 0.15);
+  .chip-remove:hover {
+    background: oklch(0.55 0.2 25 / 0.18);
     color: var(--destructive);
   }
 
   .domain-input-wrap {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border-top: 1px solid var(--border);
-    background: oklch(0.16 0.008 280 / 0.4);
-    transition: background 0.15s, border-color 0.15s;
+    gap: 6px;
+    padding: 4px 4px 4px 10px;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: border-color 0.15s;
   }
   .domain-input-wrap:focus-within {
-    background: oklch(0.18 0.008 280 / 0.5);
-  }
-  .domain-input-icon {
-    color: var(--fg-muted);
-    flex-shrink: 0;
-  }
-  .domain-input-wrap:focus-within .domain-input-icon {
-    color: var(--primary);
+    border-color: var(--primary);
   }
   .domain-input {
     flex: 1;
-    padding: 2px 0;
+    padding: 4px 0;
     background: none;
     border: none;
     font-size: 12px;
@@ -594,34 +515,19 @@
   }
   .domain-input::placeholder { color: var(--fg-muted); }
   .domain-add {
-    padding: 5px 12px;
+    padding: 3px 10px;
     font-size: 11px;
     font-weight: 600;
     background: var(--primary);
     color: var(--primary-fg);
     border: none;
-    border-radius: 5px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: filter 0.15s;
     flex-shrink: 0;
-    animation: btn-in 0.15s ease;
-  }
-  @keyframes btn-in {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
+    animation: chip-in 0.12s ease;
   }
   .domain-add:hover { filter: brightness(1.1); }
-  .domain-kbd {
-    font-family: inherit;
-    font-size: 10px;
-    font-weight: 500;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: var(--muted);
-    border: 1px solid var(--border);
-    color: var(--fg-muted);
-    flex-shrink: 0;
-  }
 
   .data-section {
     display: flex;

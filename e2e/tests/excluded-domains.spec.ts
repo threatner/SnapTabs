@@ -7,14 +7,12 @@ test.describe('Excluded Domains — Settings UI', () => {
     await popupPage.locator('button[aria-label="Settings"]').click();
     await expect(popupPage.locator('.section-label').filter({ hasText: 'Snapshot' })).toBeVisible();
     await expect(popupPage.locator('.setting-title').filter({ hasText: 'Excluded domains' })).toBeVisible();
-    await expect(popupPage.locator('.domain-card')).toBeVisible();
+    await expect(popupPage.locator('.domain-input')).toBeVisible();
   });
 
-  test('shows empty state when no domains are configured', async ({ popupPage }) => {
+  test('shows no chips and no count when no domains are configured', async ({ popupPage }) => {
     await popupPage.locator('button[aria-label="Settings"]').click();
-    await expect(popupPage.locator('.domain-empty')).toBeVisible();
-    await expect(popupPage.locator('.domain-empty p')).toHaveText('No domains excluded yet');
-    await expect(popupPage.locator('.domain-list')).not.toBeVisible();
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(0);
     await expect(popupPage.locator('.count-pill')).not.toBeVisible();
   });
 
@@ -24,14 +22,13 @@ test.describe('Excluded Domains — Settings UI', () => {
     const input = popupPage.locator('.domain-input');
     await input.fill('mail.google.com');
 
-    // kbd hint should become an Add button when input has value
+    // Add button only appears when input has value
     const addBtn = popupPage.locator('.domain-add', { hasText: 'Add' });
     await expect(addBtn).toBeVisible();
     await addBtn.click();
 
-    await expect(popupPage.locator('.domain-item')).toHaveCount(1);
-    await expect(popupPage.locator('.domain-text')).toHaveText('mail.google.com');
-    await expect(popupPage.locator('.domain-empty')).not.toBeVisible();
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
+    await expect(popupPage.locator('.domain-chip').first()).toContainText('mail.google.com');
     await expect(popupPage.locator('.count-pill')).toHaveText('1');
     await expect(input).toHaveValue('');
   });
@@ -43,8 +40,8 @@ test.describe('Excluded Domains — Settings UI', () => {
     await input.fill('github.com');
     await input.press('Enter');
 
-    await expect(popupPage.locator('.domain-item')).toHaveCount(1);
-    await expect(popupPage.locator('.domain-text')).toHaveText('github.com');
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
+    await expect(popupPage.locator('.domain-chip').first()).toContainText('github.com');
   });
 
   test('normalizes input by stripping protocol, www, path, and casing', async ({ popupPage }) => {
@@ -54,7 +51,7 @@ test.describe('Excluded Domains — Settings UI', () => {
     await input.fill('https://www.GitHub.com/some/path?q=1');
     await input.press('Enter');
 
-    await expect(popupPage.locator('.domain-text')).toHaveText('github.com');
+    await expect(popupPage.locator('.domain-chip').first()).toContainText('github.com');
   });
 
   test('does not add the same domain twice', async ({ popupPage }) => {
@@ -63,11 +60,11 @@ test.describe('Excluded Domains — Settings UI', () => {
 
     await input.fill('foo.com');
     await input.press('Enter');
-    await expect(popupPage.locator('.domain-item')).toHaveCount(1);
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
 
     await input.fill('foo.com');
     await input.press('Enter');
-    await expect(popupPage.locator('.domain-item')).toHaveCount(1);
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
     await expect(popupPage.locator('.count-pill')).toHaveText('1');
   });
 
@@ -77,8 +74,8 @@ test.describe('Excluded Domains — Settings UI', () => {
 
     await input.fill('   ');
     await input.press('Enter');
-    await expect(popupPage.locator('.domain-item')).toHaveCount(0);
-    await expect(popupPage.locator('.domain-empty')).toBeVisible();
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(0);
+    await expect(popupPage.locator('.count-pill')).not.toBeVisible();
   });
 
   test('removes a domain via the X button', async ({ popupPage }) => {
@@ -89,13 +86,12 @@ test.describe('Excluded Domains — Settings UI', () => {
     await input.press('Enter');
     await input.fill('two.com');
     await input.press('Enter');
-    await expect(popupPage.locator('.domain-item')).toHaveCount(2);
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(2);
     await expect(popupPage.locator('.count-pill')).toHaveText('2');
 
-    // Remove "one.com" — buttons are aria-labelled per domain
-    await popupPage.locator('button[aria-label="Remove one.com"]').click({ force: true });
-    await expect(popupPage.locator('.domain-item')).toHaveCount(1);
-    await expect(popupPage.locator('.domain-text')).toHaveText('two.com');
+    await popupPage.locator('button[aria-label="Remove one.com"]').click();
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
+    await expect(popupPage.locator('.domain-chip').first()).toContainText('two.com');
     await expect(popupPage.locator('.count-pill')).toHaveText('1');
   });
 
@@ -105,10 +101,10 @@ test.describe('Excluded Domains — Settings UI', () => {
 
     await input.fill('only.com');
     await input.press('Enter');
-    await expect(popupPage.locator('.domain-item')).toHaveCount(1);
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
 
-    await popupPage.locator('button[aria-label="Remove only.com"]').click({ force: true });
-    await expect(popupPage.locator('.domain-empty')).toBeVisible();
+    await popupPage.locator('button[aria-label="Remove only.com"]').click();
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(0);
     await expect(popupPage.locator('.count-pill')).not.toBeVisible();
   });
 
@@ -118,13 +114,13 @@ test.describe('Excluded Domains — Settings UI', () => {
 
     await input.fill('persist.com');
     await input.press('Enter');
-    await expect(popupPage.locator('.domain-item')).toHaveCount(1);
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
 
     await reloadPopup(popupPage, extensionId);
     await popupPage.locator('button[aria-label="Settings"]').click();
 
-    await expect(popupPage.locator('.domain-item')).toHaveCount(1);
-    await expect(popupPage.locator('.domain-text')).toHaveText('persist.com');
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
+    await expect(popupPage.locator('.domain-chip').first()).toContainText('persist.com');
     await expect(popupPage.locator('.count-pill')).toHaveText('1');
   });
 });
