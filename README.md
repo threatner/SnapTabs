@@ -127,6 +127,7 @@ npm run test:coverage  # coverage report
 npm run test:e2e       # E2E tests (Playwright, requires build first)
 npm run test:e2e:debug # E2E tests in debug mode
 npm run test:e2e:brave # E2E tests against Brave (set BRAVE_PATH if non-default)
+npm run screenshots    # Regenerate Chrome Web Store listing screenshots (1280x800)
 ```
 
 ## Tech stack
