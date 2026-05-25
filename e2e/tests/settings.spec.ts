@@ -19,7 +19,7 @@ test.describe('Settings', () => {
   test('all setting sections are visible', async ({ popupPage }) => {
     await popupPage.locator('button[aria-label="Settings"]').click();
     await expect(popupPage.locator('.section-label').filter({ hasText: 'Auto-Save' })).toBeVisible();
-    await expect(popupPage.locator('.section-label').filter({ hasText: 'Restore Options' })).toBeVisible();
+    await expect(popupPage.locator('.section-label').filter({ hasText: 'Restore' })).toBeVisible();
     await expect(popupPage.locator('.section-label').filter({ hasText: 'Warnings' })).toBeVisible();
     await expect(popupPage.locator('.section-label').filter({ hasText: 'Storage' })).toBeVisible();
   });
