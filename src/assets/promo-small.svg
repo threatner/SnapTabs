@@ -32,21 +32,22 @@
   <text x="232" y="128" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="44" font-weight="700" fill="#ffffff" letter-spacing="-1">SnapTabs</text>
 
   <!-- Tagline -->
-  <text x="234" y="158" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="500" fill="#cbd5e1">Save &amp; Restore Browser Tabs</text>
+  <text x="232" y="158" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" font-weight="500" fill="#cbd5e1">Save &amp; Restore Browser Tabs</text>
 
-  <!-- Feature chips -->
+  <!-- Feature chips. Left edge x=232 (matches wordmark), right edge x=396
+       (mirrors the icon's 44px left margin) so both edges feel balanced. -->
   <g font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#94a3b8">
     <g>
-      <rect x="234" y="178" width="80" height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <rect x="232" y="178" width="84" height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
       <text x="274" y="193" text-anchor="middle">Tab groups</text>
     </g>
     <g>
-      <rect x="320" y="178" width="68" height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
-      <text x="354" y="193" text-anchor="middle">Incognito</text>
+      <rect x="322" y="178" width="74" height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="359" y="193" text-anchor="middle">Incognito</text>
     </g>
     <g>
-      <rect x="234" y="206" width="120" height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
-      <text x="294" y="221" text-anchor="middle">Crash-safe auto-save</text>
+      <rect x="232" y="206" width="164" height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="314" y="221" text-anchor="middle">Crash-safe auto-save</text>
     </g>
   </g>
 </svg>
