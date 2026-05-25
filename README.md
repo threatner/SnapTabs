@@ -14,7 +14,7 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 | | |
 |---|---|
-| Latest version | 1.4.0 |
+| Latest version | 1.5.0 |
 | Browser | Chrome 93+ |
 | Manifest | V3 |
 | Storage | Local only. No cloud sync |
@@ -65,11 +65,13 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 No. Everything is stored in `chrome.storage.local` on your device. There is no cloud sync, no backend service, no analytics. The extension does not make outbound network requests.
 
-### What happens to my tabs if Chrome crashes?
+### What happens to my tabs if Chrome (or Brave) crashes?
 
-Turn on **Settings > Auto-Save > Save on browser close** (off by default). While it's on, your tabs are captured as the last window closes and saved as a session named "Browser close". On next launch, open the SnapTabs popup and restore it.
+Turn on **Settings > Auto-Save > Save on browser close** (off by default). While it's on, every window's tabs land in a combined session named "Browser close" when the last window closes — including the multi-window `Cmd+Q` case.
 
-A hard crash that kills the service worker before the save completes can lose the most recent snapshot. For critical tab sets, take a manual snapshot (`Alt+Shift+S`).
+If the browser kills the extension's service worker mid-shutdown before the save lands (Brave is more aggressive about this than Chrome), SnapTabs falls back to a continuously-updated snapshot it keeps in local storage. On the next browser start, that snapshot is promoted to a session named "Browser close (recovered)". Either way your tabs come back.
+
+For critical tab sets, also take a manual snapshot (`Alt+Shift+S`) — it goes through a different code path and is the most belt-and-braces option.
 
 ### Does it restore tab groups correctly?
 
@@ -124,6 +126,7 @@ npm run test:watch     # unit tests in watch mode
 npm run test:coverage  # coverage report
 npm run test:e2e       # E2E tests (Playwright, requires build first)
 npm run test:e2e:debug # E2E tests in debug mode
+npm run test:e2e:brave # E2E tests against Brave (set BRAVE_PATH if non-default)
 ```
 
 ## Tech stack

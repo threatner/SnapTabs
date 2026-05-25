@@ -4,6 +4,25 @@ All notable changes to SnapTabs are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-05-26
+
+### Fixed
+
+- **Auto-save on browser close is now reliable on Brave** (and under load on Chrome). Two races in the pending-close buffer were silently dropping windows: concurrent `chrome.windows.onRemoved` callbacks read the same empty buffer and the last `savePendingClose` overwrote the others, and `chrome.windows.getAll()` could be observed as 0 or non-zero from multiple callbacks depending on event ordering. Multi-window `Cmd+Q` was the worst-affected case. Window-close handling is now serialized on a single in-SW promise chain, so every window's tabs land in the combined "Browser close" session.
+- **Service-worker survival fallback.** Brave terminates the MV3 service worker more aggressively during shutdown than Chrome does, which could cancel the close handler mid-write. SnapTabs now keeps a continuously-updated "last-known-good" snapshot of all open non-incognito tabs in `chrome.storage.local` (debounced on every tab change). On the next fresh browser start, if the handler-path save didn't complete, the snapshot is promoted to a `Browser close (recovered)` session. Deduplicates against a recent matching auto-save via URL-set signature so a successful close never produces a duplicate.
+
+### Changed
+
+- **Settings sections reordered by importance.** Auto-Save first (the headline behaviour, including the fix above), then Snapshot, then Restore (renamed from "Restore Options" — "Open in new window" promoted to top of the group), then Warnings, Storage, Data, Danger.
+- **Compact excluded-domains UI.** Replaced the bordered card with empty-state illustration and globe-icon rows with a tag-chip layout — entries are small pills with inline remove buttons, the input is a single short row. No big empty state.
+
+### Internal
+
+- New `src/lib/browserClose.ts` extracts the close handling (`createCloseChain`, `processNormalWindowClose`, `recoverLastSnapshot`) out of the service-worker entrypoint so the race fix and recovery can be unit-tested in isolation.
+- New `chrome.storage.local` key `snaptabs_last_snapshot` and `chrome.storage.session` key `snaptabs_session_marker` (the latter distinguishes a fresh browser start from a mid-session SW restart).
+- New Playwright project `brave`: `npm run test:e2e:brave` (or `--project=brave`) runs the existing E2E suite against Brave by default-resolving the platform Brave binary path, override with `BRAVE_PATH=…`.
+- Test coverage: 150 unit tests (+19 across the new `tests/browserClose.test.ts`, including a sanity-check assertion that the unserialized version of the close handler drops tabs).
+
 ## [1.4.0] - 2026-05-25
 
 ### Added
