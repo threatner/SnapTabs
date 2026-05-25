@@ -8,9 +8,21 @@ export const KEYS = {
   windowMap: 'snaptabs_window_map',
   incognitoCache: 'snaptabs_incognito_tab_cache',
   pendingClose: 'snaptabs_pending_close',
+  lastSnapshot: 'snaptabs_last_snapshot',
+  sessionMarker: 'snaptabs_session_marker',
 } as const;
 
 export interface PendingClose {
+  tabs: SavedTab[];
+  windowCount: number;
+  updatedAt: number;
+}
+
+// Last-known-good snapshot of all open non-incognito tabs, persisted to
+// chrome.storage.local so it survives a service-worker termination during
+// browser shutdown (observed on Brave). Promoted to a real session on the
+// next fresh browser start if the in-handler save path didn't complete.
+export interface LastSnapshot {
   tabs: SavedTab[];
   windowCount: number;
   updatedAt: number;
@@ -174,6 +186,34 @@ export async function savePendingClose(data: PendingClose): Promise<void> {
 
 export async function clearPendingClose(): Promise<void> {
   await chrome.storage.session.remove(KEYS.pendingClose);
+}
+
+// ── Last Snapshot (browser-close recovery) ──
+
+export async function getLastSnapshot(): Promise<LastSnapshot | null> {
+  const result = await chrome.storage.local.get(KEYS.lastSnapshot);
+  return (result[KEYS.lastSnapshot] as LastSnapshot | undefined) ?? null;
+}
+
+export async function saveLastSnapshot(snap: LastSnapshot): Promise<void> {
+  await chrome.storage.local.set({ [KEYS.lastSnapshot]: snap });
+}
+
+export async function clearLastSnapshot(): Promise<void> {
+  await chrome.storage.local.remove(KEYS.lastSnapshot);
+}
+
+// Session marker lives in chrome.storage.session, which is wiped when the
+// browser fully quits. If it is missing at SW startup, this is a fresh
+// browser start (not a SW restart mid-session) and we should attempt
+// last-snapshot recovery.
+export async function hasSessionMarker(): Promise<boolean> {
+  const result = await chrome.storage.session.get(KEYS.sessionMarker);
+  return Boolean(result[KEYS.sessionMarker]);
+}
+
+export async function setSessionMarker(): Promise<void> {
+  await chrome.storage.session.set({ [KEYS.sessionMarker]: true });
 }
 
 // ── Import / Export ──

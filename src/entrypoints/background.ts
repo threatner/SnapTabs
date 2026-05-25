@@ -10,9 +10,6 @@ import {
   deleteSession,
   saveSession,
   togglePin,
-  getPendingClose,
-  savePendingClose,
-  clearPendingClose,
   getRecording,
   startRecording,
   addTabToRecording,
@@ -22,11 +19,21 @@ import {
   saveWindowMap,
   getIncognitoCache,
   saveIncognitoCache,
+  saveLastSnapshot,
+  clearLastSnapshot,
 } from '../lib/storage';
+import { createCloseChain, processNormalWindowClose, recoverLastSnapshot } from '../lib/browserClose';
 
 export default defineBackground(() => {
   const windowMap = new Map<number, boolean>();
   const tabCache = new Map<number, SavedTab[]>();
+
+  // Serializes chrome.windows.onRemoved processing. Without this, concurrent
+  // multi-window close events (e.g. Cmd+Q with N windows) race on the
+  // pending-close buffer and on chrome.windows.getAll(), so some windows'
+  // tabs get dropped or remaining===0 triggers more than once.
+  const closeChain = createCloseChain();
+  let snapshotTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ── Persistence helpers ──
 
@@ -56,7 +63,58 @@ export default defineBackground(() => {
       const tabs = await chrome.tabs.query({ windowId });
       tabCache.set(windowId, tabs.map(toSavedTab));
       await persistTabCache();
+      scheduleSnapshotUpdate();
     } catch {}
+  }
+
+  // ── Last-snapshot fallback (browser-close recovery) ──
+  //
+  // Brave (and Chrome under load) can terminate the MV3 service worker
+  // mid-shutdown before the onRemoved handler finishes writing the
+  // combined session. We continuously persist a "what an auto-save would
+  // look like right now" snapshot to chrome.storage.local, then promote it
+  // on next browser start if the handler-path session didn't land.
+
+  function scheduleSnapshotUpdate() {
+    if (snapshotTimer) clearTimeout(snapshotTimer);
+    snapshotTimer = setTimeout(() => { snapshotTimer = null; void writeLastSnapshot(); }, 1000);
+  }
+
+  async function writeLastSnapshot() {
+    try {
+      const settings = await getSettings();
+      if (!settings.autoSnapshotOnBrowserClose) return;
+
+      const allTabs: SavedTab[] = [];
+      let windowCount = 0;
+      for (const [windowId, isIncognito] of windowMap) {
+        if (isIncognito) continue;
+        const cached = tabCache.get(windowId);
+        if (!cached || cached.length === 0) continue;
+        const filtered = settings.excludedDomains.length > 0
+          ? cached.filter((t) => !isExcludedUrl(t.url, settings.excludedDomains))
+          : cached;
+        if (filtered.length === 0) continue;
+        allTabs.push(...filtered);
+        windowCount += 1;
+      }
+
+      if (allTabs.length === 0) {
+        await clearLastSnapshot();
+        return;
+      }
+      await saveLastSnapshot({ tabs: allTabs, windowCount, updatedAt: Date.now() });
+    } catch {}
+  }
+
+  async function recoverLastSnapshotIfFreshStart() {
+    try {
+      const settings = await getSettings();
+      const recovered = await recoverLastSnapshot(settings);
+      if (recovered) await updateBadge();
+    } catch (e) {
+      console.error('[SnapTabs] recoverLastSnapshot error:', e);
+    }
   }
 
   // ── Badge ──
@@ -96,7 +154,13 @@ export default defineBackground(() => {
     await refreshWindowCache(w.id);
   });
 
-  chrome.windows.onRemoved.addListener(async (windowId) => {
+  chrome.windows.onRemoved.addListener((windowId) => {
+    // Serialize all close handling so concurrent multi-window close events
+    // can't clobber pendingClose or both see remaining===0.
+    closeChain.enqueue(() => handleWindowRemoved(windowId));
+  });
+
+  async function handleWindowRemoved(windowId: number) {
     const wasIncognito = windowMap.get(windowId);
     const cached = tabCache.get(windowId);
     windowMap.delete(windowId);
@@ -133,36 +197,11 @@ export default defineBackground(() => {
         // Normal window close — accumulate into pending buffer so multi-window
         // Cmd+Q captures every window's tabs, not just the last one.
         if (!settings.autoSnapshotOnBrowserClose) return;
-
-        const STALE_MS = 5000;
-        const now = Date.now();
-        let pending = await getPendingClose();
-        if (now - pending.updatedAt > STALE_MS) {
-          pending = { tabs: [], windowCount: 0, updatedAt: now };
-        }
-        pending.tabs.push(...filtered);
-        pending.windowCount += 1;
-        pending.updatedAt = now;
-        await savePendingClose(pending);
-
-        if (remaining.length === 0 && pending.tabs.length > 0) {
-          const session: Session = {
-            id: uuid(),
-            name: formatSessionName('Browser close'),
-            timestamp: now,
-            tabs: pending.tabs,
-            tabGroups: [],
-            windowCount: pending.windowCount,
-            hasIncognitoTabs: false,
-            isAutoSave: true,
-          };
-          await saveSession(session);
-          await clearPendingClose();
-          await updateBadge();
-        }
+        const saved = await processNormalWindowClose(filtered, remaining.length === 0);
+        if (saved) await updateBadge();
       }
     } catch {}
-  });
+  }
 
   chrome.tabs.onCreated.addListener(async (tab) => {
     if (tab.windowId !== undefined) await refreshWindowCache(tab.windowId);
@@ -381,6 +420,10 @@ export default defineBackground(() => {
   async function init() {
     try {
       await restoreState();
+      // Run recovery BEFORE we touch windowMap / refreshWindowCache so the
+      // pre-existing lastSnapshot reflects the previous browser session,
+      // not whatever Chrome restored this time.
+      await recoverLastSnapshotIfFreshStart();
       // Restore in-memory recording flags in case service worker restarted
       const rec = await getRecording();
       if (rec?.isActive) {
