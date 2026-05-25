@@ -86,6 +86,27 @@
   </div>
 
   <div class="settings-body">
+    <!-- Auto-Save -->
+    <h3 class="section-label">Auto-Save</h3>
+    <div class="section">
+      <label class="setting-row">
+        <div class="setting-text">
+          <p class="setting-title">Save on browser close</p>
+          <p class="setting-desc">Snapshot open tabs when you quit Chrome so you can restore them later</p>
+        </div>
+        <input type="checkbox" class="tv-switch" checked={settings.autoSnapshotOnBrowserClose}
+          onchange={() => onUpdateSettings({ autoSnapshotOnBrowserClose: !settings.autoSnapshotOnBrowserClose })} />
+      </label>
+      <label class="setting-row">
+        <div class="setting-text">
+          <p class="setting-title">Save incognito on close</p>
+          <p class="setting-desc">Automatically save tabs when closing incognito windows</p>
+        </div>
+        <input type="checkbox" class="tv-switch" checked={settings.autoSnapshotOnClose}
+          onchange={() => onUpdateSettings({ autoSnapshotOnClose: !settings.autoSnapshotOnClose })} />
+      </label>
+    </div>
+
     <!-- Snapshot -->
     <h3 class="section-label">Snapshot</h3>
     <div class="section">
@@ -160,30 +181,17 @@
       </div>
     </div>
 
-    <!-- Auto-Save -->
-    <h3 class="section-label">Auto-Save</h3>
+    <!-- Restore -->
+    <h3 class="section-label">Restore</h3>
     <div class="section">
       <label class="setting-row">
         <div class="setting-text">
-          <p class="setting-title">Save on browser close</p>
-          <p class="setting-desc">Snapshot open tabs when you quit Chrome so you can restore them later</p>
+          <p class="setting-title">Open in new window</p>
+          <p class="setting-desc">Always restore sessions in a new window</p>
         </div>
-        <input type="checkbox" class="tv-switch" checked={settings.autoSnapshotOnBrowserClose}
-          onchange={() => onUpdateSettings({ autoSnapshotOnBrowserClose: !settings.autoSnapshotOnBrowserClose })} />
+        <input type="checkbox" class="tv-switch" checked={settings.restoreInNewWindow}
+          onchange={() => onUpdateSettings({ restoreInNewWindow: !settings.restoreInNewWindow })} />
       </label>
-      <label class="setting-row">
-        <div class="setting-text">
-          <p class="setting-title">Save incognito on close</p>
-          <p class="setting-desc">Automatically save tabs when closing incognito windows</p>
-        </div>
-        <input type="checkbox" class="tv-switch" checked={settings.autoSnapshotOnClose}
-          onchange={() => onUpdateSettings({ autoSnapshotOnClose: !settings.autoSnapshotOnClose })} />
-      </label>
-    </div>
-
-    <!-- Restore Options -->
-    <h3 class="section-label">Restore Options</h3>
-    <div class="section">
       <label class="setting-row">
         <div class="setting-text">
           <p class="setting-title">Auto-delete after restore</p>
@@ -199,14 +207,6 @@
         </div>
         <input type="checkbox" class="tv-switch" checked={settings.restoreIncognitoToIncognito}
           onchange={() => onUpdateSettings({ restoreIncognitoToIncognito: !settings.restoreIncognitoToIncognito })} />
-      </label>
-      <label class="setting-row">
-        <div class="setting-text">
-          <p class="setting-title">Open in new window</p>
-          <p class="setting-desc">Always restore sessions in a new window</p>
-        </div>
-        <input type="checkbox" class="tv-switch" checked={settings.restoreInNewWindow}
-          onchange={() => onUpdateSettings({ restoreInNewWindow: !settings.restoreInNewWindow })} />
       </label>
     </div>
 
