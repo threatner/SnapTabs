@@ -30,10 +30,22 @@ export async function openCardContextMenu(page: Page) {
   await page.locator('.action-btn').first().click();
 }
 
+// Resolve the browser binary path. Reads from the active Playwright
+// project's metadata.executablePath (e.g. the `brave` project), with env
+// overrides for ad-hoc runs. Defaults to bundled Chromium when unset.
+function resolveExecutablePath(metadataPath: unknown): string | undefined {
+  if (process.env.BROWSER_PATH) return process.env.BROWSER_PATH;
+  if (process.env.BRAVE_PATH) return process.env.BRAVE_PATH;
+  if (typeof metadataPath === 'string' && metadataPath.length > 0) return metadataPath;
+  return undefined;
+}
+
 export const test = base.extend<ExtensionFixtures>({
-  context: async ({}, use) => {
+  context: async ({}, use, testInfo) => {
+    const executablePath = resolveExecutablePath(testInfo.project.metadata?.executablePath);
     const context = await chromium.launchPersistentContext('', {
       headless: false,
+      ...(executablePath ? { executablePath } : {}),
       args: [
         `--disable-extensions-except=${EXTENSION_PATH}`,
         `--load-extension=${EXTENSION_PATH}`,
