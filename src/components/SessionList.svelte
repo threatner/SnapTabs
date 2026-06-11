@@ -1,23 +1,25 @@
 <script lang="ts">
-  import type { Session } from '@/lib/types';
+  import type { Session, SessionSort } from '@/lib/types';
   import SessionCard from './SessionCard.svelte';
 
   interface Props {
     sessions: Session[];
     searchQuery: string;
+    sortBy: SessionSort;
     onSessionClick: (session: Session) => void;
     onRestore: (session: Session) => void;
     onDelete: (session: Session) => void;
     onRename: (session: Session, newName: string) => void;
     onTogglePin: (session: Session) => void;
     onSearchChange: (query: string) => void;
+    onSortChange: (sort: SessionSort) => void;
   }
 
-  let { sessions, searchQuery, onSessionClick, onRestore, onDelete, onRename, onTogglePin, onSearchChange }: Props = $props();
+  let { sessions, searchQuery, sortBy, onSessionClick, onRestore, onDelete, onRename, onTogglePin, onSearchChange, onSortChange }: Props = $props();
 </script>
 
 <div class="list-area">
-  <!-- Search -->
+  <!-- Search + sort -->
   <div class="search-wrap">
     <div class="search-box">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="search-icon">
@@ -38,6 +40,24 @@
         </button>
       {/if}
     </div>
+    {#if sessions.length > 1}
+      <div class="sort-box" title="Sort sessions">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="sort-icon">
+          <path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="M11 4h10"/><path d="M11 8h7"/><path d="M11 12h4"/>
+        </svg>
+        <select
+          class="sort-select"
+          value={sortBy}
+          onchange={(e) => onSortChange((e.currentTarget as HTMLSelectElement).value as SessionSort)}
+          aria-label="Sort sessions"
+        >
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="name">Name</option>
+          <option value="tabs">Most tabs</option>
+        </select>
+      </div>
+    {/if}
   </div>
 
   <!-- List -->
@@ -96,11 +116,16 @@
   .search-wrap {
     padding: 8px 16px;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   .search-box {
     position: relative;
     display: flex;
     align-items: center;
+    flex: 1;
+    min-width: 0;
   }
   .search-icon {
     position: absolute;
@@ -142,6 +167,40 @@
     transition: all 0.1s;
   }
   .search-clear:hover { color: var(--fg); background: var(--accent); }
+
+  .sort-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .sort-icon {
+    position: absolute;
+    left: 9px;
+    color: var(--fg-muted);
+    pointer-events: none;
+  }
+  .sort-select {
+    height: 32px;
+    padding: 0 26px 0 28px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--fg);
+    background: oklch(0.22 0.008 280 / 0.5);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    transition: all 0.15s;
+    /* Chevron */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+  .sort-select:hover { background-color: var(--muted); }
+  .sort-select:focus { border-color: var(--border); background-color: var(--muted); }
+  .sort-select option { background: var(--card); color: var(--fg); }
 
   .list {
     flex: 1;

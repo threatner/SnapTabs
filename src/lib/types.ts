@@ -51,6 +51,10 @@ export const DEFAULT_SETTINGS: SnapTabsSettings = {
   excludedDomains: [],
 };
 
+// Ordering options for the popup session list. Pinned sessions always sort
+// to the top regardless; this controls the order within each group.
+export type SessionSort = 'newest' | 'oldest' | 'name' | 'tabs';
+
 export interface LiveRecording {
   id: string;
   name: string;

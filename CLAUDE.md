@@ -33,6 +33,7 @@ SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser
 - **Import / Export**: download all sessions to a JSON file (`snaptabs-export-YYYY-MM-DD.json`) or load from a previous export. Import handles ID collisions by renaming on conflict and skipping exact re-imports (same id + timestamp).
 - **Omnibox search**: `st <query>` in Chrome's address bar fuzzy-matches tab titles and URLs across every saved session. Selecting a suggestion opens the tab (Alt+Enter for new tab); raw text with no selection falls back to Google search.
 - **Search** (popup): real-time filter across session names, tab titles, and URLs.
+- **Sort** (popup): order the session list by newest (default), oldest, name (A–Z), or most tabs via a dropdown beside the search box. Pinned sessions always stay on top regardless of sort. Ephemeral popup state (`sortBy: SessionSort`), resets each open; storage/pruning order is unaffected.
 - **Duplicate snapshot warning**: before saving a manual snapshot from the popup, compares the candidate tab set against the most recent session via a URL-set signature (order-, fragment-, trailing-slash-insensitive; `isRestorable`-filtered on both sides). If matched, shows a confirm modal with "Cancel" / "Save anyway". Context-menu and keyboard-shortcut snapshots bypass the check. Controlled by `warnOnDuplicateSnapshot` (default true).
 - **Excluded domains**: per-domain skip list applied at capture time (manual snapshot, live recording, auto-save on close). Exact host or subdomain match — `github.com` matches `api.github.com`. Input is normalized (strips protocol, `www.`, path, query, casing). Lives in `excludedDomains: string[]` setting.
 - **Storage management**: 10 MB quota with automatic pruning (oldest auto-saves removed first, pinned sessions never pruned). Configurable session limit (1-500). Storage usage bar in settings.
@@ -93,7 +94,7 @@ The popup is a fixed 400×600px window with three views:
 | Header | `src/components/Header.svelte` | Logo, brand name, recording indicator, settings button |
 | SnapshotBar | `src/components/SnapshotBar.svelte` | Scope dropdown, snapshot button, record toggle, incognito warning |
 | RecordingBar | `src/components/RecordingBar.svelte` | Timer, tab count, recent tabs preview, stop/cancel buttons |
-| SessionList | `src/components/SessionList.svelte` | Search input, scrollable list of SessionCards, empty states |
+| SessionList | `src/components/SessionList.svelte` | Search input, sort dropdown, scrollable list of SessionCards, empty states |
 | SessionCard | `src/components/SessionCard.svelte` | Session name (inline rename), badges, metadata, tab group chips, context menu |
 | SessionDetail | `src/components/SessionDetail.svelte` | Full session view with collapsible tab groups, favicons, restore/delete/rename |
 | Settings | `src/components/Settings.svelte` | Toggle rows, max sessions input, storage bar, danger zone |
@@ -140,7 +141,7 @@ Coverage: storage.ts 100%, tabs.ts ~70% (uncovered lines are Chrome group recrea
 
 ### E2E Tests (Playwright)
 
-End-to-end tests use **Playwright** to launch real Chromium (or Brave via `--project=brave`) with the extension loaded. 73 tests across 11 files in `e2e/`:
+End-to-end tests use **Playwright** to launch real Chromium (or Brave via `--project=brave`) with the extension loaded. 76 tests across 11 files in `e2e/`:
 
 ```
 e2e/
@@ -154,7 +155,7 @@ e2e/
     ├── snapshot.spec.ts            # Opens real sites, snapshots, verifies capture
     ├── restore.spec.ts             # Seeds sessions, restores, verifies tabs open
     ├── recording.spec.ts           # Opens sites during recording, verifies capture & dedup
-    ├── session-list.spec.ts        # Session display, badges, metadata, search
+    ├── session-list.spec.ts        # Session display, badges, metadata, search, sort (incl. pinned-on-top)
     ├── session-detail.spec.ts      # Detail view, tab groups, collapse/expand
     ├── session-actions.spec.ts     # Context menu, rename, delete, confirmation flows
     ├── settings.spec.ts            # Toggles, input, storage bar, persistence

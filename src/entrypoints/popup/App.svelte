@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { Session, SnapTabsSettings, LiveRecording } from '@/lib/types';
+  import type { Session, SnapTabsSettings, LiveRecording, SessionSort } from '@/lib/types';
   import { DEFAULT_SETTINGS } from '@/lib/types';
   import { isExcludedUrl } from '@/lib/types';
   import { getSessions, renameSession, deleteAllSessions, getSettings, updateSettings, getStorageUsage, getRecording, buildExportPayload, importSessions } from '@/lib/storage';
@@ -24,6 +24,7 @@
   let recording: LiveRecording | null = $state(null);
   let scopeAllWindows = $state(false);
   let searchQuery = $state('');
+  let sortBy: SessionSort = $state('newest');
   let selectedSession: Session | null = $state(null);
   let loading = $state(true);
 
@@ -38,12 +39,24 @@
 
   let filtered = $derived.by(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return sessions;
-    return sessions.filter((s) =>
+    const matches = !q ? sessions : sessions.filter((s) =>
       s.name.toLowerCase().includes(q) ||
       s.tabs.some((t) => t.title.toLowerCase().includes(q) || t.url.toLowerCase().includes(q))
     );
+    // Pinned sessions always float to the top; sortBy orders within each group.
+    return [...matches].sort((a, b) => compareForSort(a, b, sortBy));
   });
+
+  function compareForSort(a: Session, b: Session, by: SessionSort): number {
+    const pinDelta = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+    if (pinDelta !== 0) return pinDelta;
+    switch (by) {
+      case 'oldest': return a.timestamp - b.timestamp;
+      case 'name': return a.name.localeCompare(b.name);
+      case 'tabs': return b.tabs.length - a.tabs.length;
+      default: return b.timestamp - a.timestamp; // 'newest'
+    }
+  }
 
   function toast(msg: string, type: 'success' | 'error' | 'warning' = 'success') {
     clearTimeout(toastTimer);
@@ -379,12 +392,14 @@
     <SessionList
       sessions={filtered}
       {searchQuery}
+      {sortBy}
       onSessionClick={handleSessionClick}
       onRestore={handleRestore}
       onDelete={handleDelete}
       onRename={handleRename}
       onTogglePin={handleTogglePin}
       onSearchChange={(q) => searchQuery = q}
+      onSortChange={(s) => sortBy = s}
     />
   {/if}
 </main>
