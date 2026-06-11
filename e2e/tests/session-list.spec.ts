@@ -64,4 +64,31 @@ test.describe('Session List', () => {
     await popupPage.locator('.search-clear').click();
     await expect(popupPage.locator('.card')).toHaveCount(3);
   });
+
+  test('sort by name orders sessions alphabetically', async ({ popupPage }) => {
+    await popupPage.locator('.sort-select').selectOption('name');
+    const names = popupPage.locator('.card .card-name');
+    await expect(names.nth(0)).toHaveText('Auto-save incognito');
+    await expect(names.nth(1)).toHaveText('Shopping list');
+    await expect(names.nth(2)).toHaveText('Work tabs');
+  });
+
+  test('sort by oldest reverses the default newest order', async ({ popupPage }) => {
+    await popupPage.locator('.sort-select').selectOption('oldest');
+    const names = popupPage.locator('.card .card-name');
+    // Default seed order is newest-first (Work, Shopping, Auto-save).
+    await expect(names.nth(0)).toHaveText('Auto-save incognito');
+    await expect(names.nth(2)).toHaveText('Work tabs');
+  });
+
+  test('pinned sessions stay on top regardless of sort', async ({ context, popupPage }) => {
+    // Pin the oldest session, then sort by newest — it should still lead.
+    await seedSessions(context, [
+      createMockSession({ name: 'Pinned old', timestamp: Date.now() - 999_000, pinned: true }),
+      createMockSession({ name: 'Fresh', timestamp: Date.now() }),
+    ]);
+    await popupPage.reload();
+    await popupPage.locator('.sort-select').selectOption('newest');
+    await expect(popupPage.locator('.card .card-name').nth(0)).toHaveText('Pinned old');
+  });
 });
