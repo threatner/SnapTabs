@@ -1,4 +1,4 @@
-import type { Session, SnapTabsSettings, LiveRecording, SavedTab } from './types';
+import type { Session, SnapTabsSettings, LiveRecording, SavedTab, SavedTabGroup } from './types';
 import { DEFAULT_SETTINGS, uuid, formatSessionName } from './types';
 
 export const KEYS = {
@@ -6,14 +6,23 @@ export const KEYS = {
   settings: 'snaptabs_settings',
   recording: 'snaptabs_live_recording',
   windowMap: 'snaptabs_window_map',
-  incognitoCache: 'snaptabs_incognito_tab_cache',
+  windowCache: 'snaptabs_window_cache',
   pendingClose: 'snaptabs_pending_close',
   lastSnapshot: 'snaptabs_last_snapshot',
   sessionMarker: 'snaptabs_session_marker',
 } as const;
 
+// Proactive per-window capture (tabs + tab groups), cached so auto-saves on
+// browser/incognito close have a full snapshot — including group names — even
+// after the window's tabs are gone.
+export interface WindowCapture {
+  tabs: SavedTab[];
+  groups: SavedTabGroup[];
+}
+
 export interface PendingClose {
   tabs: SavedTab[];
+  groups: SavedTabGroup[];
   windowCount: number;
   updatedAt: number;
 }
@@ -24,6 +33,7 @@ export interface PendingClose {
 // next fresh browser start if the in-handler save path didn't complete.
 export interface LastSnapshot {
   tabs: SavedTab[];
+  groups: SavedTabGroup[];
   windowCount: number;
   updatedAt: number;
 }
@@ -160,15 +170,16 @@ export async function saveWindowMap(map: Record<number, boolean>): Promise<void>
   await chrome.storage.session.set({ [KEYS.windowMap]: map });
 }
 
-// ── Incognito Cache ──
+// ── Window Cache ──
+// Per-window proactive capture (tabs + tab groups). Keyed by window id.
 
-export async function getIncognitoCache(): Promise<Record<string, SavedTab[]>> {
-  const result = await chrome.storage.session.get(KEYS.incognitoCache);
-  return result[KEYS.incognitoCache] ?? {};
+export async function getWindowCache(): Promise<Record<string, WindowCapture>> {
+  const result = await chrome.storage.session.get(KEYS.windowCache);
+  return result[KEYS.windowCache] ?? {};
 }
 
-export async function saveIncognitoCache(cache: Record<string, SavedTab[]>): Promise<void> {
-  await chrome.storage.session.set({ [KEYS.incognitoCache]: cache });
+export async function saveWindowCache(cache: Record<string, WindowCapture>): Promise<void> {
+  await chrome.storage.session.set({ [KEYS.windowCache]: cache });
 }
 
 // ── Pending Close Buffer ──
@@ -177,7 +188,9 @@ export async function saveIncognitoCache(cache: Record<string, SavedTab[]>): Pro
 
 export async function getPendingClose(): Promise<PendingClose> {
   const result = await chrome.storage.session.get(KEYS.pendingClose);
-  return (result[KEYS.pendingClose] as PendingClose | undefined) ?? { tabs: [], windowCount: 0, updatedAt: 0 };
+  const stored = result[KEYS.pendingClose] as Partial<PendingClose> | undefined;
+  if (!stored) return { tabs: [], groups: [], windowCount: 0, updatedAt: 0 };
+  return { groups: [], ...stored } as PendingClose;
 }
 
 export async function savePendingClose(data: PendingClose): Promise<void> {
@@ -192,7 +205,9 @@ export async function clearPendingClose(): Promise<void> {
 
 export async function getLastSnapshot(): Promise<LastSnapshot | null> {
   const result = await chrome.storage.local.get(KEYS.lastSnapshot);
-  return (result[KEYS.lastSnapshot] as LastSnapshot | undefined) ?? null;
+  const stored = result[KEYS.lastSnapshot] as Partial<LastSnapshot> | undefined;
+  if (!stored) return null;
+  return { groups: [], ...stored } as LastSnapshot;
 }
 
 export async function saveLastSnapshot(snap: LastSnapshot): Promise<void> {

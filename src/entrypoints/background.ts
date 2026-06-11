@@ -1,7 +1,8 @@
 import { defineBackground } from 'wxt/sandbox';
-import type { Session, SavedTab, SnapTabsSettings } from '../lib/types';
+import type { Session, SavedTab, SavedTabGroup, SnapTabsSettings } from '../lib/types';
 import { uuid, formatSessionName, isExcludedUrl } from '../lib/types';
-import { createSnapshot, restoreSession, getTabStats, toSavedTab, isRestorable } from '../lib/tabs';
+import { createSnapshot, restoreSession, getTabStats, captureWindow, toSavedTab, mergeGroups, isRestorable } from '../lib/tabs';
+import type { WindowCapture } from '../lib/storage';
 import {
   KEYS,
   getSessions,
@@ -17,8 +18,8 @@ import {
   cancelRecording,
   getWindowMap,
   saveWindowMap,
-  getIncognitoCache,
-  saveIncognitoCache,
+  getWindowCache,
+  saveWindowCache,
   saveLastSnapshot,
   clearLastSnapshot,
 } from '../lib/storage';
@@ -26,7 +27,7 @@ import { createCloseChain, processNormalWindowClose, recoverLastSnapshot } from 
 
 export default defineBackground(() => {
   const windowMap = new Map<number, boolean>();
-  const tabCache = new Map<number, SavedTab[]>();
+  const windowCache = new Map<number, WindowCapture>();
 
   // Serializes chrome.windows.onRemoved processing. Without this, concurrent
   // multi-window close events (e.g. Cmd+Q with N windows) race on the
@@ -41,11 +42,11 @@ export default defineBackground(() => {
     try { await saveWindowMap(Object.fromEntries(windowMap)); } catch {}
   }
 
-  async function persistTabCache() {
+  async function persistWindowCache() {
     try {
-      const obj: Record<string, SavedTab[]> = {};
-      for (const [k, v] of tabCache) obj[String(k)] = v;
-      await saveIncognitoCache(obj);
+      const obj: Record<string, WindowCapture> = {};
+      for (const [k, v] of windowCache) obj[String(k)] = v;
+      await saveWindowCache(obj);
     } catch {}
   }
 
@@ -53,16 +54,16 @@ export default defineBackground(() => {
     try {
       const wm = await getWindowMap();
       for (const [k, v] of Object.entries(wm)) windowMap.set(Number(k), v as boolean);
-      const cache = await getIncognitoCache();
-      for (const [k, v] of Object.entries(cache)) tabCache.set(Number(k), v as SavedTab[]);
+      const cache = await getWindowCache();
+      for (const [k, v] of Object.entries(cache)) windowCache.set(Number(k), v as WindowCapture);
     } catch {}
   }
 
   async function refreshWindowCache(windowId: number) {
     try {
-      const tabs = await chrome.tabs.query({ windowId });
-      tabCache.set(windowId, tabs.map(toSavedTab));
-      await persistTabCache();
+      const { tabs, groups } = await captureWindow(windowId);
+      windowCache.set(windowId, { tabs, groups });
+      await persistWindowCache();
       scheduleSnapshotUpdate();
     } catch {}
   }
@@ -86,16 +87,18 @@ export default defineBackground(() => {
       if (!settings.autoSnapshotOnBrowserClose) return;
 
       const allTabs: SavedTab[] = [];
+      let allGroups: SavedTabGroup[] = [];
       let windowCount = 0;
       for (const [windowId, isIncognito] of windowMap) {
         if (isIncognito) continue;
-        const cached = tabCache.get(windowId);
-        if (!cached || cached.length === 0) continue;
+        const cap = windowCache.get(windowId);
+        if (!cap || cap.tabs.length === 0) continue;
         const filtered = settings.excludedDomains.length > 0
-          ? cached.filter((t) => !isExcludedUrl(t.url, settings.excludedDomains))
-          : cached;
+          ? cap.tabs.filter((t) => !isExcludedUrl(t.url, settings.excludedDomains))
+          : cap.tabs;
         if (filtered.length === 0) continue;
         allTabs.push(...filtered);
+        allGroups = mergeGroups(allGroups, cap.groups);
         windowCount += 1;
       }
 
@@ -103,7 +106,7 @@ export default defineBackground(() => {
         await clearLastSnapshot();
         return;
       }
-      await saveLastSnapshot({ tabs: allTabs, windowCount, updatedAt: Date.now() });
+      await saveLastSnapshot({ tabs: allTabs, groups: allGroups, windowCount, updatedAt: Date.now() });
     } catch {}
   }
 
@@ -162,10 +165,12 @@ export default defineBackground(() => {
 
   async function handleWindowRemoved(windowId: number) {
     const wasIncognito = windowMap.get(windowId);
-    const cached = tabCache.get(windowId);
+    const cap = windowCache.get(windowId);
+    const cached = cap?.tabs;
+    const cachedGroups = cap?.groups ?? [];
     windowMap.delete(windowId);
-    tabCache.delete(windowId);
-    await Promise.all([persistWindowMap(), persistTabCache()]);
+    windowCache.delete(windowId);
+    await Promise.all([persistWindowMap(), persistWindowCache()]);
 
     if (!cached || cached.length === 0) return;
 
@@ -186,7 +191,7 @@ export default defineBackground(() => {
           name: formatSessionName('Auto-save'),
           timestamp: Date.now(),
           tabs: filtered,
-          tabGroups: [],
+          tabGroups: cachedGroups,
           windowCount: 1,
           hasIncognitoTabs: true,
           isAutoSave: true,
@@ -195,9 +200,9 @@ export default defineBackground(() => {
         await updateBadge();
       } else {
         // Normal window close — accumulate into pending buffer so multi-window
-        // Cmd+Q captures every window's tabs, not just the last one.
+        // Cmd+Q captures every window's tabs and groups, not just the last one.
         if (!settings.autoSnapshotOnBrowserClose) return;
-        const saved = await processNormalWindowClose(filtered, remaining.length === 0);
+        const saved = await processNormalWindowClose(filtered, cachedGroups, remaining.length === 0);
         if (saved) await updateBadge();
       }
     } catch {}

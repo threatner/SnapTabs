@@ -36,6 +36,21 @@ export function findDuplicateSession(urls: string[], sessions: Session[]): Sessi
   return recentSig === sig ? recent : null;
 }
 
+// Merge incoming tab groups into an existing list, deduping by id. Tab-group
+// ids are unique across windows within a browser session, so accumulating a
+// multi-window capture by id is safe.
+export function mergeGroups(existing: SavedTabGroup[], incoming: SavedTabGroup[]): SavedTabGroup[] {
+  const seen = new Set(existing.map((g) => g.id));
+  const merged = [...existing];
+  for (const g of incoming) {
+    if (!seen.has(g.id)) {
+      seen.add(g.id);
+      merged.push(g);
+    }
+  }
+  return merged;
+}
+
 export function toSavedTab(t: chrome.tabs.Tab): SavedTab {
   const hasTabGroups = typeof chrome.tabGroups !== 'undefined';
   return {
@@ -79,17 +94,11 @@ export async function captureAllWindows(): Promise<{
   const captures = await Promise.all(windows.map((w) => captureWindow(w.id!)));
 
   const allTabs: SavedTab[] = [];
-  const allGroups: SavedTabGroup[] = [];
-  const seenGroups = new Set<number>();
+  let allGroups: SavedTabGroup[] = [];
 
   for (const { tabs, groups } of captures) {
     allTabs.push(...tabs);
-    for (const g of groups) {
-      if (!seenGroups.has(g.id)) {
-        seenGroups.add(g.id);
-        allGroups.push(g);
-      }
-    }
+    allGroups = mergeGroups(allGroups, groups);
   }
 
   return {

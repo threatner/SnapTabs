@@ -17,8 +17,8 @@ import {
   cancelRecording,
   getWindowMap,
   saveWindowMap,
-  getIncognitoCache,
-  saveIncognitoCache,
+  getWindowCache,
+  saveWindowCache,
   getPendingClose,
   savePendingClose,
   clearPendingClose,
@@ -307,20 +307,22 @@ describe('Window Map', () => {
   });
 });
 
-describe('Incognito Cache', () => {
+describe('Window Cache', () => {
   beforeEach(() => resetChromeStorage());
 
   it('returns empty object when nothing stored', async () => {
-    const cache = await getIncognitoCache();
+    const cache = await getWindowCache();
     expect(cache).toEqual({});
   });
 
-  it('saves and retrieves incognito cache', async () => {
-    const tabs = [makeTab({ isIncognito: true })];
-    await saveIncognitoCache({ '42': tabs });
-    const cache = await getIncognitoCache();
-    expect(cache['42']).toHaveLength(1);
-    expect(cache['42'][0].isIncognito).toBe(true);
+  it('saves and retrieves a per-window capture of tabs and groups', async () => {
+    const tabs = [makeTab({ isIncognito: true, groupId: 7 })];
+    const groups = [{ id: 7, title: 'Work', color: 'blue' as const, collapsed: false }];
+    await saveWindowCache({ '42': { tabs, groups } });
+    const cache = await getWindowCache();
+    expect(cache['42'].tabs).toHaveLength(1);
+    expect(cache['42'].tabs[0].isIncognito).toBe(true);
+    expect(cache['42'].groups).toEqual(groups);
   });
 });
 
@@ -518,23 +520,31 @@ describe('Pending Close Buffer', () => {
 
   it('returns empty default when nothing stored', async () => {
     const pc = await getPendingClose();
-    expect(pc).toEqual({ tabs: [], windowCount: 0, updatedAt: 0 });
+    expect(pc).toEqual({ tabs: [], groups: [], windowCount: 0, updatedAt: 0 });
   });
 
   it('saves and retrieves a pending close buffer', async () => {
     const tabs = [makeTab({ url: 'https://a.com' }), makeTab({ url: 'https://b.com' })];
-    await savePendingClose({ tabs, windowCount: 2, updatedAt: 12345 });
+    await savePendingClose({ tabs, groups: [], windowCount: 2, updatedAt: 12345 });
     const pc = await getPendingClose();
     expect(pc.tabs).toHaveLength(2);
     expect(pc.windowCount).toBe(2);
     expect(pc.updatedAt).toBe(12345);
   });
 
+  it('defaults groups to [] for a legacy buffer stored without the field', async () => {
+    await chrome.storage.session.set({
+      snaptabs_pending_close: { tabs: [makeTab()], windowCount: 1, updatedAt: 1 },
+    });
+    const pc = await getPendingClose();
+    expect(pc.groups).toEqual([]);
+  });
+
   it('clearPendingClose removes the buffer', async () => {
-    await savePendingClose({ tabs: [makeTab()], windowCount: 1, updatedAt: 1 });
+    await savePendingClose({ tabs: [makeTab()], groups: [], windowCount: 1, updatedAt: 1 });
     await clearPendingClose();
     const pc = await getPendingClose();
-    expect(pc).toEqual({ tabs: [], windowCount: 0, updatedAt: 0 });
+    expect(pc).toEqual({ tabs: [], groups: [], windowCount: 0, updatedAt: 0 });
   });
 });
 

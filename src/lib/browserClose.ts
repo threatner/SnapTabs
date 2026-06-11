@@ -1,6 +1,6 @@
-import type { Session, SavedTab, SnapTabsSettings } from './types';
+import type { Session, SavedTab, SavedTabGroup, SnapTabsSettings } from './types';
 import { uuid, formatSessionName, isExcludedUrl } from './types';
-import { urlSetSignature } from './tabs';
+import { urlSetSignature, mergeGroups } from './tabs';
 import {
   getSessions,
   saveSession,
@@ -36,20 +36,22 @@ export function createCloseChain(): CloseChain {
 
 export const PENDING_CLOSE_STALE_MS = 5000;
 
-// Accumulates a normal (non-incognito) window's tabs into the pending-close
-// buffer; flushes a combined "Browser close" session when this was the
-// last window. Caller is responsible for excluded-domain filtering and
-// for guarding on settings.autoSnapshotOnBrowserClose.
+// Accumulates a normal (non-incognito) window's tabs and tab groups into the
+// pending-close buffer; flushes a combined "Browser close" session when this
+// was the last window. Caller is responsible for excluded-domain filtering
+// and for guarding on settings.autoSnapshotOnBrowserClose.
 export async function processNormalWindowClose(
   tabs: SavedTab[],
+  groups: SavedTabGroup[],
   isLastWindow: boolean,
   now: number = Date.now(),
 ): Promise<Session | null> {
   let pending = await getPendingClose();
   if (now - pending.updatedAt > PENDING_CLOSE_STALE_MS) {
-    pending = { tabs: [], windowCount: 0, updatedAt: now };
+    pending = { tabs: [], groups: [], windowCount: 0, updatedAt: now };
   }
   pending.tabs.push(...tabs);
+  pending.groups = mergeGroups(pending.groups, groups);
   pending.windowCount += 1;
   pending.updatedAt = now;
   await savePendingClose(pending);
@@ -61,7 +63,7 @@ export async function processNormalWindowClose(
     name: formatSessionName('Browser close'),
     timestamp: now,
     tabs: pending.tabs,
-    tabGroups: [],
+    tabGroups: pending.groups,
     windowCount: pending.windowCount,
     hasIncognitoTabs: false,
     isAutoSave: true,
@@ -121,7 +123,7 @@ export async function recoverLastSnapshot(settings: SnapTabsSettings): Promise<S
     name: formatSessionName('Browser close (recovered)'),
     timestamp: snap.updatedAt,
     tabs: filtered,
-    tabGroups: [],
+    tabGroups: snap.groups,
     windowCount: snap.windowCount,
     hasIncognitoTabs: false,
     isAutoSave: true,

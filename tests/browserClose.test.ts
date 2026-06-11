@@ -17,7 +17,7 @@ import {
   updateSettings,
   getSettings,
 } from '../src/lib/storage';
-import type { SavedTab, Session, SnapTabsSettings } from '../src/lib/types';
+import type { SavedTab, SavedTabGroup, Session, SnapTabsSettings } from '../src/lib/types';
 import { DEFAULT_SETTINGS } from '../src/lib/types';
 
 function tab(url: string, overrides: Partial<SavedTab> = {}): SavedTab {
@@ -29,6 +29,10 @@ function tab(url: string, overrides: Partial<SavedTab> = {}): SavedTab {
     index: 0,
     ...overrides,
   };
+}
+
+function group(id: number, title: string, overrides: Partial<SavedTabGroup> = {}): SavedTabGroup {
+  return { id, title, color: 'blue', collapsed: false, ...overrides };
 }
 
 function settingsWith(overrides: Partial<SnapTabsSettings> = {}): SnapTabsSettings {
@@ -76,7 +80,7 @@ describe('processNormalWindowClose', () => {
   beforeEach(() => resetChromeStorage());
 
   it('appends tabs to pending buffer and does not save when not last window', async () => {
-    const result = await processNormalWindowClose([tab('https://a.com')], false, 1000);
+    const result = await processNormalWindowClose([tab('https://a.com')], [], false, 1000);
     expect(result).toBeNull();
 
     const pending = await getPendingClose();
@@ -86,9 +90,9 @@ describe('processNormalWindowClose', () => {
   });
 
   it('flushes pending buffer to a session when last window closes', async () => {
-    await processNormalWindowClose([tab('https://a.com')], false, 1000);
-    await processNormalWindowClose([tab('https://b.com'), tab('https://c.com')], false, 1100);
-    const session = await processNormalWindowClose([tab('https://d.com')], true, 1200);
+    await processNormalWindowClose([tab('https://a.com')], [], false, 1000);
+    await processNormalWindowClose([tab('https://b.com'), tab('https://c.com')], [], false, 1100);
+    const session = await processNormalWindowClose([tab('https://d.com')], [], true, 1200);
 
     expect(session).not.toBeNull();
     expect(session!.tabs).toHaveLength(4);
@@ -113,10 +117,34 @@ describe('processNormalWindowClose', () => {
     expect(sessions[0].tabs).toHaveLength(4);
   });
 
+  it('preserves tab-group metadata in the flushed session', async () => {
+    const session = await processNormalWindowClose(
+      [tab('https://a.com', { groupId: 3 })],
+      [group(3, 'Work', { color: 'green', collapsed: true })],
+      true,
+      1000,
+    );
+    expect(session!.tabGroups).toEqual([group(3, 'Work', { color: 'green', collapsed: true })]);
+  });
+
+  it('accumulates groups across windows, deduping by id', async () => {
+    await processNormalWindowClose([tab('https://a.com', { groupId: 1 })], [group(1, 'Alpha')], false, 1000);
+    // Same group id seen again from a second window report — should not duplicate.
+    await processNormalWindowClose([tab('https://b.com', { groupId: 1 })], [group(1, 'Alpha')], false, 1100);
+    const session = await processNormalWindowClose(
+      [tab('https://c.com', { groupId: 2 })],
+      [group(2, 'Beta')],
+      true,
+      1200,
+    );
+    expect(session!.tabGroups).toEqual([group(1, 'Alpha'), group(2, 'Beta')]);
+  });
+
   it('resets pending buffer if it is older than the stale window', async () => {
-    await processNormalWindowClose([tab('https://stale.com')], false, 1000);
+    await processNormalWindowClose([tab('https://stale.com')], [], false, 1000);
     const fresh = await processNormalWindowClose(
       [tab('https://fresh.com')],
+      [],
       true,
       1000 + PENDING_CLOSE_STALE_MS + 1,
     );
@@ -126,8 +154,8 @@ describe('processNormalWindowClose', () => {
   });
 
   it('clears lastSnapshot when it saves a session', async () => {
-    await saveLastSnapshot({ tabs: [tab('https://x.com')], windowCount: 1, updatedAt: 1 });
-    await processNormalWindowClose([tab('https://a.com')], true, 1000);
+    await saveLastSnapshot({ tabs: [tab('https://x.com')], groups: [], windowCount: 1, updatedAt: 1 });
+    await processNormalWindowClose([tab('https://a.com')], [], true, 1000);
     const snap = await getLastSnapshot();
     expect(snap).toBeNull();
   });
@@ -142,13 +170,13 @@ describe('processNormalWindowClose', () => {
 
     let last: Session | null = null;
     chain.enqueue(async () => {
-      await processNormalWindowClose(w1, false, 1000);
+      await processNormalWindowClose(w1, [], false, 1000);
     });
     chain.enqueue(async () => {
-      await processNormalWindowClose(w2, false, 1001);
+      await processNormalWindowClose(w2, [], false, 1001);
     });
     chain.enqueue(async () => {
-      last = await processNormalWindowClose(w3, true, 1002);
+      last = await processNormalWindowClose(w3, [], true, 1002);
     });
 
     await chain.drain();
@@ -175,9 +203,9 @@ describe('processNormalWindowClose', () => {
     const w3 = [tab('https://w3.com')];
 
     await Promise.all([
-      processNormalWindowClose(w1, false, 1000),
-      processNormalWindowClose(w2, false, 1000),
-      processNormalWindowClose(w3, true, 1000),
+      processNormalWindowClose(w1, [], false, 1000),
+      processNormalWindowClose(w2, [], false, 1000),
+      processNormalWindowClose(w3, [], true, 1000),
     ]);
 
     const sessions = await getSessions();
@@ -192,7 +220,7 @@ describe('recoverLastSnapshot', () => {
 
   it('returns null and does nothing when sessionMarker already set', async () => {
     await setSessionMarker();
-    await saveLastSnapshot({ tabs: [tab('https://x.com')], windowCount: 1, updatedAt: 1 });
+    await saveLastSnapshot({ tabs: [tab('https://x.com')], groups: [], windowCount: 1, updatedAt: 1 });
     const result = await recoverLastSnapshot(settingsWith({ autoSnapshotOnBrowserClose: true }));
     expect(result).toBeNull();
     // lastSnapshot left intact for the next genuine fresh start
@@ -201,7 +229,7 @@ describe('recoverLastSnapshot', () => {
   });
 
   it('clears lastSnapshot and returns null when feature disabled', async () => {
-    await saveLastSnapshot({ tabs: [tab('https://x.com')], windowCount: 1, updatedAt: 1 });
+    await saveLastSnapshot({ tabs: [tab('https://x.com')], groups: [], windowCount: 1, updatedAt: 1 });
     const result = await recoverLastSnapshot(settingsWith({ autoSnapshotOnBrowserClose: false }));
     expect(result).toBeNull();
     const snap = await getLastSnapshot();
@@ -211,12 +239,14 @@ describe('recoverLastSnapshot', () => {
   it('promotes lastSnapshot to a session on a fresh browser start', async () => {
     await saveLastSnapshot({
       tabs: [tab('https://a.com'), tab('https://b.com')],
+      groups: [group(7, 'Research')],
       windowCount: 2,
       updatedAt: 5000,
     });
     const result = await recoverLastSnapshot(settingsWith({ autoSnapshotOnBrowserClose: true }));
     expect(result).not.toBeNull();
     expect(result!.tabs).toHaveLength(2);
+    expect(result!.tabGroups).toEqual([group(7, 'Research')]);
     expect(result!.windowCount).toBe(2);
     expect(result!.isAutoSave).toBe(true);
     expect(result!.name).toMatch(/Browser close \(recovered\)/);
@@ -245,7 +275,7 @@ describe('recoverLastSnapshot', () => {
       isAutoSave: true,
     };
     await saveSession(existing);
-    await saveLastSnapshot({ tabs, windowCount: 1, updatedAt: 9_900 });
+    await saveLastSnapshot({ tabs, groups: [], windowCount: 1, updatedAt: 9_900 });
 
     const result = await recoverLastSnapshot(settingsWith({ autoSnapshotOnBrowserClose: true }));
     expect(result).toBeNull();
@@ -270,6 +300,7 @@ describe('recoverLastSnapshot', () => {
     await saveSession(existing);
     await saveLastSnapshot({
       tabs: [tab('https://a.com'), tab('https://b.com')],
+      groups: [],
       windowCount: 1,
       updatedAt: 10_000,
     });
@@ -282,6 +313,7 @@ describe('recoverLastSnapshot', () => {
   it('applies excluded-domain filter at recovery time', async () => {
     await saveLastSnapshot({
       tabs: [tab('https://keep.com'), tab('https://drop.com')],
+      groups: [],
       windowCount: 1,
       updatedAt: 5_000,
     });
@@ -296,6 +328,7 @@ describe('recoverLastSnapshot', () => {
   it('returns null when filter empties the snapshot', async () => {
     await saveLastSnapshot({
       tabs: [tab('https://drop.com')],
+      groups: [],
       windowCount: 1,
       updatedAt: 5_000,
     });
@@ -308,7 +341,7 @@ describe('recoverLastSnapshot', () => {
   });
 
   it('idempotent: a second call within the same browser session is a no-op', async () => {
-    await saveLastSnapshot({ tabs: [tab('https://a.com')], windowCount: 1, updatedAt: 5_000 });
+    await saveLastSnapshot({ tabs: [tab('https://a.com')], groups: [], windowCount: 1, updatedAt: 5_000 });
     const first = await recoverLastSnapshot(settingsWith({ autoSnapshotOnBrowserClose: true }));
     expect(first).not.toBeNull();
     const second = await recoverLastSnapshot(settingsWith({ autoSnapshotOnBrowserClose: true }));
@@ -323,15 +356,15 @@ describe('storage: lastSnapshot and sessionMarker round-trips', () => {
 
   it('saveLastSnapshot / getLastSnapshot / clearLastSnapshot', async () => {
     expect(await getLastSnapshot()).toBeNull();
-    await saveLastSnapshot({ tabs: [tab('https://a.com')], windowCount: 1, updatedAt: 42 });
+    await saveLastSnapshot({ tabs: [tab('https://a.com')], groups: [], windowCount: 1, updatedAt: 42 });
     const got = await getLastSnapshot();
-    expect(got).toEqual({ tabs: [tab('https://a.com')], windowCount: 1, updatedAt: 42 });
+    expect(got).toEqual({ tabs: [tab('https://a.com')], groups: [], windowCount: 1, updatedAt: 42 });
     await clearLastSnapshot();
     expect(await getLastSnapshot()).toBeNull();
   });
 
   it('lastSnapshot lives in chrome.storage.local (survives session wipe)', async () => {
-    await saveLastSnapshot({ tabs: [], windowCount: 0, updatedAt: 1 });
+    await saveLastSnapshot({ tabs: [], groups: [], windowCount: 0, updatedAt: 1 });
     // recovery flow uses chrome.storage.session for the marker; the
     // snapshot itself MUST be in local so it survives browser quit.
     const { snaptabs_last_snapshot } = await chrome.storage.local.get('snaptabs_last_snapshot');
