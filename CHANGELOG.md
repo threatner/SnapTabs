@@ -4,6 +4,22 @@ All notable changes to SnapTabs are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-06-12
+
+### Fixed
+
+- **Tab group names are now saved on auto-save, not just manual snapshots** ([#7](https://github.com/threatner/SnapTabs/issues/7)). When auto-saving on browser close (or incognito-window close, or service-worker crash recovery), tab group names, colors, and collapsed state were being dropped — restored sessions came back with bare, unnamed groups. The proactive per-window cache only kept tab data, so every auto-save path saved empty `tabGroups`. The cache now captures tab-group metadata alongside tabs, so a browser-close session restores its groups exactly like a manual snapshot does.
+
+### Added
+
+- **Sort the session list.** A dropdown next to the search box orders saved sessions by Newest (default), Oldest, Name (A–Z), or Most tabs. Pinned sessions always stay on top regardless of the chosen sort.
+
+### Internal
+
+- Unified the separate per-window tab cache and tab-group cache into a single `windowCache` (`Map<number, WindowCapture { tabs, groups }>`) persisted in one write, so tabs and groups can't drift out of sync. New `chrome.storage.session` key `snaptabs_window_cache` replaces the old `snaptabs_incognito_tab_cache` / group-cache keys.
+- New shared `mergeGroups` helper in `tabs.ts` (dedupe tab groups by id), reused by `captureAllWindows`, `processNormalWindowClose`, and `writeLastSnapshot`.
+- Test coverage: 153 unit tests and 76 Playwright E2E tests (added group-preservation, cross-window group dedup, window-cache round-trip, and session-sort coverage incl. pinned-stays-on-top).
+
 ## [1.5.0] - 2026-05-26
 
 ### Fixed

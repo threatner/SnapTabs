@@ -92,7 +92,7 @@ Save the current window or every open window. Name the session, or let SnapTabs 
 About to save tabs that match your most recent session? SnapTabs asks before creating a copy. Compares URL sets, ignoring order, fragments, and trailing slashes. Turn off in Settings if you'd rather every click save unconditionally.
 
 **Tab groups, preserved**
-Group names, group colors, collapsed state. All of it comes back exactly how you left it.
+Group names, group colors, collapsed state. All of it comes back exactly how you left it — on manual snapshots and on auto-saves when you quit the browser.
 
 **Incognito support**
 Flip the switch in Chrome to let SnapTabs run in incognito, and your private tabs are captured and restored to an incognito window automatically.
@@ -115,8 +115,8 @@ Type `st` in Chrome's address bar, press space, type a query. SnapTabs searches 
 **Import and export**
 Download every session as a JSON file for backup or to move to another computer. Load the file on the other side and everything is restored, with duplicate-import handling built in.
 
-**Search inside the popup**
-Filter by session name, tab title, or URL. Works on thousands of saved tabs.
+**Search and sort your sessions**
+Filter by session name, tab title, or URL — works across thousands of saved tabs. Reorder the list by newest, oldest, name, or most tabs from the sort menu next to the search box. Pinned sessions always stay on top.
 
 **Keyboard shortcut**
 `Alt+Shift+S` saves all tabs without opening the popup.
@@ -160,7 +160,7 @@ No. Storage is local. The extension makes zero outbound requests. You can verify
 Turn on "Save on browser close" in Settings (it's off by default). While it's on, every window's tabs land in a combined "Browser close" session when the last window closes — including the multi-window Cmd+Q case. If the browser kills the extension's service worker mid-shutdown before the save lands (Brave is more aggressive about this than Chrome), SnapTabs falls back to a continuously-updated snapshot it keeps in local storage. On the next browser start, that snapshot is promoted to a "Browser close (recovered)" session. Either way your tabs come back. For critical tab sets, also take a manual snapshot (`Alt+Shift+S`) as belt-and-braces.
 
 **Will my tab groups come back?**
-Yes. Name, color, collapsed state. Pinned tabs come back pinned. The only thing SnapTabs cannot restore is the exact window position, because Chrome does not expose that to extensions.
+Yes. Name, color, collapsed state — on manual snapshots and on browser-close auto-saves alike. Pinned tabs come back pinned. The only thing SnapTabs cannot restore is the exact window position, because Chrome does not expose that to extensions.
 
 **Can I sync my sessions across devices?**
 Not automatically. Use Settings > Data > Export to download a JSON file, then Import on the other machine.
