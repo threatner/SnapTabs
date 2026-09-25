@@ -2,7 +2,7 @@ import { defineBackground } from 'wxt/sandbox';
 import type { Session, SavedTab, SavedTabGroup, SnapTabsSettings } from '../lib/types';
 import { uuid, formatSessionName, isExcludedUrl } from '../lib/types';
 import { createSnapshot, restoreSession, getTabStats, captureWindow, toSavedTab, mergeGroups, isRestorable } from '../lib/tabs';
-import type { WindowCapture } from '../lib/storage';
+import type { WindowCapture, UsageEvent } from '../lib/storage';
 import {
   getSessions,
   getSettings,
@@ -22,7 +22,8 @@ import {
   saveWindowCache,
   saveLastSnapshot,
   clearLastSnapshot,
-  recordRestore,
+  recordUsage,
+  backfillUsageStats,
   renameSession,
   deleteAllSessions,
   dismissRatingPrompt,
@@ -45,6 +46,12 @@ export default defineBackground(() => {
   // tabs get dropped or remaining===0 triggers more than once.
   const closeChain = createCloseChain();
   let snapshotTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Usage stats only feed one-time prompts; a failed count must never make
+  // the action it counts fail.
+  async function track(event: UsageEvent, session?: Session): Promise<void> {
+    try { await recordUsage(event, session); } catch {}
+  }
 
   // ── Persistence helpers ──
 
@@ -126,7 +133,7 @@ export default defineBackground(() => {
       const stillOpenUrls = extensionUpdated
         ? (await chrome.tabs.query({})).filter((t) => !t.incognito).map((t) => t.url || t.pendingUrl || '')
         : undefined;
-      await recoverLastSnapshot(settings, stillOpenUrls);
+      if (await recoverLastSnapshot(settings, stillOpenUrls)) await track('autoSave');
     } catch (e) {
       console.error('[SnapTabs] recoverLastSnapshot error:', e);
     }
@@ -209,11 +216,13 @@ export default defineBackground(() => {
           isAutoSave: true,
         };
         await saveSession(session);
+        await track('autoSave');
       } else {
         // Normal window close — accumulate into pending buffer so multi-window
         // Cmd+Q captures every window's tabs and groups, not just the last one.
         if (!settings.autoSnapshotOnBrowserClose) return;
-        await processNormalWindowClose(filtered, cachedGroups, remaining.length === 0);
+        const saved = await processNormalWindowClose(filtered, cachedGroups, remaining.length === 0);
+        if (saved) await track('autoSave');
       }
     } catch {}
   }
@@ -272,14 +281,14 @@ export default defineBackground(() => {
 
   chrome.contextMenus.onClicked.addListener(async (info) => {
     if (info.menuItemId === 'snaptabs-save-all') {
-      try { await createSnapshot(); } catch {}
+      try { await createSnapshot(); await track('manualSnapshot'); } catch {}
     }
   });
 
   if (chrome.commands?.onCommand) {
     chrome.commands.onCommand.addListener(async (cmd) => {
       if (cmd === 'snapshot-tabs') {
-        try { await createSnapshot(); } catch {}
+        try { await createSnapshot(); await track('manualSnapshot'); } catch {}
       }
     });
   }
@@ -415,6 +424,7 @@ export default defineBackground(() => {
           false,
           typeof msg.windowId === 'number' ? msg.windowId : undefined,
         );
+        await track('manualSnapshot');
         return session;
       }
       case 'restore': {
@@ -423,8 +433,7 @@ export default defineBackground(() => {
         if (!session) throw new Error('Session not found');
         const settings = await getSettings();
         await restoreSession(session, settings.restoreIncognitoToIncognito, settings.restoreInNewWindow, settings.sleepRestoredTabs);
-        // Only feeds the rating prompt; must never make a restore look failed.
-        try { await recordRestore(); } catch {}
+        await track('restore', session);
         if (settings.autoDeleteAfterRestore) await deleteSession(session.id);
         return { success: true };
       }
@@ -471,6 +480,7 @@ export default defineBackground(() => {
         recordingWindowId = -1;
         recordedTabIds.clear();
         const session = await stopRecording();
+        if (session) await track('recording');
         await updateBadge();
         return session;
       }
@@ -492,6 +502,8 @@ export default defineBackground(() => {
   async function init() {
     try {
       await restoreState();
+      // Before anything below saves a session, so nothing is counted twice.
+      try { await backfillUsageStats(); } catch {}
       // Read before recovery, which sets the marker. storage.session is also
       // cleared by extension updates, so a missing marker means "browser
       // restart or extension update"; the version tells them apart.

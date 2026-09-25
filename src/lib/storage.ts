@@ -61,20 +61,50 @@ async function withLock<T>(name: string, fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
-// Usage counters that drive one-time prompts. Not part of export/import.
+// ── Usage stats ──
+// Local-only counters of what the user does with SnapTabs, for deciding when
+// to show one-time prompts (e.g. the rating request). Never sent anywhere and
+// not part of export/import.
+export interface UsageStats {
+  manualSnapshots: number;         // popup button, keyboard shortcut, right-click menu
+  recordings: number;              // live recordings saved
+  autoSaves: number;               // browser close, incognito close, recovered after a crash
+  restores: number;                // every restore
+  restoresOfManualSessions: number; // restores of snapshots and recordings
+  restoresOfAutoSaves: number;     // restores of auto-saves and the rolling backup
+  firstSeenAt: number;             // earliest known use (0 = unknown)
+}
+
 export interface Meta {
-  restoreCount: number;
+  stats: UsageStats;
+  // Set once stats were seeded from sessions saved before stats existed
+  // (v1.9), so long-time users are counted from what they already have.
+  statsBackfilled: boolean;
   ratingPromptDone: boolean;
 }
 
-const DEFAULT_META: Meta = { restoreCount: 0, ratingPromptDone: false };
+const EMPTY_STATS: UsageStats = {
+  manualSnapshots: 0,
+  recordings: 0,
+  autoSaves: 0,
+  restores: 0,
+  restoresOfManualSessions: 0,
+  restoresOfAutoSaves: 0,
+  firstSeenAt: 0,
+};
 
-// Successful restores before the popup asks for a rating.
+// The rating request shows after either of these, whichever comes first.
+export const RATING_PROMPT_AFTER_MANUAL_SNAPSHOTS = 5;
 export const RATING_PROMPT_AFTER_RESTORES = 3;
 
 export async function getMeta(): Promise<Meta> {
   const result = await chrome.storage.local.get(KEYS.meta);
-  return { ...DEFAULT_META, ...result[KEYS.meta] };
+  const stored = (result[KEYS.meta] ?? {}) as Partial<Meta>;
+  return {
+    statsBackfilled: stored.statsBackfilled ?? false,
+    ratingPromptDone: stored.ratingPromptDone ?? false,
+    stats: { ...EMPTY_STATS, ...stored.stats },
+  };
 }
 
 async function updateMeta(update: (meta: Meta) => Partial<Meta>): Promise<void> {
@@ -84,8 +114,44 @@ async function updateMeta(update: (meta: Meta) => Partial<Meta>): Promise<void> 
   });
 }
 
-export async function recordRestore(): Promise<void> {
-  await updateMeta(({ restoreCount }) => ({ restoreCount: restoreCount + 1 }));
+export type UsageEvent = 'manualSnapshot' | 'recording' | 'autoSave' | 'restore';
+
+// Counts one user action. `session` is the session restored (for 'restore').
+export async function recordUsage(event: UsageEvent, session?: Pick<Session, 'isAutoSave'>, now = Date.now()): Promise<void> {
+  await updateMeta(({ stats }) => {
+    const next = { ...stats, firstSeenAt: stats.firstSeenAt || now };
+    if (event === 'manualSnapshot') next.manualSnapshots++;
+    else if (event === 'recording') next.recordings++;
+    else if (event === 'autoSave') next.autoSaves++;
+    else {
+      next.restores++;
+      if (session?.isAutoSave) next.restoresOfAutoSaves++;
+      else next.restoresOfManualSessions++;
+    }
+    return { stats: next };
+  });
+}
+
+// One-time seed from the sessions already saved, so users from before v1.9
+// aren't treated as brand new. Restores weren't tracked before, so they
+// start at 0.
+export async function backfillUsageStats(now = Date.now()): Promise<void> {
+  const sessions = await getSessions();
+  await updateMeta(({ stats, statsBackfilled }) => {
+    if (statsBackfilled) return {};
+    const manual = sessions.filter((s) => !s.isAutoSave).length;
+    const auto = sessions.filter((s) => s.isAutoSave && !s.isBackup).length;
+    const oldest = sessions.reduce((min, s) => Math.min(min, s.timestamp), now);
+    return {
+      statsBackfilled: true,
+      stats: {
+        ...stats,
+        manualSnapshots: stats.manualSnapshots + manual,
+        autoSaves: stats.autoSaves + auto,
+        firstSeenAt: stats.firstSeenAt ? Math.min(stats.firstSeenAt, oldest) : oldest,
+      },
+    };
+  });
 }
 
 export async function dismissRatingPrompt(): Promise<void> {
@@ -93,7 +159,9 @@ export async function dismissRatingPrompt(): Promise<void> {
 }
 
 export function shouldShowRatingPrompt(meta: Meta): boolean {
-  return !meta.ratingPromptDone && meta.restoreCount >= RATING_PROMPT_AFTER_RESTORES;
+  if (meta.ratingPromptDone) return false;
+  return meta.stats.manualSnapshots >= RATING_PROMPT_AFTER_MANUAL_SNAPSHOTS
+    || meta.stats.restores >= RATING_PROMPT_AFTER_RESTORES;
 }
 
 // ── Sessions ──
