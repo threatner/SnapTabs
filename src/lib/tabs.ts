@@ -61,6 +61,7 @@ export function toSavedTab(t: chrome.tabs.Tab): SavedTab {
     isIncognito: t.incognito,
     groupId: hasTabGroups && t.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE ? t.groupId : undefined,
     index: t.index,
+    windowId: t.windowId,
   };
 }
 
@@ -159,27 +160,50 @@ export async function restoreSession(
   restoreIncognitoToIncognito: boolean,
   restoreInNewWindow: boolean,
 ): Promise<void> {
-  const restorable = session.tabs.filter((t) => isRestorable(t.url));
-  const regular = restorable.filter((t) => !t.isIncognito);
-  const incognito = restorable.filter((t) => t.isIncognito);
+  // Each saved window comes back as its own window. Only the first one may
+  // land in the current window (when restoreInNewWindow is off).
+  let usedCurrentWindow = false;
 
-  if (regular.length > 0) {
-    if (restoreInNewWindow) {
-      await restoreInWindow(regular, session.tabGroups, false);
-    } else {
-      await restoreInCurrent(regular, session.tabGroups);
+  for (const windowTabs of splitByWindow(session.tabs, session.windowCount)) {
+    const restorable = windowTabs.filter((t) => isRestorable(t.url));
+    const toIncognito = restoreIncognitoToIncognito ? restorable.filter((t) => t.isIncognito) : [];
+    const rest = restoreIncognitoToIncognito ? restorable.filter((t) => !t.isIncognito) : restorable;
+
+    if (rest.length > 0) {
+      if (restoreInNewWindow || usedCurrentWindow) {
+        await restoreInWindow(rest, session.tabGroups, false);
+      } else {
+        await restoreInCurrent(rest, session.tabGroups);
+        usedCurrentWindow = true;
+      }
+    }
+
+    if (toIncognito.length > 0) {
+      await restoreInWindow(toIncognito, session.tabGroups, true);
     }
   }
+}
 
-  if (incognito.length > 0) {
-    if (restoreIncognitoToIncognito) {
-      await restoreInWindow(incognito, session.tabGroups, true);
-    } else if (restoreInNewWindow) {
-      await restoreInWindow(incognito, session.tabGroups, false);
-    } else {
-      await restoreInCurrent(incognito, session.tabGroups);
-    }
+// Splits a session's tabs into per-window lists, in the order windows were
+// captured. Tab `index` is only unique within a window, so windows must be
+// restored separately or their tabs interleave. Sessions saved before v1.9
+// have no windowId, but their tabs were stored window-by-window, so an index
+// that fails to increase marks the start of the next window.
+export function splitByWindow(tabs: SavedTab[], windowCount: number): SavedTab[][] {
+  if (tabs.length === 0) return [];
+  if (windowCount <= 1) return [tabs];
+
+  const windows = new Map<string, SavedTab[]>();
+  let segment = 0;
+  let prevIndex = -1;
+  for (const tab of tabs) {
+    if (tab.index <= prevIndex) segment++;
+    prevIndex = tab.index;
+    const key = tab.windowId !== undefined ? `w${tab.windowId}` : `s${segment}`;
+    if (!windows.has(key)) windows.set(key, []);
+    windows.get(key)!.push(tab);
   }
+  return [...windows.values()];
 }
 
 // ── Stats ──
