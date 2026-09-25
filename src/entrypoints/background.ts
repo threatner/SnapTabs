@@ -29,6 +29,7 @@ import {
   retireBackup,
   setBackupRestartCheck,
   hasSessionMarker,
+  recordVersion,
 } from '../lib/storage';
 import { createCloseChain, processNormalWindowClose, recoverLastSnapshot } from '../lib/browserClose';
 import { BACKUP_ALARM, scheduleBackup, runBackup } from '../lib/backup';
@@ -119,10 +120,13 @@ export default defineBackground(() => {
     } catch {}
   }
 
-  async function recoverLastSnapshotIfFreshStart() {
+  async function recoverLastSnapshotIfFreshStart(extensionUpdated: boolean) {
     try {
       const settings = await getSettings();
-      await recoverLastSnapshot(settings);
+      const stillOpenUrls = extensionUpdated
+        ? (await chrome.tabs.query({})).filter((t) => !t.incognito).map((t) => t.url || t.pendingUrl || '')
+        : undefined;
+      await recoverLastSnapshot(settings, stillOpenUrls);
     } catch (e) {
       console.error('[SnapTabs] recoverLastSnapshot error:', e);
     }
@@ -290,6 +294,13 @@ export default defineBackground(() => {
     return backupQueue;
   }
 
+  // Retiring goes through the same queue so it can't land in the middle of a
+  // backup run that already read the old backup.
+  function queueRetire(): Promise<unknown> {
+    backupQueue = backupQueue.then(() => ready).then(() => retireBackup()).catch(() => {});
+    return backupQueue;
+  }
+
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === BACKUP_ALARM) void queueBackup();
   });
@@ -307,7 +318,7 @@ export default defineBackground(() => {
         // Take the first backup right away so turning it on has a visible
         // result; turning it off leaves the last backup as a normal auto-save.
         if (after > 0) await queueBackup();
-        else await retireBackup();
+        else await queueRetire();
       } catch {}
     })();
   });
@@ -481,13 +492,16 @@ export default defineBackground(() => {
   async function init() {
     try {
       await restoreState();
-      // Read before recovery, which sets the marker.
+      // Read before recovery, which sets the marker. storage.session is also
+      // cleared by extension updates, so a missing marker means "browser
+      // restart or extension update"; the version tells them apart.
       const freshStart = !(await hasSessionMarker());
+      const extensionUpdated = await recordVersion(chrome.runtime.getManifest().version);
       // Run recovery BEFORE we touch windowMap / refreshWindowCache so the
       // pre-existing lastSnapshot reflects the previous browser session,
       // not whatever Chrome restored this time.
-      await recoverLastSnapshotIfFreshStart();
-      if (freshStart) await setBackupRestartCheck();
+      await recoverLastSnapshotIfFreshStart(extensionUpdated);
+      if (freshStart && !extensionUpdated) await setBackupRestartCheck();
       // Restore in-memory recording flags in case service worker restarted
       const rec = await getRecording();
       if (rec?.isActive) {

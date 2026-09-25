@@ -26,6 +26,7 @@ describe('concurrent storage writes', () => {
   });
 
   it('a backup refresh never drops a snapshot saved at the same moment', async () => {
+    await updateSettings({ autoBackupMinutes: 15 });
     await Promise.all([
       upsertBackup(session('backup', { isAutoSave: true, isBackup: true })),
       saveSession(session('manual1')),

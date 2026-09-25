@@ -96,6 +96,5 @@ export async function runBackup(now: number = Date.now()): Promise<Session | nul
     isBackup: true,
     pinned: existing?.pinned,
   };
-  await upsertBackup(session, keepPrevious);
-  return session;
+  return (await upsertBackup(session, keepPrevious)) ? session : null;
 }
