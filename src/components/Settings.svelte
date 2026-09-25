@@ -170,6 +170,14 @@
       </label>
       <label class="setting-row">
         <div class="setting-text">
+          <p class="setting-title">Sleep restored tabs</p>
+          <p class="setting-desc">Unload background tabs once they load, to save memory. They reload when you open them</p>
+        </div>
+        <input type="checkbox" class="tv-switch" checked={settings.sleepRestoredTabs}
+          onchange={() => onUpdateSettings({ sleepRestoredTabs: !settings.sleepRestoredTabs })} />
+      </label>
+      <label class="setting-row">
+        <div class="setting-text">
           <p class="setting-title">Auto-delete after restore</p>
           <p class="setting-desc">Remove session data after restoring</p>
         </div>

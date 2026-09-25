@@ -30,6 +30,17 @@ function createStorageArea(store: Record<string, unknown>) {
   };
 }
 
+// Minimal chrome.events.Event mock; `emit` lets tests fire the event.
+function createEvent<A extends unknown[]>() {
+  const listeners = new Set<(...args: A) => void>();
+  return {
+    addListener: vi.fn((fn: (...args: A) => void) => { listeners.add(fn); }),
+    removeListener: vi.fn((fn: (...args: A) => void) => { listeners.delete(fn); }),
+    hasListeners: () => listeners.size > 0,
+    emit: (...args: A) => { for (const fn of [...listeners]) fn(...args); },
+  };
+}
+
 const chromeLocal = createStorageArea(localStore);
 const chromeSession = createStorageArea(sessionStore);
 
@@ -52,6 +63,8 @@ const chromeMock = {
     get: vi.fn(async (id: number) => ({ id, windowId: 1 })),
     update: vi.fn(async () => ({})),
     group: vi.fn(async () => Math.floor(Math.random() * 1000)),
+    discard: vi.fn(async (id: number) => ({ id, discarded: true })),
+    onUpdated: createEvent<[number, chrome.tabs.TabChangeInfo, chrome.tabs.Tab]>(),
   },
   tabGroups: {
     query: vi.fn(async () => []),

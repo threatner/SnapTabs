@@ -358,7 +358,7 @@ export default defineBackground(() => {
         const session = sessions.find((s) => s.id === msg.sessionId);
         if (!session) throw new Error('Session not found');
         const settings = await getSettings();
-        await restoreSession(session, settings.restoreIncognitoToIncognito, settings.restoreInNewWindow);
+        await restoreSession(session, settings.restoreIncognitoToIncognito, settings.restoreInNewWindow, settings.sleepRestoredTabs);
         if (settings.autoDeleteAfterRestore) await deleteSession(session.id);
         return { success: true };
       }

@@ -1,6 +1,7 @@
 import type { SavedTab, SavedTabGroup, Session } from './types';
 import { BLOCKED_URL_PREFIXES, uuid, formatSessionName, isExcludedUrl } from './types';
 import { saveSession, getSettings } from './storage';
+import { sleepTabsWhenLoaded } from './sleepTabs';
 
 export function isRestorable(url: string): boolean {
   return !BLOCKED_URL_PREFIXES.some((p) => url.startsWith(p));
@@ -160,10 +161,12 @@ export async function restoreSession(
   session: Session,
   restoreIncognitoToIncognito: boolean,
   restoreInNewWindow: boolean,
+  sleepRestoredTabs = false,
 ): Promise<void> {
   // Each saved window comes back as its own window. Only the first one may
   // land in the current window (when restoreInNewWindow is off).
   let usedCurrentWindow = false;
+  const backgroundTabIds: number[] = [];
 
   for (const windowTabs of splitByWindow(session.tabs, session.windowCount)) {
     const restorable = windowTabs.filter((t) => isRestorable(t.url));
@@ -172,17 +175,21 @@ export async function restoreSession(
 
     if (rest.length > 0) {
       if (restoreInNewWindow || usedCurrentWindow) {
-        await restoreInWindow(rest, session.tabGroups, false);
+        backgroundTabIds.push(...await restoreInWindow(rest, session.tabGroups, false));
       } else {
-        await restoreInCurrent(rest, session.tabGroups);
+        backgroundTabIds.push(...await restoreInCurrent(rest, session.tabGroups));
         usedCurrentWindow = true;
       }
     }
 
     if (toIncognito.length > 0) {
-      await restoreInWindow(toIncognito, session.tabGroups, true);
+      backgroundTabIds.push(...await restoreInWindow(toIncognito, session.tabGroups, true));
     }
   }
+
+  // Not awaited: sleeping waits for each tab to finish loading, and the
+  // restore itself is already done.
+  if (sleepRestoredTabs && backgroundTabIds.length > 0) void sleepTabsWhenLoaded(backgroundTabIds);
 }
 
 // Splits a session's tabs into per-window lists, in the order windows were
@@ -227,13 +234,17 @@ export async function getTabStats(): Promise<{
 
 // ── Internal ──
 
-async function restoreInCurrent(tabs: SavedTab[], sessionGroups: SavedTabGroup[]): Promise<void> {
+// Both restore helpers focus the first restored tab and return the ids of the
+// other (background) tabs, which are the ones eligible to be put to sleep.
+
+async function restoreInCurrent(tabs: SavedTab[], sessionGroups: SavedTabGroup[]): Promise<number[]> {
   const sorted = [...tabs].sort((a, b) => a.index - b.index);
   const ids: (number | undefined)[] = [];
 
   for (const tab of sorted) {
     try {
-      const created = await chrome.tabs.create({ url: tab.url, pinned: tab.pinned });
+      const active = ids.every((id) => id === undefined);
+      const created = await chrome.tabs.create({ url: tab.url, pinned: tab.pinned, active });
       ids.push(created.id);
     } catch {
       ids.push(undefined);
@@ -241,25 +252,31 @@ async function restoreInCurrent(tabs: SavedTab[], sessionGroups: SavedTabGroup[]
   }
 
   const first = ids.find((id) => id !== undefined);
-  if (first === undefined) return;
+  if (first === undefined) return [];
   const windowId = (await chrome.tabs.get(first)).windowId;
   await recreateGroups(sorted, ids, sessionGroups, windowId);
+  return ids.filter((id): id is number => id !== undefined && id !== first);
 }
 
-async function restoreInWindow(tabs: SavedTab[], sessionGroups: SavedTabGroup[], incognito: boolean): Promise<void> {
+async function restoreInWindow(tabs: SavedTab[], sessionGroups: SavedTabGroup[], incognito: boolean): Promise<number[]> {
   const sorted = [...tabs].sort((a, b) => a.index - b.index);
   const win = await chrome.windows.create({ url: sorted[0].url, incognito, focused: true });
-  if (!win?.id) return;
+  if (!win?.id) return [];
 
   const ids: (number | undefined)[] = [win.tabs?.[0]?.id];
 
   for (let i = 1; i < sorted.length; i++) {
-    const created = await chrome.tabs.create({ windowId: win.id, url: sorted[i].url, pinned: sorted[i].pinned, index: i });
-    ids.push(created.id);
+    try {
+      const created = await chrome.tabs.create({ windowId: win.id, url: sorted[i].url, pinned: sorted[i].pinned, index: i, active: false });
+      ids.push(created.id);
+    } catch {
+      ids.push(undefined);
+    }
   }
 
   if (sorted[0].pinned && ids[0]) await chrome.tabs.update(ids[0], { pinned: true });
   await recreateGroups(sorted, ids, sessionGroups, win.id);
+  return ids.slice(1).filter((id): id is number => id !== undefined);
 }
 
 async function recreateGroups(tabs: SavedTab[], tabIds: (number | undefined)[], sessionGroups: SavedTabGroup[], windowId: number): Promise<void> {
