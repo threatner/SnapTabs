@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { resetChromeStorage } from './setup';
-import { isRestorable, toSavedTab, urlSetSignature, findDuplicateSession } from '../src/lib/tabs';
-import type { Session } from '../src/lib/types';
+import { isRestorable, toSavedTab, urlSetSignature, findDuplicateSession, splitByWindow, restoreSession } from '../src/lib/tabs';
+import type { Session, SavedTab } from '../src/lib/types';
 
 describe('isRestorable', () => {
   it('allows normal http URLs', () => {
@@ -75,6 +75,7 @@ describe('toSavedTab', () => {
     expect(saved.pinned).toBe(true);
     expect(saved.isIncognito).toBe(false);
     expect(saved.index).toBe(0);
+    expect(saved.windowId).toBe(1);
   });
 
   it('uses pendingUrl when url is undefined', () => {
@@ -605,5 +606,119 @@ describe('restoreSession', () => {
     expect(chrome.windows.create).toHaveBeenCalledWith(
       expect.objectContaining({ incognito: true }),
     );
+  });
+});
+
+describe('splitByWindow', () => {
+  const tab = (url: string, index: number, windowId?: number): SavedTab => ({
+    url, title: url, pinned: false, isIncognito: false, index, windowId,
+  });
+
+  it('returns a single window when windowCount is 1', () => {
+    const tabs = [tab('a', 0, 1), tab('b', 0, 2)];
+    expect(splitByWindow(tabs, 1)).toEqual([tabs]);
+  });
+
+  it('returns nothing for an empty session', () => {
+    expect(splitByWindow([], 3)).toEqual([]);
+  });
+
+  it('groups by windowId in first-seen order', () => {
+    const tabs = [tab('a1', 0, 7), tab('a2', 1, 7), tab('b1', 0, 3), tab('b2', 1, 3)];
+    expect(splitByWindow(tabs, 2).map((w) => w.map((t) => t.url))).toEqual([['a1', 'a2'], ['b1', 'b2']]);
+  });
+
+  it('splits legacy sessions (no windowId) where the index resets', () => {
+    const tabs = [tab('a1', 0), tab('a2', 1), tab('a3', 2), tab('b1', 0), tab('b2', 1), tab('c1', 0)];
+    expect(splitByWindow(tabs, 3).map((w) => w.map((t) => t.url))).toEqual([['a1', 'a2', 'a3'], ['b1', 'b2'], ['c1']]);
+  });
+
+  it('tolerates index gaps from filtered tabs in legacy sessions', () => {
+    const tabs = [tab('a1', 0), tab('a3', 2), tab('b2', 1), tab('b4', 3)];
+    expect(splitByWindow(tabs, 2).map((w) => w.map((t) => t.url))).toEqual([['a1', 'a3'], ['b2', 'b4']]);
+  });
+});
+
+describe('restoreSession (multi-window)', () => {
+  beforeEach(() => {
+    resetChromeStorage();
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
+  const tab = (url: string, index: number, windowId?: number, isIncognito = false): SavedTab => ({
+    url, title: url, pinned: false, isIncognito, index, windowId,
+  });
+
+  const session = (tabs: SavedTab[], windowCount: number): Session => ({
+    id: 's', name: 'S', timestamp: 0, tabs, tabGroups: [], windowCount,
+    hasIncognitoTabs: tabs.some((t) => t.isIncognito), isAutoSave: true,
+  });
+
+  function mockCreation() {
+    let nextTab = 1000;
+    let nextWin = 50;
+    vi.mocked(chrome.tabs.create).mockImplementation(async (opts) =>
+      ({ id: nextTab++, windowId: opts.windowId ?? 1 }) as chrome.tabs.Tab);
+    vi.mocked(chrome.tabs.get).mockImplementation(async (id) => ({ id, windowId: 1 }) as chrome.tabs.Tab);
+    vi.mocked(chrome.windows.create).mockImplementation(async (opts) =>
+      ({ id: nextWin++, incognito: opts?.incognito ?? false, tabs: [{ id: nextTab++ }] }) as unknown as chrome.windows.Window);
+  }
+
+  it('restores each saved window into its own window, first into the current one', async () => {
+    mockCreation();
+    const s = session([
+      tab('https://a1.com', 0, 7), tab('https://a2.com', 1, 7),
+      tab('https://b1.com', 0, 3), tab('https://b2.com', 1, 3),
+      tab('https://c1.com', 0, 9),
+    ], 3);
+
+    await restoreSession(s, true, false);
+
+    const tabCalls = vi.mocked(chrome.tabs.create).mock.calls.map(([o]) => [o.url, o.windowId]);
+    expect(tabCalls).toEqual([
+      ['https://a1.com', undefined],
+      ['https://a2.com', undefined],
+      ['https://b2.com', 50],
+    ]);
+    const winCalls = vi.mocked(chrome.windows.create).mock.calls.map(([o]) => o?.url);
+    expect(winCalls).toEqual(['https://b1.com', 'https://c1.com']);
+  });
+
+  it('opens every window new when restoreInNewWindow is on', async () => {
+    mockCreation();
+    const s = session([tab('https://a1.com', 0, 7), tab('https://b1.com', 0, 3)], 2);
+
+    await restoreSession(s, true, true);
+
+    expect(vi.mocked(chrome.windows.create).mock.calls.map(([o]) => o?.url)).toEqual(['https://a1.com', 'https://b1.com']);
+  });
+
+  it('does not interleave tabs of legacy multi-window sessions', async () => {
+    mockCreation();
+    const s = session([
+      tab('https://a1.com', 0), tab('https://a2.com', 1),
+      tab('https://b1.com', 0), tab('https://b2.com', 1),
+    ], 2);
+
+    await restoreSession(s, true, false);
+
+    const tabUrls = vi.mocked(chrome.tabs.create).mock.calls.map(([o]) => o.url);
+    expect(tabUrls).toEqual(['https://a1.com', 'https://a2.com', 'https://b2.com']);
+    expect(vi.mocked(chrome.windows.create).mock.calls.map(([o]) => o?.url)).toEqual(['https://b1.com']);
+  });
+
+  it('keeps an incognito window separate and incognito', async () => {
+    mockCreation();
+    const s = session([
+      tab('https://a1.com', 0, 7),
+      tab('https://p1.com', 0, 8, true), tab('https://p2.com', 1, 8, true),
+    ], 2);
+
+    await restoreSession(s, true, false);
+
+    expect(vi.mocked(chrome.windows.create).mock.calls).toEqual([
+      [expect.objectContaining({ url: 'https://p1.com', incognito: true })],
+    ]);
   });
 });

@@ -6,6 +6,9 @@ export interface SavedTab {
   isIncognito: boolean;
   groupId?: number;
   index: number;
+  // Browser window the tab was captured from. Only meaningful for telling
+  // windows apart within one session; absent on sessions saved before v1.9.
+  windowId?: number;
 }
 
 export interface SavedTabGroup {
