@@ -10,6 +10,7 @@ export const KEYS = {
   pendingClose: 'snaptabs_pending_close',
   lastSnapshot: 'snaptabs_last_snapshot',
   sessionMarker: 'snaptabs_session_marker',
+  meta: 'snaptabs_meta',
 } as const;
 
 // Proactive per-window capture (tabs + tab groups), cached so auto-saves on
@@ -36,6 +37,40 @@ export interface LastSnapshot {
   groups: SavedTabGroup[];
   windowCount: number;
   updatedAt: number;
+}
+
+// Usage counters that drive one-time prompts. Not part of export/import.
+export interface Meta {
+  restoreCount: number;
+  ratingPromptDone: boolean;
+}
+
+const DEFAULT_META: Meta = { restoreCount: 0, ratingPromptDone: false };
+
+// Successful restores before the popup asks for a rating.
+export const RATING_PROMPT_AFTER_RESTORES = 3;
+
+export async function getMeta(): Promise<Meta> {
+  const result = await chrome.storage.local.get(KEYS.meta);
+  return { ...DEFAULT_META, ...result[KEYS.meta] };
+}
+
+async function updateMeta(partial: Partial<Meta>): Promise<void> {
+  const current = await getMeta();
+  await chrome.storage.local.set({ [KEYS.meta]: { ...current, ...partial } });
+}
+
+export async function recordRestore(): Promise<void> {
+  const { restoreCount } = await getMeta();
+  await updateMeta({ restoreCount: restoreCount + 1 });
+}
+
+export async function dismissRatingPrompt(): Promise<void> {
+  await updateMeta({ ratingPromptDone: true });
+}
+
+export function shouldShowRatingPrompt(meta: Meta): boolean {
+  return !meta.ratingPromptDone && meta.restoreCount >= RATING_PROMPT_AFTER_RESTORES;
 }
 
 // ── Sessions ──

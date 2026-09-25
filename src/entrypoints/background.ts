@@ -22,6 +22,7 @@ import {
   saveWindowCache,
   saveLastSnapshot,
   clearLastSnapshot,
+  recordRestore,
 } from '../lib/storage';
 import { createCloseChain, processNormalWindowClose, recoverLastSnapshot } from '../lib/browserClose';
 import { BACKUP_ALARM, scheduleBackup, runBackup } from '../lib/backup';
@@ -386,6 +387,8 @@ export default defineBackground(() => {
         if (!session) throw new Error('Session not found');
         const settings = await getSettings();
         await restoreSession(session, settings.restoreIncognitoToIncognito, settings.restoreInNewWindow, settings.sleepRestoredTabs);
+        // Only feeds the rating prompt; must never make a restore look failed.
+        try { await recordRestore(); } catch {}
         if (settings.autoDeleteAfterRestore) await deleteSession(session.id);
         return { success: true };
       }
