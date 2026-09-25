@@ -104,6 +104,18 @@ export async function launch({ port, ext = DEFAULT_EXT, userDataDir } = {}) {
   const sw = () => waitForTarget((t) => t.type === 'service_worker' && t.url.endsWith('/background.js'));
   const extensionId = (await sw()).url.split('/')[2];
 
+  // The worker target can be listed before it answers (seen on Brave's first
+  // start); wait until it evaluates.
+  for (let i = 0; ; i++) {
+    try {
+      await Promise.race([evaluate(await sw(), 'return 1'), sleep(3_000).then(() => { throw new Error('slow'); })]);
+      break;
+    } catch (e) {
+      if (i >= 20) throw new Error(`service worker never became ready: ${e.message}`);
+      await sleep(250);
+    }
+  }
+
   return {
     extensionId,
     targets,
