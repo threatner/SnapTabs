@@ -122,7 +122,7 @@
         : { windowType: 'normal' };
       const tabs = await chrome.tabs.query(query);
       const urls = tabs
-        .map((t) => t.url ?? t.pendingUrl ?? '')
+        .map((t) => t.url || t.pendingUrl || '')
         .filter((u) => u && !isExcludedUrl(u, settings.excludedDomains));
       if (urls.length === 0) return null;
       return findDuplicateSession(urls, sessions);

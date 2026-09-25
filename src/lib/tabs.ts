@@ -54,7 +54,8 @@ export function mergeGroups(existing: SavedTabGroup[], incoming: SavedTabGroup[]
 export function toSavedTab(t: chrome.tabs.Tab): SavedTab {
   const hasTabGroups = typeof chrome.tabGroups !== 'undefined';
   return {
-    url: t.url ?? t.pendingUrl ?? '',
+    // A tab that is still loading reports url '' with the target in pendingUrl.
+    url: t.url || t.pendingUrl || '',
     title: t.title ?? '',
     favIconUrl: t.favIconUrl || undefined,
     pinned: t.pinned ?? false,
