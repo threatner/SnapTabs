@@ -39,6 +39,26 @@ export interface LastSnapshot {
   updatedAt: number;
 }
 
+// ── Write serialization ──
+//
+// Every write below is a read-modify-write of a whole storage key, and the
+// writers run concurrently: service-worker timers and events, the popup, and
+// the welcome page. Unserialized, they silently drop each other's changes
+// (e.g. a backup refresh erasing a snapshot saved in the same instant). The
+// Web Locks API is shared by all same-origin contexts, so one lock per key
+// covers every extension page and the service worker.
+const localQueues = new Map<string, Promise<unknown>>();
+
+async function withLock<T>(name: string, fn: () => Promise<T>): Promise<T> {
+  if (typeof navigator !== 'undefined' && navigator.locks?.request) {
+    return navigator.locks.request(`snaptabs:${name}`, fn) as Promise<T>;
+  }
+  // Fallback for environments without Web Locks: serialize within this context.
+  const run = (localQueues.get(name) ?? Promise.resolve()).then(fn, fn);
+  localQueues.set(name, run.catch(() => {}));
+  return run;
+}
+
 // Usage counters that drive one-time prompts. Not part of export/import.
 export interface Meta {
   restoreCount: number;
@@ -55,18 +75,19 @@ export async function getMeta(): Promise<Meta> {
   return { ...DEFAULT_META, ...result[KEYS.meta] };
 }
 
-async function updateMeta(partial: Partial<Meta>): Promise<void> {
-  const current = await getMeta();
-  await chrome.storage.local.set({ [KEYS.meta]: { ...current, ...partial } });
+async function updateMeta(update: (meta: Meta) => Partial<Meta>): Promise<void> {
+  await withLock(KEYS.meta, async () => {
+    const current = await getMeta();
+    await chrome.storage.local.set({ [KEYS.meta]: { ...current, ...update(current) } });
+  });
 }
 
 export async function recordRestore(): Promise<void> {
-  const { restoreCount } = await getMeta();
-  await updateMeta({ restoreCount: restoreCount + 1 });
+  await updateMeta(({ restoreCount }) => ({ restoreCount: restoreCount + 1 }));
 }
 
 export async function dismissRatingPrompt(): Promise<void> {
-  await updateMeta({ ratingPromptDone: true });
+  await updateMeta(() => ({ ratingPromptDone: true }));
 }
 
 export function shouldShowRatingPrompt(meta: Meta): boolean {
@@ -89,51 +110,61 @@ function compareSessions(a: Session, b: Session): number {
 }
 
 export async function saveSession(session: Session): Promise<void> {
-  const result = await chrome.storage.local.get([KEYS.sessions, KEYS.settings]);
-  const sessions: Session[] = result[KEYS.sessions] ?? [];
-  const settings: SnapTabsSettings = { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
-  sessions.push(session);
-  enforceLimit(sessions, settings.maxSessions);
-  await chrome.storage.local.set({ [KEYS.sessions]: sessions });
+  await withLock(KEYS.sessions, async () => {
+    const result = await chrome.storage.local.get([KEYS.sessions, KEYS.settings]);
+    const sessions: Session[] = result[KEYS.sessions] ?? [];
+    const settings: SnapTabsSettings = { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
+    sessions.push(session);
+    enforceLimit(sessions, settings.maxSessions);
+    await chrome.storage.local.set({ [KEYS.sessions]: sessions });
+  });
 }
 
 // Replaces the rolling-backup session (there is only ever one).
 export async function upsertBackup(session: Session): Promise<void> {
-  const result = await chrome.storage.local.get([KEYS.sessions, KEYS.settings]);
-  const sessions: Session[] = (result[KEYS.sessions] ?? []).filter((s: Session) => !s.isBackup);
-  const settings: SnapTabsSettings = { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
-  sessions.push({ ...session, isBackup: true });
-  enforceLimit(sessions, settings.maxSessions);
-  await chrome.storage.local.set({ [KEYS.sessions]: sessions });
+  await withLock(KEYS.sessions, async () => {
+    const result = await chrome.storage.local.get([KEYS.sessions, KEYS.settings]);
+    const sessions: Session[] = (result[KEYS.sessions] ?? []).filter((s: Session) => !s.isBackup);
+    const settings: SnapTabsSettings = { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
+    sessions.push({ ...session, isBackup: true });
+    enforceLimit(sessions, settings.maxSessions);
+    await chrome.storage.local.set({ [KEYS.sessions]: sessions });
+  });
 }
 
 export async function renameSession(id: string, name: string): Promise<void> {
-  const sessions = await getSessions();
-  const session = sessions.find((s) => s.id === id);
-  if (session) {
-    session.name = name;
-    await chrome.storage.local.set({ [KEYS.sessions]: sessions });
-  }
+  await withLock(KEYS.sessions, async () => {
+    const sessions = await getSessions();
+    const session = sessions.find((s) => s.id === id);
+    if (session) {
+      session.name = name;
+      await chrome.storage.local.set({ [KEYS.sessions]: sessions });
+    }
+  });
 }
 
 export async function togglePin(id: string): Promise<boolean> {
-  const sessions = await getSessions();
-  const session = sessions.find((s) => s.id === id);
-  if (!session) return false;
-  session.pinned = !session.pinned;
-  await chrome.storage.local.set({ [KEYS.sessions]: sessions });
-  return session.pinned;
+  return withLock(KEYS.sessions, async () => {
+    const sessions = await getSessions();
+    const session = sessions.find((s) => s.id === id);
+    if (!session) return false;
+    session.pinned = !session.pinned;
+    await chrome.storage.local.set({ [KEYS.sessions]: sessions });
+    return session.pinned;
+  });
 }
 
 export async function deleteSession(id: string): Promise<void> {
-  const sessions = await getSessions();
-  await chrome.storage.local.set({
-    [KEYS.sessions]: sessions.filter((s) => s.id !== id),
+  await withLock(KEYS.sessions, async () => {
+    const sessions = await getSessions();
+    await chrome.storage.local.set({
+      [KEYS.sessions]: sessions.filter((s) => s.id !== id),
+    });
   });
 }
 
 export async function deleteAllSessions(): Promise<void> {
-  await chrome.storage.local.set({ [KEYS.sessions]: [] });
+  await withLock(KEYS.sessions, () => chrome.storage.local.set({ [KEYS.sessions]: [] }));
 }
 
 // ── Settings ──
@@ -144,8 +175,10 @@ export async function getSettings(): Promise<SnapTabsSettings> {
 }
 
 export async function updateSettings(partial: Partial<SnapTabsSettings>): Promise<void> {
-  const current = await getSettings();
-  await chrome.storage.local.set({ [KEYS.settings]: { ...current, ...partial } });
+  await withLock(KEYS.settings, async () => {
+    const current = await getSettings();
+    await chrome.storage.local.set({ [KEYS.settings]: { ...current, ...partial } });
+  });
 }
 
 // ── Live Recording ──
@@ -164,25 +197,30 @@ export async function startRecording(name: string, windowId: number): Promise<Li
     tabs: [],
     isActive: true,
   };
-  await chrome.storage.session.set({ [KEYS.recording]: recording });
+  await withLock(KEYS.recording, () => chrome.storage.session.set({ [KEYS.recording]: recording }));
   return recording;
 }
 
 export async function addTabToRecording(tab: SavedTab): Promise<LiveRecording | null> {
-  const recording = await getRecording();
-  if (!recording?.isActive) return null;
-  if (!recording.tabs.some((t) => t.url === tab.url)) {
-    recording.tabs.push(tab);
-    await chrome.storage.session.set({ [KEYS.recording]: recording });
-  }
-  return recording;
+  return withLock(KEYS.recording, async () => {
+    const recording = await getRecording();
+    if (!recording?.isActive) return null;
+    if (!recording.tabs.some((t) => t.url === tab.url)) {
+      recording.tabs.push(tab);
+      await chrome.storage.session.set({ [KEYS.recording]: recording });
+    }
+    return recording;
+  });
 }
 
 export async function stopRecording(): Promise<Session | null> {
-  const recording = await getRecording();
+  // Under the recording lock so a tab still being added lands first.
+  const recording = await withLock(KEYS.recording, async () => {
+    const current = await getRecording();
+    if (current) await chrome.storage.session.remove(KEYS.recording);
+    return current;
+  });
   if (!recording) return null;
-
-  await chrome.storage.session.remove(KEYS.recording);
 
   if (recording.tabs.length === 0) return null;
 
@@ -201,7 +239,7 @@ export async function stopRecording(): Promise<Session | null> {
 }
 
 export async function cancelRecording(): Promise<void> {
-  await chrome.storage.session.remove(KEYS.recording);
+  await withLock(KEYS.recording, () => chrome.storage.session.remove(KEYS.recording));
 }
 
 // ── Window Map ──
@@ -305,6 +343,10 @@ export async function buildExportPayload(): Promise<ExportPayload> {
 
 export async function importSessions(payload: unknown): Promise<ImportResult> {
   const validated = validateImportPayload(payload);
+  return withLock(KEYS.sessions, () => mergeImported(validated));
+}
+
+async function mergeImported(validated: ExportPayload): Promise<ImportResult> {
   const result = await chrome.storage.local.get([KEYS.sessions, KEYS.settings]);
   const existing: Session[] = result[KEYS.sessions] ?? [];
   const settings: SnapTabsSettings = { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
