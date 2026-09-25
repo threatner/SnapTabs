@@ -19,7 +19,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **Sleep restored tabs** (on by default, Settings > Restore). After a restore, background tabs unload once they've loaded, so a 60-tab session leaves one live tab per window instead of 60. They keep their title and icon in the tab strip and reload when you click them. Restore now also focuses the first restored tab instead of the last.
 - **Rolling backup** (off by default, Settings > Auto-Save). Keeps a single, always-fresh "Rolling backup" session of your open tabs, refreshed every 5, 15, 30, or 60 minutes, only when something changed. If a browser restart or a big window closing would make the backup lose tabs, the previous backup is kept as its own session first. Never includes incognito windows, never counts toward your session limit, and turning it off leaves the last backup as a normal auto-save.
-- **Welcome page** on first install: pin SnapTabs to the toolbar (it detects when you have), opt in to save-on-close and the rolling backup, and learn the shortcut, the `st` address-bar search, and the right-click menu. Only for new installs, never on updates.
+- **Welcome page** on first install: two steps: pin SnapTabs to the toolbar (the extensions and pin icons are shown inline, and it detects when you've pinned), and opt in to save-on-close and the rolling backup. Only for new installs, never on updates.
 - **A one-time rating request.** After your third restore, the popup asks once whether you'd rate SnapTabs. Dismissing it or rating hides it for good.
 - **Optional uninstall feedback.** Groundwork for a short, optional "why are you leaving?" form after uninstalling (not active until a form is configured). Nothing is attached to it.
 

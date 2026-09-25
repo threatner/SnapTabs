@@ -15,7 +15,6 @@
   let pending: Promise<unknown>[] = [];
   // null = unknown (API unavailable), so we just show the instructions.
   let pinned: boolean | null = $state(null);
-  let shortcut = $state('');
   let pinTimer: ReturnType<typeof setInterval> | undefined;
 
   async function checkPinned() {
@@ -32,13 +31,6 @@
     pinTimer = undefined;
   }
 
-  async function loadShortcut() {
-    try {
-      const cmd = (await chrome.commands.getAll()).find((c) => c.name === 'snapshot-tabs');
-      shortcut = cmd?.shortcut ?? '';
-    } catch { /* leave empty */ }
-  }
-
   function set(partial: Partial<SnapTabsSettings>) {
     const previous = Object.fromEntries(
       Object.keys(partial).map((k) => [k, settings[k as keyof SnapTabsSettings]]),
@@ -50,10 +42,6 @@
     }));
   }
 
-  function openShortcutSettings() {
-    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
-  }
-
   async function closeTab() {
     await Promise.all(pending);
     const tab = await chrome.tabs.getCurrent();
@@ -62,7 +50,6 @@
 
   onMount(() => {
     getSettings().then((s) => { settings = s; }).catch(() => {}).finally(() => { loaded = true; });
-    loadShortcut();
     checkPinned().then(() => {
       if (pinned === false) pinTimer = setInterval(checkPinned, 1500);
     });
@@ -75,7 +62,7 @@
   <header class="hero">
     <img src="/icon/128.png" alt="" width="56" height="56" class="hero-icon" />
     <h1>SnapTabs is installed</h1>
-    <p class="hero-sub">Three quick steps to make sure you never lose your tabs.</p>
+    <p class="hero-sub">Two quick steps and you're set.</p>
   </header>
 
   <section class="step" data-step="pin">
@@ -90,8 +77,15 @@
         <p class="step-text step-text--ok">Pinned. SnapTabs is one click away.</p>
       {:else}
         <p class="step-text">
-          Click the <strong>puzzle-piece</strong> icon at the top right of Chrome, then the
-          <strong>pin</strong> next to SnapTabs.
+          Click the extensions icon
+          <span class="ui-icon" role="img" aria-label="extensions (puzzle piece) icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z" /></svg>
+          </span>
+          at the top right of your browser, then the pin
+          <span class="ui-icon" role="img" aria-label="pin icon">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z" /></svg>
+          </span>
+          next to SnapTabs.
         </p>
       {/if}
     </div>
@@ -101,14 +95,14 @@
     <div class="step-num">2</div>
     <div class="step-body">
       <h2>Choose how SnapTabs keeps you safe</h2>
-      <p class="step-text">Both are off until you turn them on, and everything stays on this device.</p>
+      <p class="step-text">Both are off until you turn them on. Everything stays on this device.</p>
 
       <label class="option">
         <div class="option-text">
-          <p class="option-title">Save my tabs when I close Chrome</p>
+          <p class="option-title">Save my tabs when I close the browser</p>
           <p class="option-desc">Every window is saved when you quit, ready to restore next time.</p>
         </div>
-        <input type="checkbox" class="tv-switch" aria-label="Save my tabs when I close Chrome" disabled={!loaded}
+        <input type="checkbox" class="tv-switch" aria-label="Save my tabs when I close the browser" disabled={!loaded}
           checked={settings.autoSnapshotOnBrowserClose}
           onchange={() => set({ autoSnapshotOnBrowserClose: !settings.autoSnapshotOnBrowserClose })} />
       </label>
@@ -116,7 +110,7 @@
       <label class="option">
         <div class="option-text">
           <p class="option-title">Keep a rolling backup</p>
-          <p class="option-desc">Refreshes one backup of your open tabs every {WELCOME_BACKUP_MINUTES} minutes, in case Chrome crashes or a window closes.</p>
+          <p class="option-desc">Saves a fresh copy of your open tabs every {WELCOME_BACKUP_MINUTES} minutes, in case the browser crashes.</p>
         </div>
         <input type="checkbox" class="tv-switch" aria-label="Keep a rolling backup" disabled={!loaded}
           checked={settings.autoBackupMinutes > 0}
@@ -125,29 +119,7 @@
     </div>
   </section>
 
-  <section class="step" data-step="shortcuts">
-    <div class="step-num">3</div>
-    <div class="step-body">
-      <h2>Save and find tabs without opening anything</h2>
-      <ul class="tips">
-        <li>
-          {#if shortcut}
-            Press <kbd class="shortcut">{shortcut}</kbd> to save every open tab, in all windows.
-          {:else}
-            Set a keyboard shortcut for saving tabs in
-            <button class="link-btn" onclick={openShortcutSettings}>Chrome's shortcut settings</button>.
-          {/if}
-        </li>
-        <li>
-          Type <kbd>st</kbd> then <kbd>Space</kbd> in the address bar to search every tab you've saved.
-        </li>
-        <li>Right-click the SnapTabs icon and choose <strong>Save all tabs with SnapTabs</strong>.</li>
-      </ul>
-    </div>
-  </section>
-
   <footer class="footer">
-    <p class="footer-note">You can change any of this later in SnapTabs &rsaquo; Settings.</p>
     <button class="done-btn" onclick={closeTab}>Done</button>
   </footer>
 </main>
@@ -260,54 +232,25 @@
     color: var(--fg-muted);
   }
 
-  .tips {
-    margin-top: 8px;
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    font-size: 13px;
-    line-height: 1.55;
-    color: var(--fg-muted);
-  }
-  .tips strong {
-    color: var(--fg);
-    font-weight: 600;
-  }
-  kbd {
-    display: inline-block;
-    padding: 0 6px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 12px;
-    line-height: 20px;
-    color: var(--fg);
-    background: var(--secondary);
-    border: 1px solid var(--border);
-    border-bottom-width: 2px;
-    border-radius: 5px;
-  }
-  .link-btn {
-    background: none;
-    border: none;
-    padding: 0;
-    font: inherit;
-    color: var(--primary);
-    cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
 
   .footer {
     margin-top: 10px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
+    justify-content: flex-end;
   }
-  .footer-note {
-    font-size: 12px;
-    color: var(--fg-muted);
+  /* Inline stand-in for a browser toolbar button. */
+  .ui-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin: 0 2px;
+    vertical-align: -6px;
+    color: var(--fg);
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
   }
   .done-btn {
     padding: 9px 22px;

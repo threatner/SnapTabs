@@ -9,7 +9,7 @@ async function openWelcome(page: Page, extensionId: string) {
   await page.goto(`chrome-extension://${extensionId}/welcome.html`);
   await expect(page.locator('h1')).toHaveText('SnapTabs is installed');
   // Toggles are disabled until stored settings have loaded.
-  await expect(page.getByLabel('Save my tabs when I close Chrome')).toBeEnabled();
+  await expect(page.getByLabel('Save my tabs when I close the browser')).toBeEnabled();
 }
 
 async function storedSettings(page: Page) {
@@ -17,26 +17,23 @@ async function storedSettings(page: Page) {
 }
 
 test.describe('Welcome page', () => {
-  test('shows the three steps, with both safety options off by default', async ({ popupPage, extensionId }) => {
+  test('shows the two steps, with both safety options off by default', async ({ popupPage, extensionId }) => {
     await openWelcome(popupPage, extensionId);
-    await expect(popupPage.locator('.step')).toHaveCount(3);
-    await expect(popupPage.getByLabel('Save my tabs when I close Chrome')).not.toBeChecked();
+    await expect(popupPage.locator('.step')).toHaveCount(2);
+    await expect(popupPage.getByLabel('Save my tabs when I close the browser')).not.toBeChecked();
     await expect(popupPage.getByLabel('Keep a rolling backup')).not.toBeChecked();
   });
 
-  test('explains how to pin when SnapTabs is not on the toolbar', async ({ popupPage, extensionId }) => {
+  test('explains how to pin, showing the extensions and pin icons', async ({ popupPage, extensionId }) => {
     await openWelcome(popupPage, extensionId);
-    await expect(popupPage.locator('[data-step="pin"]')).toContainText('puzzle-piece');
-  });
-
-  test('shows the snapshot keyboard shortcut', async ({ popupPage, extensionId }) => {
-    await openWelcome(popupPage, extensionId);
-    await expect(popupPage.locator('kbd.shortcut')).toHaveText(/S$/);
+    const pin = popupPage.locator('[data-step="pin"]');
+    await expect(pin.getByRole('img', { name: 'extensions (puzzle piece) icon' })).toBeVisible();
+    await expect(pin.getByRole('img', { name: 'pin icon' })).toBeVisible();
   });
 
   test('turning on save-on-close writes the setting', async ({ popupPage, extensionId }) => {
     await openWelcome(popupPage, extensionId);
-    await popupPage.getByLabel('Save my tabs when I close Chrome').click();
+    await popupPage.getByLabel('Save my tabs when I close the browser').click();
     await expect.poll(async () => (await storedSettings(popupPage)).autoSnapshotOnBrowserClose).toBe(true);
   });
 
@@ -61,7 +58,7 @@ test.describe('Welcome page', () => {
 
   test('toggling both options quickly keeps both', async ({ popupPage, extensionId }) => {
     await openWelcome(popupPage, extensionId);
-    await popupPage.getByLabel('Save my tabs when I close Chrome').click();
+    await popupPage.getByLabel('Save my tabs when I close the browser').click();
     await popupPage.getByLabel('Keep a rolling backup').click();
     await expect.poll(async () => {
       const s = await storedSettings(popupPage);
@@ -72,7 +69,7 @@ test.describe('Welcome page', () => {
   test('reflects settings that are already on', async ({ context, popupPage, extensionId }) => {
     await seedSettings(context, { autoSnapshotOnBrowserClose: true, autoBackupMinutes: 30 });
     await openWelcome(popupPage, extensionId);
-    await expect(popupPage.getByLabel('Save my tabs when I close Chrome')).toBeChecked();
+    await expect(popupPage.getByLabel('Save my tabs when I close the browser')).toBeChecked();
     await expect(popupPage.getByLabel('Keep a rolling backup')).toBeChecked();
   });
 

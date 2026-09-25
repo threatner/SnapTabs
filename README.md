@@ -42,7 +42,7 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 - **Multi-window restore.** Sessions saved from several windows come back as several windows, each in its original tab order, including sessions saved by older versions.
 - **Sleep restored tabs.** After a restore, background tabs unload once loaded and wake when you click them, so big sessions don't eat your memory. On by default; toggle in **Settings > Restore**.
 - **Rolling backup.** An optional, always-fresh backup of your open tabs, refreshed every 5 to 60 minutes. If a crash or a closed window would make it lose tabs, the previous backup is kept as its own session. Off by default; **Settings > Auto-Save**.
-- **Welcome page.** New installs get a short setup page: pin the extension, opt in to the automatic saves, and learn the shortcuts.
+- **Welcome page.** New installs get a short setup page: pin the extension (with the toolbar icons shown inline) and opt in to the automatic saves.
 - **Clean toolbar icon.** The persistent session-count number on the toolbar badge is gone — the count now shows inside the popup header, where you're actually looking. The badge is reserved for the red recording dot.
 - **Session sorting.** Order the list by newest, oldest, name, or most tabs. Pinned sessions always stay on top.
 - **Duplicate snapshot warning.** If the tabs you are about to snapshot match your most recent session, SnapTabs asks before saving another copy. Skips trivial differences like trailing slashes and URL fragments. Turn off in Settings if you want every click to save unconditionally.
