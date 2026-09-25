@@ -561,11 +561,11 @@ describe('restoreSession', () => {
       isAutoSave: false,
     };
 
-    vi.mocked(chrome.tabs.create).mockResolvedValue({
+    vi.mocked(chrome.tabs.create).mockImplementation(async () => ({
       id: 100, windowId: 1, index: 0, pinned: false, highlighted: false,
       active: false, incognito: false, selected: false, discarded: false,
       autoDiscardable: true, groupId: -1,
-    } as chrome.tabs.Tab);
+    }) as chrome.tabs.Tab);
 
     vi.mocked(chrome.tabs.get).mockResolvedValue({
       id: 100, windowId: 1, index: 0, pinned: false, highlighted: false,
@@ -599,11 +599,11 @@ describe('restoreSession', () => {
       isAutoSave: false,
     };
 
-    vi.mocked(chrome.tabs.create).mockResolvedValue({
+    vi.mocked(chrome.tabs.create).mockImplementation(async () => ({
       id: 100, windowId: 1, index: 0, pinned: false, highlighted: false,
       active: false, incognito: false, selected: false, discarded: false,
       autoDiscardable: true, groupId: -1,
-    } as chrome.tabs.Tab);
+    }) as chrome.tabs.Tab);
 
     vi.mocked(chrome.tabs.get).mockResolvedValue({
       id: 100, windowId: 1, index: 0, pinned: false, highlighted: false,
@@ -611,9 +611,9 @@ describe('restoreSession', () => {
       autoDiscardable: true, groupId: -1,
     } as chrome.tabs.Tab);
 
-    vi.mocked(chrome.windows.create).mockResolvedValue({
+    vi.mocked(chrome.windows.create).mockImplementation(async () => ({
       id: 2, incognito: true, tabs: [{ id: 200 }],
-    } as unknown as chrome.windows.Window);
+    }) as unknown as chrome.windows.Window);
 
     await restoreSession(session, true, false);
 
