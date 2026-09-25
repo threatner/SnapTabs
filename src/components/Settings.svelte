@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { SnapTabsSettings } from '@/lib/types';
   import { normalizeDomain } from '@/lib/types';
+  import { BACKUP_INTERVALS } from '@/lib/backup';
 
   interface Props {
     settings: SnapTabsSettings;
@@ -104,6 +105,22 @@
         </div>
         <input type="checkbox" class="tv-switch" checked={settings.autoSnapshotOnClose}
           onchange={() => onUpdateSettings({ autoSnapshotOnClose: !settings.autoSnapshotOnClose })} />
+      </label>
+      <label class="setting-row">
+        <div class="setting-text">
+          <p class="setting-title">Rolling backup</p>
+          <p class="setting-desc">Keep one always-fresh copy of your open tabs, in case Chrome crashes or a window closes</p>
+        </div>
+        <select
+          class="select-input"
+          aria-label="Rolling backup interval"
+          value={settings.autoBackupMinutes}
+          onchange={(e) => onUpdateSettings({ autoBackupMinutes: Number((e.currentTarget as HTMLSelectElement).value) })}
+        >
+          {#each BACKUP_INTERVALS as m (m)}
+            <option value={m}>{m === 0 ? 'Off' : `${m} min`}</option>
+          {/each}
+        </select>
       </label>
     </div>
 
@@ -423,7 +440,7 @@
     margin-top: 2px;
   }
 
-  .num-input {
+  .num-input, .select-input {
     width: 56px;
     padding: 4px 6px;
     background: var(--muted);
@@ -436,7 +453,12 @@
     outline: none;
     transition: all 0.15s;
   }
-  .num-input:focus {
+  .select-input {
+    width: auto;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .num-input:focus, .select-input:focus {
     border-color: var(--ring);
     box-shadow: 0 0 0 2px oklch(0.65 0.19 255 / 0.15);
   }

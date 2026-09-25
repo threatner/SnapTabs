@@ -109,6 +109,7 @@ export async function recoverLastSnapshot(settings: SnapTabsSettings): Promise<S
       (s) =>
         s.isAutoSave &&
         !s.pinned &&
+        !s.isBackup &&
         s.timestamp >= snap.updatedAt - 60_000 &&
         urlSetSignature(s.tabs.map((t) => t.url)) === sig,
     )

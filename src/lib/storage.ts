@@ -62,6 +62,16 @@ export async function saveSession(session: Session): Promise<void> {
   await chrome.storage.local.set({ [KEYS.sessions]: sessions });
 }
 
+// Replaces the rolling-backup session (there is only ever one).
+export async function upsertBackup(session: Session): Promise<void> {
+  const result = await chrome.storage.local.get([KEYS.sessions, KEYS.settings]);
+  const sessions: Session[] = (result[KEYS.sessions] ?? []).filter((s: Session) => !s.isBackup);
+  const settings: SnapTabsSettings = { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
+  sessions.push({ ...session, isBackup: true });
+  enforceLimit(sessions, settings.maxSessions);
+  await chrome.storage.local.set({ [KEYS.sessions]: sessions });
+}
+
 export async function renameSession(id: string, name: string): Promise<void> {
   const sessions = await getSessions();
   const session = sessions.find((s) => s.id === id);
@@ -270,6 +280,9 @@ export async function importSessions(payload: unknown): Promise<ImportResult> {
   let renamed = 0;
 
   for (const session of validated.sessions) {
+    // An imported backup becomes an ordinary auto-save so there is never
+    // more than one rolling backup.
+    delete session.isBackup;
     const existingSession = byId.get(session.id);
     if (existingSession && existingSession.timestamp === session.timestamp) {
       skipped++;
@@ -335,9 +348,10 @@ export async function getStorageUsage(): Promise<{ used: number; total: number }
 
 function enforceLimit(sessions: Session[], max: number): void {
   sessions.sort((a, b) => a.timestamp - b.timestamp);
+  const prunable = (s: Session) => !s.pinned && !s.isBackup;
   while (sessions.length > max) {
-    let idx = sessions.findIndex((s) => s.isAutoSave && !s.pinned);
-    if (idx === -1) idx = sessions.findIndex((s) => !s.pinned);
+    let idx = sessions.findIndex((s) => s.isAutoSave && prunable(s));
+    if (idx === -1) idx = sessions.findIndex(prunable);
     if (idx === -1) break;
     sessions.splice(idx, 1);
   }

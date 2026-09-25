@@ -29,8 +29,9 @@ export function findDuplicateSession(urls: string[], sessions: Session[]): Sessi
   // (chrome://newtab/, etc.), so we ignore those when comparing.
   const sig = urlSetSignature(urls.filter(isRestorable));
   if (!sig) return null;
-  // Only check the most recent session — that's the accidental-double-click case.
-  const sorted = [...sessions].sort((a, b) => b.timestamp - a.timestamp);
+  // Only check the most recent session — that's the accidental-double-click
+  // case. The rolling backup is refreshed constantly, so it doesn't count.
+  const sorted = sessions.filter((s) => !s.isBackup).sort((a, b) => b.timestamp - a.timestamp);
   const recent = sorted[0];
   if (!recent) return null;
   const recentSig = urlSetSignature(recent.tabs.map((t) => t.url).filter(isRestorable));

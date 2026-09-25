@@ -28,6 +28,8 @@ export interface Session {
   hasIncognitoTabs: boolean;
   isAutoSave: boolean;
   pinned?: boolean;
+  // The single rolling-backup session (see backup.ts). Never pruned.
+  isBackup?: boolean;
 }
 
 export interface SnapTabsSettings {
@@ -41,6 +43,7 @@ export interface SnapTabsSettings {
   sleepRestoredTabs: boolean;
   warnOnDuplicateSnapshot: boolean;
   excludedDomains: string[];
+  autoBackupMinutes: number;
 }
 
 export const DEFAULT_SETTINGS: SnapTabsSettings = {
@@ -54,6 +57,7 @@ export const DEFAULT_SETTINGS: SnapTabsSettings = {
   sleepRestoredTabs: true,
   warnOnDuplicateSnapshot: true,
   excludedDomains: [],
+  autoBackupMinutes: 0,
 };
 
 // Ordering options for the popup session list. Pinned sessions always sort

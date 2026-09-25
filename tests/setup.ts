@@ -42,6 +42,7 @@ function createEvent<A extends unknown[]>() {
 }
 
 const chromeLocal = createStorageArea(localStore);
+const alarms = new Map<string, chrome.alarms.Alarm>();
 const chromeSession = createStorageArea(sessionStore);
 
 const chromeMock = {
@@ -80,6 +81,14 @@ const chromeMock = {
       tabs: [{ id: Math.floor(Math.random() * 10000) }],
     })),
   },
+  alarms: {
+    get: vi.fn(async (name: string) => alarms.get(name)),
+    create: vi.fn(async (name: string, info: { periodInMinutes?: number; delayInMinutes?: number }) => {
+      alarms.set(name, { name, scheduledTime: Date.now() + (info.delayInMinutes ?? 0) * 60_000, periodInMinutes: info.periodInMinutes });
+    }),
+    clear: vi.fn(async (name: string) => alarms.delete(name)),
+    onAlarm: createEvent<[chrome.alarms.Alarm]>(),
+  },
   action: {
     setBadgeText: vi.fn(async () => {}),
     setBadgeBackgroundColor: vi.fn(async () => {}),
@@ -104,6 +113,7 @@ Object.assign(globalThis, { chrome: chromeMock });
 
 // Helper to reset storage state between tests
 export function resetChromeStorage() {
+  alarms.clear();
   for (const k of Object.keys(localStore)) delete localStore[k];
   for (const k of Object.keys(sessionStore)) delete sessionStore[k];
 }
