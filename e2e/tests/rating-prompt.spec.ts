@@ -1,13 +1,20 @@
 import { test, expect } from '../fixtures/extension';
 import { reloadPopup } from '../fixtures/extension';
 import type { BrowserContext } from '@playwright/test';
-import { getServiceWorker, seedSessions, createMockSession } from '../helpers/storage';
+import { getServiceWorker, seedSessions, seedSettings, createMockSession } from '../helpers/storage';
 import { KEYS } from '../../src/lib/storage';
 import { REVIEW_URL } from '../../src/lib/links';
 
-async function seedMeta(context: BrowserContext, meta: { restoreCount: number; ratingPromptDone: boolean }) {
+async function seedMeta(context: BrowserContext, meta: { restores?: number; manualSnapshots?: number; ratingPromptDone?: boolean }) {
   const sw = await getServiceWorker(context);
-  await sw.evaluate((d) => chrome.storage.local.set({ [d.key]: d.meta }), { key: KEYS.meta, meta });
+  await sw.evaluate((d) => chrome.storage.local.set({ [d.key]: d.meta }), {
+    key: KEYS.meta,
+    meta: {
+      statsBackfilled: true,
+      ratingPromptDone: meta.ratingPromptDone ?? false,
+      stats: { restores: meta.restores ?? 0, manualSnapshots: meta.manualSnapshots ?? 0 },
+    },
+  });
 }
 
 async function readMeta(context: BrowserContext) {
@@ -16,8 +23,8 @@ async function readMeta(context: BrowserContext) {
 }
 
 test.describe('Rating prompt', () => {
-  test('is hidden before the third restore', async ({ context, popupPage, extensionId }) => {
-    await seedMeta(context, { restoreCount: 2, ratingPromptDone: false });
+  test('is hidden before the third restore or fifth snapshot', async ({ context, popupPage, extensionId }) => {
+    await seedMeta(context, { restores: 2, manualSnapshots: 4 });
     await reloadPopup(popupPage, extensionId);
     await expect(popupPage.locator('.rating')).toHaveCount(0);
   });
@@ -29,17 +36,31 @@ test.describe('Rating prompt', () => {
     await reloadPopup(popupPage, extensionId);
     await popupPage.locator('.card').first().click();
     await popupPage.locator('.restore-btn').click();
-    await expect.poll(async () => (await readMeta(context))?.restoreCount).toBe(1);
+    await expect.poll(async () => (await readMeta(context))?.stats?.restores).toBe(1);
+    expect((await readMeta(context)).stats.restoresOfManualSessions).toBe(1);
+  });
+
+  test('appears after five manual snapshots taken in the popup', async ({ context, popupPage, extensionId }) => {
+    await seedSettings(context, { warnOnDuplicateSnapshot: false });
+    await reloadPopup(popupPage, extensionId);
+    for (let i = 0; i < 5; i++) {
+      await expect(popupPage.locator('.rating')).toHaveCount(0);
+      await popupPage.locator('.snap-btn').click();
+      await expect(popupPage.locator('.toast-text')).toHaveText('Snapshot saved!');
+      await reloadPopup(popupPage, extensionId);
+    }
+    expect((await readMeta(context)).stats.manualSnapshots).toBe(5);
+    await expect(popupPage.locator('.rating')).toContainText('Enjoying SnapTabs?');
   });
 
   test('appears after three restores', async ({ context, popupPage, extensionId }) => {
-    await seedMeta(context, { restoreCount: 3, ratingPromptDone: false });
+    await seedMeta(context, { restores: 3 });
     await reloadPopup(popupPage, extensionId);
     await expect(popupPage.locator('.rating')).toContainText('Enjoying SnapTabs?');
   });
 
   test('dismissing hides it for good, even if the popup closes right away', async ({ context, popupPage, extensionId }) => {
-    await seedMeta(context, { restoreCount: 3, ratingPromptDone: false });
+    await seedMeta(context, { restores: 3 });
     await reloadPopup(popupPage, extensionId);
     await popupPage.getByLabel('Dismiss rating prompt').click();
     await expect(popupPage.locator('.rating')).toHaveCount(0);
@@ -51,7 +72,7 @@ test.describe('Rating prompt', () => {
   });
 
   test('"Rate it" opens the store reviews page and hides it for good', async ({ context, popupPage, extensionId }) => {
-    await seedMeta(context, { restoreCount: 5, ratingPromptDone: false });
+    await seedMeta(context, { restores: 5 });
     await reloadPopup(popupPage, extensionId);
     await popupPage.getByRole('button', { name: 'Rate it' }).click();
     // Playwright doesn't surface Chrome Web Store tabs as pages (the store is

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { resetChromeStorage } from './setup';
 import {
   getSessions, saveSession, upsertBackup, renameSession, togglePin, deleteSession,
-  importSessions, updateSettings, getSettings, recordRestore, getMeta,
+  importSessions, updateSettings, getSettings, recordUsage, getMeta,
 } from '../src/lib/storage';
 import type { Session } from '../src/lib/types';
 
@@ -64,9 +64,13 @@ describe('concurrent storage writes', () => {
     expect([s.autoSnapshotOnBrowserClose, s.autoBackupMinutes, s.maxSessions]).toEqual([true, 15, 99]);
   });
 
-  it('concurrent restores are all counted', async () => {
-    await Promise.all(Array.from({ length: 5 }, () => recordRestore()));
-    expect((await getMeta()).restoreCount).toBe(5);
+  it('concurrent usage events are all counted', async () => {
+    await Promise.all([
+      ...Array.from({ length: 5 }, () => recordUsage('restore', { isAutoSave: false })),
+      ...Array.from({ length: 3 }, () => recordUsage('manualSnapshot')),
+    ]);
+    const { stats } = await getMeta();
+    expect([stats.restores, stats.manualSnapshots]).toEqual([5, 3]);
   });
 });
 

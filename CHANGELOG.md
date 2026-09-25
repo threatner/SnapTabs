@@ -20,7 +20,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Sleep restored tabs** (on by default, Settings > Restore). After a restore, background tabs unload once they've loaded, so a 60-tab session leaves one live tab per window instead of 60. They keep their title and icon in the tab strip and reload when you click them. Restore now also focuses the first restored tab instead of the last.
 - **Rolling backup** (off by default, Settings > Auto-Save). Keeps a single, always-fresh "Rolling backup" session of your open tabs, refreshed every 5, 15, 30, or 60 minutes, only when something changed. If a browser restart or a big window closing would make the backup lose tabs, the previous backup is kept as its own session first. Never includes incognito windows, never counts toward your session limit, and turning it off leaves the last backup as a normal auto-save.
 - **Welcome page** on first install: two steps: pin SnapTabs to the toolbar (the extensions and pin icons are shown inline, and it detects when you've pinned), and opt in to save-on-close and the rolling backup. Only for new installs, never on updates.
-- **A one-time rating request.** After your third restore, the popup asks once whether you'd rate SnapTabs. Dismissing it or rating hides it for good.
+- **A one-time rating request.** After 5 manual snapshots or 3 restores (whichever comes first), the popup asks once whether you'd rate SnapTabs. Dismissing it or rating hides it for good. Existing users are counted from the sessions they already have, so long-time users are asked soon after updating.
+- **Local usage stats.** SnapTabs now keeps simple counters on your device (manual snapshots, recordings, auto-saves, restores of snapshots vs auto-saves, first-seen date) to decide when to show one-time prompts. They never leave your browser and aren't included in exports.
 - **Optional uninstall feedback.** Groundwork for a short, optional "why are you leaving?" form after uninstalling (not active until a form is configured). Nothing is attached to it.
 
 ### Changed
@@ -31,7 +32,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Internal
 
 - New modules: `sleepTabs.ts`, `backup.ts`, `links.ts`, `messages.ts`; welcome page entrypoint.
-- Test coverage: 238 unit tests and 93 Playwright E2E tests (passing on Chromium and Brave), plus a new real-browser suite (`npm run test:e2e:cdp`, 16 checks, passing on Chromium and Brave) for behaviour Playwright can't drive: tab sleeping (Playwright loses its connection on tab discard), backup alarms across service-worker restarts, and crash recovery across a browser restart.
+- Test coverage: 247 unit tests and 93 Playwright E2E tests (passing on Chromium and Brave), plus a new real-browser suite (`npm run test:e2e:cdp`, 16 checks, passing on Chromium and Brave) for behaviour Playwright can't drive: tab sleeping (Playwright loses its connection on tab discard), backup alarms across service-worker restarts, and crash recovery across a browser restart.
 - Verified a real v1.8.0 → v1.9.0 profile upgrade: sessions untouched, settings kept with new defaults, no welcome page, and v1.8 multi-window snapshots restore correctly.
 
 ## [1.8.0] - 2026-07-16
