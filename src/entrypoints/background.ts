@@ -23,6 +23,9 @@ import {
   saveLastSnapshot,
   clearLastSnapshot,
   recordRestore,
+  renameSession,
+  deleteAllSessions,
+  dismissRatingPrompt,
 } from '../lib/storage';
 import { createCloseChain, processNormalWindowClose, recoverLastSnapshot } from '../lib/browserClose';
 import { BACKUP_ALARM, scheduleBackup, runBackup } from '../lib/backup';
@@ -397,6 +400,18 @@ export default defineBackground(() => {
       }
       case 'delete': {
         await deleteSession(msg.sessionId as string);
+        return { success: true };
+      }
+      case 'rename': {
+        await renameSession(msg.sessionId as string, msg.name as string);
+        return { success: true };
+      }
+      case 'deleteAll': {
+        await deleteAllSessions();
+        return { success: true };
+      }
+      case 'dismissRatingPrompt': {
+        await dismissRatingPrompt();
         return { success: true };
       }
       case 'togglePin': {

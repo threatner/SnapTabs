@@ -38,14 +38,16 @@ test.describe('Rating prompt', () => {
     await expect(popupPage.locator('.rating')).toContainText('Enjoying SnapTabs?');
   });
 
-  test('dismissing hides it for good', async ({ context, popupPage, extensionId }) => {
+  test('dismissing hides it for good, even if the popup closes right away', async ({ context, popupPage, extensionId }) => {
     await seedMeta(context, { restoreCount: 3, ratingPromptDone: false });
     await reloadPopup(popupPage, extensionId);
     await popupPage.getByLabel('Dismiss rating prompt').click();
     await expect(popupPage.locator('.rating')).toHaveCount(0);
+    // Close immediately, as a user closing the popup would.
+    await popupPage.goto('about:blank');
+    await expect.poll(async () => (await readMeta(context))?.ratingPromptDone).toBe(true);
     await reloadPopup(popupPage, extensionId);
     await expect(popupPage.locator('.rating')).toHaveCount(0);
-    expect((await readMeta(context)).ratingPromptDone).toBe(true);
   });
 
   test('"Rate it" opens the store reviews page and hides it for good', async ({ context, popupPage, extensionId }) => {
