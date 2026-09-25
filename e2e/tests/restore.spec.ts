@@ -24,15 +24,15 @@ test.describe('Restore', () => {
     await popupPage.locator('.restore-btn').click();
     await expect(popupPage.locator('.toast-text')).toContainText('Restored', { timeout: 5_000 });
 
-    // Wait for restored tabs to open
+    // Wait for restored tabs to open. A page reports about:blank until its
+    // navigation commits, so poll the URLs too (httpbin.org can be slow).
     await expect(async () => {
       expect(context.pages().length).toBeGreaterThanOrEqual(pagesBefore + RESTORE_TABS.length);
-    }).toPass({ timeout: 5_000 });
-
-    const openUrls = context.pages().map((p) => p.url());
-    for (const tab of RESTORE_TABS) {
-      expect(openUrls.some((url) => url.includes(new URL(tab.url).hostname))).toBe(true);
-    }
+      const openUrls = context.pages().map((p) => p.url());
+      for (const tab of RESTORE_TABS) {
+        expect(openUrls.some((url) => url.includes(new URL(tab.url).hostname))).toBe(true);
+      }
+    }).toPass({ timeout: 15_000 });
   });
 
   test('restore via context menu opens tabs', async ({ context, popupPage, extensionId }) => {
