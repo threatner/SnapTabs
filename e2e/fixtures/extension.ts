@@ -24,6 +24,23 @@ export async function reloadPopup(page: Page, extensionId: string) {
   await waitForPopupReady(page);
 }
 
+/**
+ * A fresh install opens the welcome page. Close it so tests start from a
+ * clean window, and fail loudly if it never opened.
+ */
+async function closeWelcomePage(context: BrowserContext) {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const welcome = context.pages().find((p) => p.url().endsWith('/welcome.html'));
+    if (welcome) {
+      await welcome.close();
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error('Welcome page did not open on install');
+}
+
 /** Open the context menu on the first session card. */
 export async function openCardContextMenu(page: Page) {
   await page.locator('.card').first().hover();
@@ -57,6 +74,7 @@ export const test = base.extend<ExtensionFixtures>({
       ],
     });
     await applyBaseSettings(context);
+    await closeWelcomePage(context);
     await use(context);
     await context.close();
   },
