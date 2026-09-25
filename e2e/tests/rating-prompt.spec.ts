@@ -84,4 +84,29 @@ test.describe('Rating prompt', () => {
     await reloadPopup(popupPage, extensionId);
     await expect(popupPage.locator('.rating')).toHaveCount(0);
   });
+
+  test('Settings has a "Rate SnapTabs" link to the store reviews page', async ({ popupPage }) => {
+    await popupPage.locator('button[aria-label="Settings"]').click();
+    const link = popupPage.getByTestId('rate-link');
+    await expect(link).toContainText('Enjoying SnapTabs?');
+    await expect(link).toHaveAttribute('href', REVIEW_URL);
+  });
+
+  test('rating from Settings stops the banner from ever showing', async ({ context, popupPage, extensionId }) => {
+    await seedMeta(context, { restores: 1 });
+    await reloadPopup(popupPage, extensionId);
+    await popupPage.locator('button[aria-label="Settings"]').click();
+    await popupPage.getByTestId('rate-link').click();
+
+    const sw = await getServiceWorker(context);
+    await expect.poll(async () => sw.evaluate(async (url) =>
+      (await chrome.tabs.query({})).some((t) => (t.url || t.pendingUrl) === url), REVIEW_URL)).toBe(true);
+    await expect.poll(async () => (await readMeta(context))?.ratingPromptDone).toBe(true);
+
+    // Reaching the threshold later doesn't bring the banner back.
+    await seedMeta(context, { restores: 10, ratingPromptDone: true });
+    await reloadPopup(popupPage, extensionId);
+    await expect(popupPage.locator('.rating')).toHaveCount(0);
+  });
 });
+
