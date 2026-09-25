@@ -99,6 +99,22 @@ describe('toSavedTab', () => {
     expect(saved.url).toBe('https://pending.com');
   });
 
+  it('uses pendingUrl when a loading tab reports an empty url', () => {
+    const chromeTab = {
+      id: 4,
+      index: 0,
+      url: '',
+      pendingUrl: 'https://still-loading.com',
+      title: '',
+      pinned: false,
+      incognito: false,
+      groupId: -1,
+      windowId: 1,
+    } as chrome.tabs.Tab;
+
+    expect(toSavedTab(chromeTab).url).toBe('https://still-loading.com');
+  });
+
   it('maps incognito tab correctly', () => {
     const chromeTab = {
       id: 3,
