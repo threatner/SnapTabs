@@ -783,3 +783,35 @@ describe('restoreSession (multi-window)', () => {
     expect(sleepTabsWhenLoaded).not.toHaveBeenCalled();
   });
 });
+
+describe('restoreSession (incognito window saved first)', () => {
+  beforeEach(() => {
+    resetChromeStorage();
+    vi.clearAllMocks();
+  });
+
+  it('restores regular windows before incognito ones, so regular tabs never land in the new incognito window', async () => {
+    vi.mocked(chrome.tabs.create).mockImplementation(async (opts) => ({ id: 1, windowId: opts.windowId ?? 1 }) as chrome.tabs.Tab);
+    vi.mocked(chrome.tabs.get).mockImplementation(async (id) => ({ id, windowId: 1 }) as chrome.tabs.Tab);
+    vi.mocked(chrome.windows.create).mockImplementation(async (opts) =>
+      ({ id: 99, incognito: opts?.incognito ?? false, tabs: [{ id: 500 }] }) as unknown as chrome.windows.Window);
+
+    const t = (url: string, index: number, windowId: number, isIncognito = false): SavedTab =>
+      ({ url, title: url, pinned: false, isIncognito, index, windowId });
+    const s: Session = {
+      id: 's', name: 'S', timestamp: 0, tabGroups: [], windowCount: 2, hasIncognitoTabs: true, isAutoSave: false,
+      tabs: [t('https://p1.com', 0, 8, true), t('https://a1.com', 0, 7), t('https://a2.com', 1, 7)],
+    };
+
+    await restoreSession(s, true, false);
+
+    const firstRegular = vi.mocked(chrome.tabs.create).mock.invocationCallOrder[0];
+    const incognitoWindow = vi.mocked(chrome.windows.create).mock.invocationCallOrder[0];
+    expect(firstRegular).toBeLessThan(incognitoWindow);
+    expect(vi.mocked(chrome.tabs.create).mock.calls.map(([o]) => [o.url, o.windowId])).toEqual([
+      ['https://a1.com', undefined],
+      ['https://a2.com', undefined],
+    ]);
+    expect(chrome.windows.create).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://p1.com', incognito: true }));
+  });
+});
