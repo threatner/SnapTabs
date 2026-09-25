@@ -77,7 +77,7 @@ Productivity
 
 SnapTabs saves every tab in your Chrome window with one click so you can close everything and bring it back later.
 
-Open 40 tabs for a research session, save them, close them. Open 12 tabs for tomorrow's standup, save them, close them. Now your browser is quiet and nothing is lost. When you need them, one click restores every tab, pinned, grouped, and in the right window.
+Open 40 tabs for a research session, save them, close them. Open 12 tabs for tomorrow's standup, save them, close them. Now your browser is quiet and nothing is lost. When you need them, one click restores every tab, pinned, grouped, and in the right window. Restored tabs sleep until you click them, so even a huge session opens instantly.
 
 Unlike other tab managers, SnapTabs keeps tab group names and colors intact, captures incognito tabs, and auto-saves your session when you quit Chrome — with a recovery-snapshot fallback so a crash or an aggressive browser shutdown doesn't cost you your work.
 
@@ -99,6 +99,9 @@ Flip the switch in Chrome to let SnapTabs run in incognito, and your private tab
 
 **Auto-snapshot on browser close**
 Turn it on in Settings, and the next time you quit Chrome with Cmd+Q or close the last window, your tabs are captured as a "Browser close" session. Multi-window quits are combined into a single session. If the browser kills the extension during shutdown (more common in Brave than Chrome), SnapTabs falls back to a recovery snapshot kept on disk, so your tabs come back on next launch either way. Off by default so nothing is saved without your explicit opt-in.
+
+**Rolling backup**
+Turn it on and SnapTabs keeps one always-fresh backup of your open tabs, refreshed every 5, 15, 30, or 60 minutes. If Chrome crashes, or you close a big window by mistake, the previous backup is kept as its own session so you can bring those tabs back. Never includes incognito windows. Off by default.
 
 **Excluded domains**
 List domains you never want captured — banking, email, internal tools. Tabs from those domains are skipped in snapshots, recordings, and auto-saves. Subdomains match the parent rule, so adding `github.com` also excludes `api.github.com`.
@@ -122,7 +125,7 @@ Filter by session name, tab title, or URL — works across thousands of saved ta
 `Alt+Shift+S` saves all tabs without opening the popup.
 
 **Flexible restore**
-Restore into the current window or a fresh one. Auto-delete the session after restore, or keep it. Incognito tabs go to an incognito window when the setting is on.
+Restore into the current window or a fresh one. Sessions saved from several windows come back as several windows. Background tabs sleep after restoring and wake when you click them, so big sessions don't slow Chrome down. Auto-delete the session after restore, or keep it. Incognito tabs go to an incognito window when the setting is on.
 
 **Storage built in**
 10 MB quota, visible progress bar, configurable session limit from 1 to 500. Oldest auto-saves are pruned first. Pinned sessions never get pruned.
@@ -142,12 +145,13 @@ Restore into the current window or a fresh one. Auto-delete the session after re
 - No account required
 - Open source. Every line of code is auditable on GitHub
 
-## Permissions (four, all minimum-necessary)
+## Permissions (five, all minimum-necessary)
 
 - **tabs**: read the tabs you have open, create tabs when you restore a session
 - **tabGroups**: preserve and recreate tab group names and colors
 - **storage**: keep sessions and settings on your device
 - **contextMenus**: the "Save all tabs" item on the right-click icon menu
+- **alarms**: schedule the optional rolling backup
 
 No network permission. No history permission. No cookie or identity access.
 
@@ -157,7 +161,7 @@ No network permission. No history permission. No cookie or identity access.
 No. Storage is local. The extension makes zero outbound requests. You can verify this in Chrome's network inspector, or in the source on GitHub.
 
 **What happens to my tabs if Chrome (or Brave) crashes?**
-Turn on "Save on browser close" in Settings (it's off by default). While it's on, every window's tabs land in a combined "Browser close" session when the last window closes — including the multi-window Cmd+Q case. If the browser kills the extension's service worker mid-shutdown before the save lands (Brave is more aggressive about this than Chrome), SnapTabs falls back to a continuously-updated snapshot it keeps in local storage. On the next browser start, that snapshot is promoted to a "Browser close (recovered)" session. Either way your tabs come back. For critical tab sets, also take a manual snapshot (`Alt+Shift+S`) as belt-and-braces.
+Turn on "Save on browser close" in Settings (it's off by default). While it's on, every window's tabs land in a combined "Browser close" session when the last window closes — including the multi-window Cmd+Q case. If the browser kills the extension's service worker mid-shutdown before the save lands (Brave is more aggressive about this than Chrome), SnapTabs falls back to a continuously-updated snapshot it keeps in local storage. On the next browser start, that snapshot is promoted to a "Browser close (recovered)" session. Either way your tabs come back. You can also turn on the rolling backup, which keeps your open tabs saved every few minutes and holds on to the pre-crash copy after a restart. For critical tab sets, also take a manual snapshot (`Alt+Shift+S`) as belt-and-braces.
 
 **Will my tab groups come back?**
 Yes. Name, color, collapsed state — on manual snapshots and on browser-close auto-saves alike. Pinned tabs come back pinned. The only thing SnapTabs cannot restore is the exact window position, because Chrome does not expose that to extensions.

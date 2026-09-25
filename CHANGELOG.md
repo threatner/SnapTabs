@@ -4,6 +4,36 @@ All notable changes to SnapTabs are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-09-25
+
+### Fixed
+
+- **Multi-window sessions now restore as multiple windows.** A session saved from several windows (an all-windows snapshot, or a browser-close auto-save with more than one window open) came back as a single window, and because tab positions are per-window, tabs from different windows were shuffled together. Each saved window now comes back as its own window, in order. Sessions saved by earlier versions are fixed too: SnapTabs infers their window boundaries from the saved tab order.
+- **Tabs that were still loading are no longer saved as blank tabs.** Snapshotting a tab mid-navigation saved an empty URL, which restored as a New Tab page.
+- **Saves no longer overwrite each other.** Two saves landing at the same moment (for example an auto-save and a manual snapshot, or two tabs finishing loading during a live recording) could silently drop one of them. Writes to sessions, settings, and live recordings are now serialized across the popup, the welcome page, and the background worker.
+- **Changes made in the popup always stick.** Settings, renames, and "delete all" are now carried out by the background worker, so closing the popup right after a click can't lose the change.
+- **No more stray "Browser close (recovered)" sessions after an extension update.** Chrome resets the extension's session state on updates as well as on browser restarts, so with "Save on browser close" on, every SnapTabs update created a recovered session of the tabs you still had open. Recovery now skips an update when every tab is still open; a restart that loses tabs still recovers them.
+- **Failed actions are reported as failures.** Restoring a session that had been deleted elsewhere used to show "Restored"; it now shows an error.
+
+### Added
+
+- **Sleep restored tabs** (on by default, Settings > Restore). After a restore, background tabs unload once they've loaded, so a 60-tab session leaves one live tab per window instead of 60. They keep their title and icon in the tab strip and reload when you click them. Restore now also focuses the first restored tab instead of the last.
+- **Rolling backup** (off by default, Settings > Auto-Save). Keeps a single, always-fresh "Rolling backup" session of your open tabs, refreshed every 5, 15, 30, or 60 minutes, only when something changed. If a browser restart or a big window closing would make the backup lose tabs, the previous backup is kept as its own session first. Never includes incognito windows, never counts toward your session limit, and turning it off leaves the last backup as a normal auto-save.
+- **Welcome page** on first install: pin SnapTabs to the toolbar (it detects when you have), opt in to save-on-close and the rolling backup, and learn the shortcut, the `st` address-bar search, and the right-click menu. Only for new installs, never on updates.
+- **A one-time rating request.** After your third restore, the popup asks once whether you'd rate SnapTabs. Dismissing it or rating hides it for good.
+- **Optional uninstall feedback.** Groundwork for a short, optional "why are you leaving?" form after uninstalling (not active until a form is configured). Nothing is attached to it.
+
+### Changed
+
+- New `alarms` permission, used only to schedule the optional rolling backup. It does not trigger a permission prompt.
+- Privacy policy updated for the rolling backup, the uninstall form, and the new permission.
+
+### Internal
+
+- New modules: `sleepTabs.ts`, `backup.ts`, `links.ts`, `messages.ts`; welcome page entrypoint.
+- Test coverage: 238 unit tests and 93 Playwright E2E tests (passing on Chromium and Brave), plus a new real-browser suite (`npm run test:e2e:cdp`, 16 checks, passing on Chromium and Brave) for behaviour Playwright can't drive: tab sleeping (Playwright loses its connection on tab discard), backup alarms across service-worker restarts, and crash recovery across a browser restart.
+- Verified a real v1.8.0 → v1.9.0 profile upgrade: sessions untouched, settings kept with new defaults, no welcome page, and v1.8 multi-window snapshots restore correctly.
+
 ## [1.8.0] - 2026-07-16
 
 ### Added
