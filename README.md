@@ -61,13 +61,15 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 ## Screenshots
 
-![Every session in one place — the main view with eight saved sessions including a pinned project session with two tab groups](screenshots/store/1-main-view.png)
+![Every session in one place — the main view with saved sessions including a pinned project session with two tab groups and the rolling backup](screenshots/store/1-main-view.png)
 
 ![Tab groups, intact — session detail showing Specs and Code groups expanded with real tab titles](screenshots/store/2-session-detail.png)
 
 ![Capture as you browse — live recording in progress with elapsed timer and recent-tabs preview](screenshots/store/3-recording.png)
 
 ![You decide what's saved — settings with excluded-domain chips for banking, mail, and internal tools](screenshots/store/4-settings.png)
+
+![Never lose your tabs — Auto-Save settings with save on browser close and a 15-minute rolling backup](screenshots/store/5-auto-save.png)
 
 ## FAQ
 

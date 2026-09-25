@@ -13,7 +13,7 @@ The Chrome Web Store uses different images in different surfaces. Missing any of
 | Extension icon | 128×128 | `src/public/icon/128.png` | Manifest icon (auto) | Detail page, install button |
 | Small promo tile | **440×280** | `screenshots/store/promo-small-440x280.png` | "Small promo tile" | **Search autocomplete**, category lists, related items |
 | Marquee promo tile | 1400×560 | `screenshots/store/promo-marquee-1400x560.png` | "Marquee promo tile" | Featured placement, homepage carousel |
-| Screenshots (up to 5) | 1280×800 | `screenshots/store/1-main-view.png`, etc. | "Screenshots" | Detail page gallery |
+| Screenshots (5) | 1280×800 | `screenshots/store/1-main-view.png` … `5-auto-save.png` | "Screenshots" | Detail page gallery |
 
 **If your listing shows the name with no icon in search suggestions, the small promo tile is most likely missing.** Upload `promo-small-440x280.png` in the dashboard under *Store listing → Graphic assets → Small promo tile*.
 
@@ -46,14 +46,15 @@ Run through this for every CWS submission so the listing never lags the source a
 
 1. **Bump version** in `package.json` and update `CHANGELOG.md` with the new entry.
 2. **Run tests + build**: `npm test` and `npm run build` both clean.
-3. **Regenerate listing screenshots**: `npm run screenshots` (builds, captures four popup views with the realistic demo data in `scripts/demo-data.ts`, composites onto branded 1280×800 canvases in `screenshots/store/`). Visually skim each PNG. If a new feature deserves a screenshot, edit `scripts/demo-data.ts` and add a slide in `scripts/compose-screenshots.ts`.
+3. **Regenerate listing screenshots**: `npm run screenshots` (builds, captures five popup views with the realistic demo data in `scripts/demo-data.ts`, composites onto branded 1280×800 canvases in `screenshots/store/`). Visually skim each PNG. If a new feature deserves a screenshot, edit `scripts/demo-data.ts` and add a slide in `scripts/compose-screenshots.ts`.
 4. **Regenerate promo tiles only if the SVGs changed**: `npm run promo`.
 5. **Update the listing copy** below (long description, features, FAQ) to reflect any new features in this release.
 6. **Build the upload zip**: `npm run zip` → produces `.output/snaptabs-<version>-chrome.zip`.
 7. **Upload to the CWS Developer Dashboard**:
    - Item page → Package tab → upload the new zip.
-   - Store listing tab → Graphic assets → re-upload the 4 screenshots from `screenshots/store/`.
+   - Store listing tab → Graphic assets → re-upload the 5 screenshots from `screenshots/store/`, in this order: `1-main-view`, `5-auto-save`, `2-session-detail`, `3-recording`, `4-settings` (the first two show in search results and matter most).
    - Store listing tab → paste the updated long description / features / FAQ from this file.
+   - Privacy practices tab → if the permissions changed, add a justification for each new one (see **Privacy practices tab** below).
    - Save draft, then Submit for review.
 8. **Merge the release PR** to `main` once submitted.
 
@@ -143,6 +144,7 @@ Restore into the current window or a fresh one. Sessions saved from several wind
 - No cloud sync, no backend service
 - No analytics, no tracking, no outbound requests
 - No account required
+- If you uninstall, an optional one-question feedback form opens. Nothing is sent with it
 - Open source. Every line of code is auditable on GitHub
 
 ## Permissions (five, all minimum-necessary)
@@ -154,6 +156,27 @@ Restore into the current window or a fresh one. Sessions saved from several wind
 - **alarms**: schedule the optional rolling backup
 
 No network permission. No history permission. No cookie or identity access.
+
+## Privacy practices tab (developer dashboard)
+
+Not shown on the listing. The dashboard's **Privacy practices** tab asks for a single-purpose statement and a justification for every permission. v1.9.0 adds `alarms`; paste the text below. (`alarms` shows no install-time warning, so updating users are not asked to re-approve anything and the extension is not disabled.)
+
+**Single purpose**
+> SnapTabs saves the user's open browser tabs as named sessions (including tab groups, pinned and incognito tabs) and restores them later, entirely on the user's device.
+
+**Permission justifications**
+
+| Permission | Justification |
+|---|---|
+| `tabs` | Read the URL, title, and position of open tabs to save them as a session, and create tabs to restore a saved session. |
+| `tabGroups` | Read tab group names, colors, and collapsed state so they are saved with a session, and recreate the groups on restore. |
+| `storage` | Store saved sessions and settings locally with chrome.storage. Nothing is synced or sent off the device. |
+| `contextMenus` | Adds a "Save all tabs with SnapTabs" item to the extension icon's right-click menu. |
+| `alarms` | Schedules the optional Rolling backup, which the user can turn on to refresh a local backup of their open tabs every 5 to 60 minutes. No network activity. |
+
+**Remote code:** No, I am not using remote code.
+
+**Data usage:** unchanged by this release. The extension still transmits no user data. The uninstall form is a Google Form the browser opens after uninstall; anything in it is typed and submitted voluntarily by the person, and the extension attaches nothing to it.
 
 ## FAQ
 
