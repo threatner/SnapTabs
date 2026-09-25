@@ -31,6 +31,27 @@ export function buildDemoSessions(now: number = Date.now()): Session[] {
   const olderAutoSaveTs = now - 14 * DAY;
 
   return [
+    // v1.9 rolling backup: refreshed a few minutes ago, shown with the
+    // "Backup" badge near the top of the list.
+    {
+      id: 'demo-backup',
+      name: 'Rolling backup',
+      timestamp: now - 6 * 60_000,
+      tabs: withIndex([
+        tab('https://github.com/acme/phoenix/pulls', 'Pull requests · acme/phoenix', { windowId: 1 }),
+        tab('https://linear.app/acme/team/PHX/active', 'Active issues · Phoenix', { windowId: 1 }),
+        tab('https://docs.google.com/document/d/1q2w3e/edit', 'Q3 planning — Google Docs', { windowId: 1 }),
+        tab('https://calendar.google.com/calendar/u/0/r/week', 'Google Calendar — This week', { windowId: 1 }),
+      ]).concat(withIndex([
+        tab('https://news.ycombinator.com/', 'Hacker News', { windowId: 2 }),
+        tab('https://www.youtube.com/watch?v=dQw4', 'Svelte 5 runes deep dive — YouTube', { windowId: 2 }),
+      ])),
+      tabGroups: [],
+      windowCount: 2,
+      hasIncognitoTabs: false,
+      isAutoSave: true,
+      isBackup: true,
+    },
     {
       id: 'demo-phoenix',
       name: 'Project Phoenix — Sprint 24 kickoff',
@@ -176,12 +197,13 @@ export function buildDemoSessions(now: number = Date.now()): Session[] {
   ];
 }
 
-// ── Settings (showcase the v1.4.0 + v1.5.0 features) ──
+// ── Settings (showcase the auto-save, rolling backup, and excluded-domain features) ──
 
 export const demoSettings: SnapTabsSettings = {
   ...DEFAULT_SETTINGS,
   autoSnapshotOnBrowserClose: true,
   autoSnapshotOnClose: true,
+  autoBackupMinutes: 15,
   warnOnDuplicateSnapshot: true,
   excludedDomains: [
     'mail.google.com',

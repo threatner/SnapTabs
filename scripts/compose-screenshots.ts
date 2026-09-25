@@ -72,6 +72,13 @@ const slides: Slide[] = [
     headline: 'You decide\nwhat’s saved.',
     subhead: 'Exclude domains you never want captured — banking, mail, internal tools. Subdomains match the parent rule.',
   },
+  {
+    raw: '5-auto-save.png',
+    out: '5-auto-save.png',
+    eyebrow: 'Crash protection',
+    headline: 'Never lose\nyour tabs.',
+    subhead: 'Save every window when you quit, plus a rolling backup every few minutes, so a crash or a closed window never costs you your work.',
+  },
 ];
 
 function escapeXml(s: string): string {

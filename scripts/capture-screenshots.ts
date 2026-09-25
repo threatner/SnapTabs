@@ -31,11 +31,14 @@ async function seedSession(sw: Awaited<ReturnType<typeof getServiceWorker>>, dat
 }
 
 async function clearAll(sw: Awaited<ReturnType<typeof getServiceWorker>>) {
-  await sw.evaluate(() => {
-    chrome.storage.local.clear();
-    chrome.storage.session.clear();
+  await sw.evaluate(async () => {
+    await chrome.storage.local.clear();
+    await chrome.storage.session.clear();
   });
 }
+
+// Keep the one-time rating banner out of store screenshots.
+const NO_RATING_BANNER = { [KEYS.meta]: { statsBackfilled: true, ratingPromptDone: true, stats: {} } };
 
 async function waitForPopupReady(page: import('@playwright/test').Page) {
   await page.waitForSelector('.popup', { state: 'visible' });
@@ -77,29 +80,31 @@ async function main() {
   const demoRecording = buildDemoRecording();
 
   // ── 1. Main view: rich session list (8 sessions, pinned at top) ──
-  console.log('[capture] 1/4 main view');
+  console.log('[capture] 1/5 main view');
   await clearAll(sw);
   await seedLocal(sw, {
     [KEYS.sessions]: demoSessions,
     [KEYS.settings]: demoSettings,
+    ...NO_RATING_BANNER,
   });
   await popup.goto(popupUrl);
   await waitForPopupReady(popup);
   await popup.screenshot({ path: path.join(RAW_DIR, '1-main.png') });
 
   // ── 2. Session detail: Phoenix, two tab groups visible ──
-  console.log('[capture] 2/4 session detail');
-  await popup.locator('.card').first().click();
+  console.log('[capture] 2/5 session detail');
+  await popup.locator('.card').filter({ hasText: 'Project Phoenix' }).click();
   await popup.waitForSelector('.detail', { state: 'visible' });
   await popup.waitForTimeout(250);
   await popup.screenshot({ path: path.join(RAW_DIR, '2-detail.png') });
 
   // ── 3. Recording in progress: bar visible with elapsed timer ──
-  console.log('[capture] 3/4 recording');
+  console.log('[capture] 3/5 recording');
   await clearAll(sw);
   await seedLocal(sw, {
     [KEYS.sessions]: demoSessions,
     [KEYS.settings]: demoSettings,
+    ...NO_RATING_BANNER,
   });
   await seedSession(sw, {
     [KEYS.recording]: demoRecording,
@@ -110,11 +115,12 @@ async function main() {
   await popup.screenshot({ path: path.join(RAW_DIR, '3-recording.png') });
 
   // ── 4. Settings: scrolled to the Snapshot section so excluded-domain chips are visible ──
-  console.log('[capture] 4/4 settings');
+  console.log('[capture] 4/5 settings');
   await clearAll(sw);
   await seedLocal(sw, {
     [KEYS.sessions]: demoSessions,
     [KEYS.settings]: demoSettings,
+    ...NO_RATING_BANNER,
   });
   await popup.goto(popupUrl);
   await waitForPopupReady(popup);
@@ -133,6 +139,15 @@ async function main() {
   });
   await popup.waitForTimeout(250);
   await popup.screenshot({ path: path.join(RAW_DIR, '4-settings.png') });
+
+  // ── 5. Auto-Save: top of Settings with save-on-close and rolling backup on ──
+  console.log('[capture] 5/5 auto-save');
+  await popup.evaluate(() => {
+    const body = document.querySelector('.settings-body') as HTMLElement | null;
+    if (body) body.scrollTop = 0;
+  });
+  await popup.waitForTimeout(250);
+  await popup.screenshot({ path: path.join(RAW_DIR, '5-auto-save.png') });
 
   await context.close();
   console.log(`[capture] Done. Raw PNGs in ${path.relative(ROOT, RAW_DIR)}/`);
