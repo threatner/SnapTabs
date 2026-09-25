@@ -96,7 +96,7 @@ try {
   failed++;
   console.log(`  ✘ setup failed\n    ${e.stack}`);
 } finally {
-  browser.close();
+  await browser.close();
 }
 console.log(failed ? `\n${failed} failed` : `\n${checks.length} passed`);
 process.exit(failed ? 1 : 0);

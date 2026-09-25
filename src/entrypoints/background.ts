@@ -26,6 +26,9 @@ import {
   renameSession,
   deleteAllSessions,
   dismissRatingPrompt,
+  retireBackup,
+  setBackupRestartCheck,
+  hasSessionMarker,
 } from '../lib/storage';
 import { createCloseChain, processNormalWindowClose, recoverLastSnapshot } from '../lib/browserClose';
 import { BACKUP_ALARM, scheduleBackup, runBackup } from '../lib/backup';
@@ -273,8 +276,16 @@ export default defineBackground(() => {
 
   // ── Rolling backup ──
 
+  // Backup runs are queued so two can never interleave, and wait for init()
+  // so a fresh browser start is recorded before the first backup after it.
+  let backupQueue: Promise<unknown> = Promise.resolve();
+  function queueBackup(): Promise<unknown> {
+    backupQueue = backupQueue.then(() => ready).then(() => runBackup()).catch(() => {});
+    return backupQueue;
+  }
+
   chrome.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === BACKUP_ALARM) void runBackup().catch(() => {});
+    if (alarm.name === BACKUP_ALARM) void queueBackup();
   });
 
   // Settings are written from the popup and the welcome page as well as here,
@@ -287,8 +298,10 @@ export default defineBackground(() => {
     void (async () => {
       try {
         await scheduleBackup(after);
-        // Take the first backup right away so turning it on has a visible result.
-        if (after > 0) await runBackup();
+        // Take the first backup right away so turning it on has a visible
+        // result; turning it off leaves the last backup as a normal auto-save.
+        if (after > 0) await queueBackup();
+        else await retireBackup();
       } catch {}
     })();
   });
@@ -462,10 +475,13 @@ export default defineBackground(() => {
   async function init() {
     try {
       await restoreState();
+      // Read before recovery, which sets the marker.
+      const freshStart = !(await hasSessionMarker());
       // Run recovery BEFORE we touch windowMap / refreshWindowCache so the
       // pre-existing lastSnapshot reflects the previous browser session,
       // not whatever Chrome restored this time.
       await recoverLastSnapshotIfFreshStart();
+      if (freshStart) await setBackupRestartCheck();
       // Restore in-memory recording flags in case service worker restarted
       const rec = await getRecording();
       if (rec?.isActive) {
@@ -482,7 +498,9 @@ export default defineBackground(() => {
       }
       await Promise.all(refreshes);
       await persistWindowMap();
-      await scheduleBackup((await getSettings()).autoBackupMinutes);
+      const { autoBackupMinutes } = await getSettings();
+      await scheduleBackup(autoBackupMinutes);
+      if (autoBackupMinutes === 0) await retireBackup();
       await setupContextMenus();
       await updateBadge();
     } catch (e) {
@@ -490,5 +508,5 @@ export default defineBackground(() => {
     }
   }
 
-  init();
+  const ready = init();
 });

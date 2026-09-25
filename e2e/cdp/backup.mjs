@@ -68,18 +68,26 @@ try {
     assert.equal(b.id, first.id);
   });
 
-  await check('turning it off clears the alarm and keeps the last backup', async () => {
+  await check('turning it off clears the alarm and keeps the last backup as a normal auto-save', async () => {
     await page(`
       const { snaptabs_settings = {} } = await chrome.storage.local.get('snaptabs_settings');
       await chrome.storage.local.set({ snaptabs_settings: { ...snaptabs_settings, autoBackupMinutes: 0 } });`);
     await eventually(async () => assert.equal(await alarm(), null));
-    assert.equal((await backups()).length, 1);
+    const sessions = await eventually(async () => {
+      const s = await browser.evalSW(`return (await chrome.storage.local.get('snaptabs_sessions')).snaptabs_sessions;`);
+      assert.equal(s.filter((x) => x.isBackup).length, 0);
+      return s;
+    });
+    assert.equal(sessions.length, 1);
+    assert.equal(sessions[0].id, first.id);
+    assert.equal(sessions[0].isAutoSave, true);
+    assert.match(sessions[0].name, /^Rolling backup - /);
   });
 } catch (e) {
   results.push(['setup', e]);
   console.log(`  ✘ setup failed\n    ${e.stack}`);
 } finally {
-  browser.close();
+  await browser.close();
 }
 const failed = results.filter(([, e]) => e).length;
 console.log(failed ? `\n${failed} failed` : `\n${results.length} passed`);

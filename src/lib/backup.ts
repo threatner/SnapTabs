@@ -1,7 +1,7 @@
 import type { Session, SavedTab, SavedTabGroup } from './types';
 import { uuid, isExcludedUrl } from './types';
-import { captureWindow, isRestorable, mergeGroups } from './tabs';
-import { getSettings, getSessions, upsertBackup } from './storage';
+import { captureWindow, isRestorable, mergeGroups, normalizeUrlForSig } from './tabs';
+import { getSettings, getSessions, upsertBackup, takeBackupRestartCheck } from './storage';
 
 // Rolling backup: a single session, refreshed on a chrome.alarms schedule,
 // that always holds the current open tabs. Protects against crashes and
@@ -23,6 +23,28 @@ export async function scheduleBackup(minutes: number): Promise<void> {
   }
   if (existing?.periodInMinutes === minutes) return;
   await chrome.alarms.create(BACKUP_ALARM, { delayInMinutes: minutes, periodInMinutes: minutes });
+}
+
+// A backup overwrite that would drop at least this many tabs, and at least
+// half of the backup, keeps the previous backup as its own session first
+// (e.g. a big window closed by accident).
+export const BIG_LOSS_MIN_TABS = 5;
+
+function restorableUrls(tabs: SavedTab[]): Set<string> {
+  return new Set(tabs.filter((t) => isRestorable(t.url)).map((t) => normalizeUrlForSig(t.url)));
+}
+
+// Whether overwriting `previous` with `next` should keep `previous` as its own
+// session. After a browser restart any loss counts (the old backup may be all
+// that's left of the crashed session); otherwise only a big loss does.
+export function shouldKeepPrevious(previous: SavedTab[], next: SavedTab[], afterRestart: boolean): boolean {
+  const before = restorableUrls(previous);
+  const after = restorableUrls(next);
+  let lost = 0;
+  for (const u of before) if (!after.has(u)) lost++;
+  if (lost === 0) return false;
+  if (afterRestart) return true;
+  return lost >= BIG_LOSS_MIN_TABS && lost * 2 >= before.size;
 }
 
 // Order-sensitive fingerprint of everything a restore would reproduce, so an
@@ -57,7 +79,10 @@ export async function runBackup(now: number = Date.now()): Promise<Session | nul
   if (!tabs.some((t) => isRestorable(t.url))) return null;
 
   const existing = (await getSessions()).find((s) => s.isBackup);
+  // Consumed by the first backup attempt after a browser restart.
+  const afterRestart = await takeBackupRestartCheck();
   if (existing && fingerprint(existing.tabs, existing.tabGroups) === fingerprint(tabs, groups)) return null;
+  const keepPrevious = !!existing && shouldKeepPrevious(existing.tabs, tabs, afterRestart);
 
   const session: Session = {
     id: existing?.id ?? uuid(),
@@ -71,6 +96,6 @@ export async function runBackup(now: number = Date.now()): Promise<Session | nul
     isBackup: true,
     pinned: existing?.pinned,
   };
-  await upsertBackup(session);
+  await upsertBackup(session, keepPrevious);
   return session;
 }
