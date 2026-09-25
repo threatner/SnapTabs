@@ -1,6 +1,6 @@
 # Privacy Policy for SnapTabs
 
-**Last updated:** March 15, 2026
+**Last updated:** September 25, 2026
 
 ## What SnapTabs Does
 
@@ -8,7 +8,7 @@ SnapTabs is a Chrome extension that lets you snapshot and restore your browser t
 
 ## Data Collection
 
-SnapTabs collects the following information **only from your open browser tabs** when you take a snapshot or record a session:
+SnapTabs collects the following information **only from your open browser tabs**, when you take a snapshot, record a session, or when an automatic save you have turned on runs (save on browser close, save incognito on close, or rolling backup):
 
 - Tab URLs
 - Tab titles
@@ -33,6 +33,15 @@ Session data persists in your browser's local storage until you manually delete 
 
 Uninstalling SnapTabs removes all stored data.
 
+## Automatic Saves
+
+All automatic saves are off until you turn them on, either in Settings or on the welcome page shown after install.
+
+- **Save on browser close** saves your open tabs when you quit the browser.
+- **Rolling backup** keeps a single, periodically refreshed copy of your open tabs (every 5, 15, 30, or 60 minutes). It never includes incognito windows.
+
+Both are stored locally, exactly like manual snapshots.
+
 ## Incognito Mode
 
 When granted incognito access, SnapTabs can snapshot tabs from incognito windows. These snapshots are stored alongside regular sessions in local storage. SnapTabs caches incognito tab data ephemerally (using `chrome.storage.session`, which is cleared when the browser closes) to support auto-save on incognito window close.
@@ -47,6 +56,11 @@ SnapTabs requests only the permissions necessary for its functionality:
 | `tabGroups` | Read and recreate tab group names, colors, and state |
 | `storage` | Persist sessions and settings locally |
 | `contextMenus` | Provide right-click "Save all tabs" option |
+| `alarms` | Schedule the optional rolling backup |
+
+## Uninstall Feedback
+
+When you uninstall SnapTabs, your browser may open a short, optional feedback form asking why you left. SnapTabs attaches nothing to that page: no identifiers, usage data, or tab data. Answering is entirely voluntary.
 
 ## Changes to This Policy
 

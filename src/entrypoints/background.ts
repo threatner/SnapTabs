@@ -26,6 +26,7 @@ import {
 } from '../lib/storage';
 import { createCloseChain, processNormalWindowClose, recoverLastSnapshot } from '../lib/browserClose';
 import { BACKUP_ALARM, scheduleBackup, runBackup } from '../lib/backup';
+import { configureUninstallSurvey } from '../lib/links';
 
 export default defineBackground(() => {
   const windowMap = new Map<number, boolean>();
@@ -244,6 +245,8 @@ export default defineBackground(() => {
 
   chrome.runtime.onInstalled.addListener(async (details) => {
     await setupContextMenus();
+    // Persists in Chrome, so setting it on install and on every update is enough.
+    await configureUninstallSurvey();
     if (details.reason === 'install') {
       await updateSettings({});
       try { await chrome.tabs.create({ url: chrome.runtime.getURL('/welcome.html') }); } catch {}
