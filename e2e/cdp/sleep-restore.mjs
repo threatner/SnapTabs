@@ -79,8 +79,11 @@ try {
     for (const w of ['a1', 'a2', 'a3', 'b1', 'b2']) assert.ok(urls.includes(url(w)), `${w} captured`);
   });
 
-  // Clicking a sleeping tab wakes it.
-  await browser.evalSW(`await chrome.tabs.update(${state.a2.id}, { active: true });`);
+  // Clicking a sleeping tab wakes it. A click also brings its window to the
+  // front; Brave only reloads a discarded tab once it is actually visible.
+  await browser.evalSW(`
+    await chrome.windows.update(${state.a2.windowId}, { focused: true });
+    await chrome.tabs.update(${state.a2.id}, { active: true });`);
   const woken = await eventually(async () => {
     const s = await byUrl();
     assert.equal(s.a2.discarded, false);
