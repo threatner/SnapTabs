@@ -12,8 +12,30 @@ import { chromium } from '@playwright/test';
 const DEFAULT_EXT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.output', 'chrome-mv3');
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Every CDP round trip gets a deadline so a dead target fails the check
+// instead of hanging the run.
+const CDP_TIMEOUT_MS = 30_000;
+function withTimeout(promise, what) {
+  let timer;
+  return Promise.race([
+    promise.finally(() => clearTimeout(timer)),
+    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`CDP timeout: ${what}`)), CDP_TIMEOUT_MS); }),
+  ]);
+}
+
 // Pass `userDataDir` to reuse a profile across launches (it is then kept on close).
-export async function launch({ port = 9300 + Math.floor(Math.random() * 500), ext = DEFAULT_EXT, userDataDir } = {}) {
+// A leftover browser on the same debugging port would silently answer in
+// place of ours, so only use a port nothing is listening on.
+async function freePort() {
+  for (let i = 0; i < 20; i++) {
+    const port = 9300 + Math.floor(Math.random() * 500);
+    try { await fetch(`http://127.0.0.1:${port}/json/version`); } catch { return port; }
+  }
+  throw new Error('no free debugging port');
+}
+
+export async function launch({ port, ext = DEFAULT_EXT, userDataDir } = {}) {
+  port ??= await freePort();
   const dir = userDataDir ?? mkdtempSync(path.join(tmpdir(), 'snaptabs-cdp-'));
   const proc = spawn(process.env.BROWSER_PATH || chromium.executablePath(), [
     `--user-data-dir=${dir}`, `--remote-debugging-port=${port}`,
@@ -42,26 +64,39 @@ export async function launch({ port = 9300 + Math.floor(Math.random() * 500), ex
   async function browserCommand(method, params = {}) {
     const { webSocketDebuggerUrl } = await (await fetch(`${base}/json/version`)).json();
     const ws = new WebSocket(webSocketDebuggerUrl);
-    await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
-    const res = await new Promise((resolve) => {
-      ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id === 1) resolve(d); };
-      ws.send(JSON.stringify({ id: 1, method, params }));
-    });
-    ws.close();
+    let res;
+    try {
+      res = await withTimeout((async () => {
+        await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
+        return new Promise((resolve) => {
+          ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id === 1) resolve(d); };
+          ws.send(JSON.stringify({ id: 1, method, params }));
+        });
+      })(), method);
+    } finally {
+      ws.close();
+    }
     if (res.error) throw new Error(res.error.message);
     return res.result;
   }
 
   async function evaluate(target, body) {
     const ws = new WebSocket(target.webSocketDebuggerUrl);
-    await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
-    const res = await new Promise((resolve) => {
-      ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id === 1) resolve(d); };
-      ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: {
-        expression: `(async () => { ${body} })()`, awaitPromise: true, returnByValue: true,
-      } }));
-    });
-    ws.close();
+    let res;
+    try {
+      res = await withTimeout((async () => {
+        await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
+        return new Promise((resolve) => {
+          ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id === 1) resolve(d); };
+          ws.onclose = () => resolve({ result: { exceptionDetails: { exception: { description: 'target closed during evaluate' } } } });
+          ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: {
+            expression: `(async () => { ${body} })()`, awaitPromise: true, returnByValue: true,
+          } }));
+        });
+      })(), `evaluate in ${target.url}`);
+    } finally {
+      ws.close();
+    }
     if (res.result?.exceptionDetails) throw new Error(res.result.exceptionDetails.exception?.description ?? 'evaluate failed');
     return res.result?.result?.value;
   }
