@@ -168,23 +168,29 @@ export async function restoreSession(
   // land in the current window (when restoreInNewWindow is off).
   let usedCurrentWindow = false;
   const backgroundTabIds: number[] = [];
+  const regularWindows: SavedTab[][] = [];
+  const incognitoWindows: SavedTab[][] = [];
+
   for (const windowTabs of splitByWindow(session.tabs, session.windowCount)) {
     const restorable = windowTabs.filter((t) => isRestorable(t.url));
     const toIncognito = restoreIncognitoToIncognito ? restorable.filter((t) => t.isIncognito) : [];
     const rest = restoreIncognitoToIncognito ? restorable.filter((t) => !t.isIncognito) : restorable;
+    if (rest.length > 0) regularWindows.push(rest);
+    if (toIncognito.length > 0) incognitoWindows.push(toIncognito);
+  }
 
-    if (rest.length > 0) {
-      if (restoreInNewWindow || usedCurrentWindow) {
-        backgroundTabIds.push(...await restoreInWindow(rest, session.tabGroups, false));
-      } else {
-        backgroundTabIds.push(...await restoreInCurrent(rest, session.tabGroups));
-        usedCurrentWindow = true;
-      }
+  // Regular windows first: "current window" means the last-focused one, and a
+  // freshly created incognito window would otherwise become it.
+  for (const tabs of regularWindows) {
+    if (restoreInNewWindow || usedCurrentWindow) {
+      backgroundTabIds.push(...await restoreInWindow(tabs, session.tabGroups, false));
+    } else {
+      backgroundTabIds.push(...await restoreInCurrent(tabs, session.tabGroups));
+      usedCurrentWindow = true;
     }
-
-    if (toIncognito.length > 0) {
-      backgroundTabIds.push(...await restoreInWindow(toIncognito, session.tabGroups, true));
-    }
+  }
+  for (const tabs of incognitoWindows) {
+    backgroundTabIds.push(...await restoreInWindow(tabs, session.tabGroups, true));
   }
 
   // Not awaited: sleeping waits for each tab to finish loading, and the
