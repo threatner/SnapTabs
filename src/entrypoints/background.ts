@@ -243,7 +243,10 @@ export default defineBackground(() => {
 
   chrome.runtime.onInstalled.addListener(async (details) => {
     await setupContextMenus();
-    if (details.reason === 'install') await updateSettings({});
+    if (details.reason === 'install') {
+      await updateSettings({});
+      try { await chrome.tabs.create({ url: chrome.runtime.getURL('/welcome.html') }); } catch {}
+    }
     await updateBadge();
   });
 
