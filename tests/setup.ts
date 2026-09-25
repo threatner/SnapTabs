@@ -95,6 +95,7 @@ const chromeMock = {
   },
   runtime: {
     sendMessage: vi.fn(async () => ({})),
+    setUninstallURL: vi.fn(async () => {}),
     onMessage: { addListener: vi.fn() },
     onInstalled: { addListener: vi.fn() },
   },
