@@ -3,7 +3,8 @@
   import type { Session, SnapTabsSettings, LiveRecording, SessionSort } from '@/lib/types';
   import { DEFAULT_SETTINGS } from '@/lib/types';
   import { isExcludedUrl } from '@/lib/types';
-  import { getSessions, renameSession, deleteAllSessions, getSettings, updateSettings, getStorageUsage, getRecording, buildExportPayload, importSessions } from '@/lib/storage';
+  import { getSessions, renameSession, deleteAllSessions, getSettings, updateSettings, getStorageUsage, getRecording, buildExportPayload, importSessions, getMeta, dismissRatingPrompt, shouldShowRatingPrompt } from '@/lib/storage';
+  import { REVIEW_URL } from '@/lib/links';
   import { getTabStats, findDuplicateSession } from '@/lib/tabs';
   import Header from '@/components/Header.svelte';
   import SnapshotBar from '@/components/SnapshotBar.svelte';
@@ -12,6 +13,7 @@
   import SessionDetail from '@/components/SessionDetail.svelte';
   import Settings from '@/components/Settings.svelte';
   import Toast from '@/components/Toast.svelte';
+  import RatingPrompt from '@/components/RatingPrompt.svelte';
 
   type View = 'main' | 'detail' | 'settings';
 
@@ -27,6 +29,10 @@
   let sortBy: SessionSort = $state('newest');
   let selectedSession: Session | null = $state(null);
   let loading = $state(true);
+  let showRatingPrompt = $state(false);
+
+  // The review link points at the Chrome Web Store, so don't ask Edge users.
+  const isEdge = navigator.userAgent.includes('Edg/');
 
   let toastVisible = $state(false);
   let toastMessage = $state('');
@@ -68,9 +74,10 @@
 
   async function loadData() {
     try {
-      const [sess, sett, stats, storage, rec] = await Promise.all([
-        getSessions(), getSettings(), getTabStats(), getStorageUsage(), getRecording(),
+      const [sess, sett, stats, storage, rec, meta] = await Promise.all([
+        getSessions(), getSettings(), getTabStats(), getStorageUsage(), getRecording(), getMeta(),
       ]);
+      showRatingPrompt = !isEdge && shouldShowRatingPrompt(meta);
       sessions = sess;
       settings = sett;
       incognitoTabs = stats.incognitoTabs;
@@ -309,6 +316,17 @@
     }
   }
 
+  function handleRate() {
+    showRatingPrompt = false;
+    // Record first: opening the tab closes the popup.
+    dismissRatingPrompt().catch(() => {}).finally(() => { chrome.tabs.create({ url: REVIEW_URL }); });
+  }
+
+  function handleDismissRating() {
+    showRatingPrompt = false;
+    dismissRatingPrompt().catch(() => {});
+  }
+
   function handleSessionClick(session: Session) {
     selectedSession = session;
     view = 'detail';
@@ -389,6 +407,10 @@
       onStopRecording={handleStopRecording}
       onCancelRecording={handleCancelRecording}
     />
+
+    {#if showRatingPrompt}
+      <RatingPrompt onRate={handleRate} onDismiss={handleDismissRating} />
+    {/if}
 
     <SessionList
       sessions={filtered}
