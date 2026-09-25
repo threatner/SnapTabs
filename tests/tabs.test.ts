@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { resetChromeStorage } from './setup';
 import { isRestorable, toSavedTab, urlSetSignature, findDuplicateSession, splitByWindow, restoreSession } from '../src/lib/tabs';
 import type { Session, SavedTab } from '../src/lib/types';
+import { sleepTabsWhenLoaded } from '../src/lib/sleepTabs';
+
+vi.mock('../src/lib/sleepTabs', () => ({ sleepTabsWhenLoaded: vi.fn(async () => {}) }));
 
 describe('isRestorable', () => {
   it('allows normal http URLs', () => {
@@ -736,5 +739,47 @@ describe('restoreSession (multi-window)', () => {
     expect(vi.mocked(chrome.windows.create).mock.calls).toEqual([
       [expect.objectContaining({ url: 'https://p1.com', incognito: true })],
     ]);
+  });
+
+  it('focuses the first restored tab in the current window, not the last', async () => {
+    mockCreation();
+    const s = session([tab('https://a1.com', 0, 7), tab('https://a2.com', 1, 7), tab('https://a3.com', 2, 7)], 1);
+
+    await restoreSession(s, true, false);
+
+    expect(vi.mocked(chrome.tabs.create).mock.calls.map(([o]) => o.active)).toEqual([true, false, false]);
+  });
+
+  it('opens extra tabs of a new window in the background', async () => {
+    mockCreation();
+    const s = session([tab('https://a1.com', 0, 7), tab('https://a2.com', 1, 7)], 1);
+
+    await restoreSession(s, true, true);
+
+    expect(vi.mocked(chrome.tabs.create).mock.calls.map(([o]) => o.active)).toEqual([false]);
+  });
+
+  it('puts every background tab to sleep when enabled, never the focused ones', async () => {
+    mockCreation();
+    const s = session([
+      tab('https://a1.com', 0, 7), tab('https://a2.com', 1, 7),
+      tab('https://b1.com', 0, 3), tab('https://b2.com', 1, 3),
+    ], 2);
+
+    await restoreSession(s, true, false, true);
+
+    // Current window: a1 (1000, focused) + a2 (1001). New window: b1 is the
+    // window's own first tab (1002), b2 (1003).
+    expect(sleepTabsWhenLoaded).toHaveBeenCalledTimes(1);
+    expect(sleepTabsWhenLoaded).toHaveBeenCalledWith([1001, 1003]);
+  });
+
+  it('does not sleep tabs when disabled', async () => {
+    mockCreation();
+    const s = session([tab('https://a1.com', 0, 7), tab('https://a2.com', 1, 7)], 1);
+
+    await restoreSession(s, true, false, false);
+
+    expect(sleepTabsWhenLoaded).not.toHaveBeenCalled();
   });
 });

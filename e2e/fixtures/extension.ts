@@ -1,7 +1,7 @@
 import { test as base, chromium, type BrowserContext, type Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getServiceWorker } from '../helpers/storage';
+import { getServiceWorker, applyBaseSettings } from '../helpers/storage';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const EXTENSION_PATH = path.resolve(__dirname, '..', '..', '.output', 'chrome-mv3');
@@ -56,6 +56,7 @@ export const test = base.extend<ExtensionFixtures>({
         '--disable-sync',
       ],
     });
+    await applyBaseSettings(context);
     await use(context);
     await context.close();
   },

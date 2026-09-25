@@ -38,6 +38,7 @@ export interface SnapTabsSettings {
   showIncognitoWarning: boolean;
   restoreIncognitoToIncognito: boolean;
   restoreInNewWindow: boolean;
+  sleepRestoredTabs: boolean;
   warnOnDuplicateSnapshot: boolean;
   excludedDomains: string[];
 }
@@ -50,6 +51,7 @@ export const DEFAULT_SETTINGS: SnapTabsSettings = {
   showIncognitoWarning: true,
   restoreIncognitoToIncognito: true,
   restoreInNewWindow: false,
+  sleepRestoredTabs: true,
   warnOnDuplicateSnapshot: true,
   excludedDomains: [],
 };

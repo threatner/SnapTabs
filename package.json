@@ -37,6 +37,7 @@
     "test:e2e": "playwright test --config=e2e/playwright.config.ts --project=chromium",
     "test:e2e:debug": "playwright test --config=e2e/playwright.config.ts --project=chromium --debug",
     "test:e2e:brave": "playwright test --config=e2e/playwright.config.ts --project=brave",
+    "test:e2e:cdp": "node e2e/cdp/sleep-restore.mjs",
     "promo": "npx --yes sharp-cli -i src/assets/promo-small.svg -o screenshots/store/promo-small-440x280.png && npx --yes sharp-cli -i src/assets/promo-marquee.svg -o screenshots/store/promo-marquee-1400x560.png",
     "screenshots:capture": "tsx scripts/capture-screenshots.ts",
     "screenshots:compose": "tsx scripts/compose-screenshots.ts",
