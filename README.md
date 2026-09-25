@@ -14,11 +14,11 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 | | |
 |---|---|
-| Latest version | 1.8.0 |
+| Latest version | 1.9.0 |
 | Browser | Chrome 93+ |
 | Manifest | V3 |
 | Storage | Local only. No cloud sync |
-| Permissions | 4 (tabs, tabGroups, storage, contextMenus) |
+| Permissions | 5 (tabs, tabGroups, storage, contextMenus, alarms) |
 | Network requests | None |
 | Price | Free |
 | License | MIT |
@@ -39,6 +39,10 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 ### Added in recent releases
 
+- **Multi-window restore.** Sessions saved from several windows come back as several windows, each in its original tab order, including sessions saved by older versions.
+- **Sleep restored tabs.** After a restore, background tabs unload once loaded and wake when you click them, so big sessions don't eat your memory. On by default; toggle in **Settings > Restore**.
+- **Rolling backup.** An optional, always-fresh backup of your open tabs, refreshed every 5 to 60 minutes. If a crash or a closed window would make it lose tabs, the previous backup is kept as its own session. Off by default; **Settings > Auto-Save**.
+- **Welcome page.** New installs get a short setup page: pin the extension, opt in to the automatic saves, and learn the shortcuts.
 - **Clean toolbar icon.** The persistent session-count number on the toolbar badge is gone — the count now shows inside the popup header, where you're actually looking. The badge is reserved for the red recording dot.
 - **Session sorting.** Order the list by newest, oldest, name, or most tabs. Pinned sessions always stay on top.
 - **Duplicate snapshot warning.** If the tabs you are about to snapshot match your most recent session, SnapTabs asks before saving another copy. Skips trivial differences like trailing slashes and URL fragments. Turn off in Settings if you want every click to save unconditionally.
@@ -76,6 +80,8 @@ No. Everything is stored in `chrome.storage.local` on your device. There is no c
 Turn on **Settings > Auto-Save > Save on browser close** (off by default). While it's on, every window's tabs land in a combined session named "Browser close" when the last window closes — including the multi-window `Cmd+Q` case.
 
 If the browser kills the extension's service worker mid-shutdown before the save lands (Brave is more aggressive about this than Chrome), SnapTabs falls back to a continuously-updated snapshot it keeps in local storage. On the next browser start, that snapshot is promoted to a session named "Browser close (recovered)". Either way your tabs come back.
+
+You can also turn on **Settings > Auto-Save > Rolling backup**. It keeps a single session with your open tabs up to date every few minutes. After a restart, if the backup would lose tabs that were open before, the pre-restart backup is kept as its own session.
 
 For critical tab sets, also take a manual snapshot (`Alt+Shift+S`) — it goes through a different code path and is the most belt-and-braces option.
 
@@ -133,6 +139,7 @@ npm run test:coverage  # coverage report
 npm run test:e2e       # E2E tests (Playwright, requires build first)
 npm run test:e2e:debug # E2E tests in debug mode
 npm run test:e2e:brave # E2E tests against Brave (set BRAVE_PATH if non-default)
+npm run test:e2e:cdp   # Real-Chromium checks Playwright can't drive (tab sleeping, backup alarms, restarts)
 npm run screenshots    # Regenerate Chrome Web Store listing screenshots (1280x800)
 ```
 
@@ -194,6 +201,7 @@ e2e/                    # E2E tests (Playwright)
 | `tabGroups` | Preserve and recreate tab group names, colors, state |
 | `storage` | Store sessions and settings on your device |
 | `contextMenus` | "Save all tabs" right-click item on the extension icon |
+| `alarms` | Schedule the optional rolling backup |
 
 No network, no history, no cookies, no identity. Full detail in [PRIVACY.md](PRIVACY.md).
 

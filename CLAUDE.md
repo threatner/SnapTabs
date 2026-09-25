@@ -14,6 +14,7 @@ npm run test:coverage  # Run tests with coverage report
 npm run test:e2e       # Run E2E tests against Chromium (Playwright, requires build first)
 npm run test:e2e:debug # Run E2E tests in debug mode
 npm run test:e2e:brave # Run E2E tests against Brave (set BRAVE_PATH if non-default)
+npm run test:e2e:cdp   # Real-Chromium checks Playwright can't drive (requires build first)
 ```
 
 ## What is SnapTabs
@@ -29,7 +30,12 @@ SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser
 - **Auto-save on incognito close**: optionally auto-save incognito tabs (and their tab groups) when an incognito window is closed. Uses the same proactive per-window capture cache.
 - **Live recording**: record new tabs as they open in a window (or all windows), then save the session. URL deduplication, pulsing badge indicator, real-time tab count.
 - **Toolbar badge**: recording-only — a red ● while live recording, empty otherwise. The stored-session count is NOT shown on the badge (removed in v1.7.0); it appears as a "N sessions saved" subtitle in the popup header instead.
-- **Session restore**: restore to current window or a new window. Incognito tabs go to an incognito window when the setting is enabled. Auto-delete after restore is optional.
+- **Session restore**: restore to current window or a new window. Incognito tabs go to an incognito window when the setting is enabled. Auto-delete after restore is optional. **Multi-window sessions restore window-by-window** (`splitByWindow` in `tabs.ts`): each `SavedTab` records `windowId`; sessions saved before v1.9 have none, so a non-increasing `index` marks a window boundary. Regular windows restore before incognito ones (a new incognito window would otherwise become the "current" window). The first restored tab is focused; the rest open in the background.
+- **Sleep restored tabs** (`sleepRestoredTabs`, default true): background tabs from a restore are `chrome.tabs.discard`ed once loaded (`sleepTabs.ts`). Never discard before the navigation commits (the tab would sleep with `url: ''`); tab groups are recreated before any discard because discard can change a tab id.
+- **Rolling backup** (`autoBackupMinutes`: 0 = off / 5 / 15 / 30 / 60, default 0): `backup.ts`. A `chrome.alarms` schedule refreshes a single `isBackup` session with every normal (non-incognito) window, only when a fingerprint changed. `scheduleBackup` leaves an existing alarm with the same period alone (re-creating it on each SW start would postpone it forever). Before overwriting, the previous backup is kept as an ordinary auto-save when tabs would be lost on the first backup after a fresh browser start (crash case; flagged via `setBackupRestartCheck` in `init()`), or on a big loss (≥5 tabs and ≥ half). The backup is excluded from `maxSessions` and pruning, the duplicate-snapshot check, and browser-close recovery dedupe; imports strip `isBackup`; turning it off (`retireBackup`) turns it into a normal auto-save. Backup runs and retirement are queued in the SW (`queueBackup` / `queueRetire`) and wait for `init()`; `upsertBackup` re-checks the setting under the lock. `enforceLimit(sessions, max, protect)` never prunes sessions created by the same write (kept backup copies carry an older timestamp).
+- **Welcome page** (`src/entrypoints/welcome/`): opened by `onInstalled` only when no settings were stored yet (a genuinely new user; don't trust `reason` alone). Pin detection via `chrome.action.getUserSettings()`, opt-in toggles for save-on-close and a 15-minute rolling backup, bound shortcut via `chrome.commands.getAll()`.
+- **Rating prompt**: after `RATING_PROMPT_AFTER_RESTORES` (3) successful restores, the popup shows `RatingPrompt.svelte` once; rating or dismissing sets `ratingPromptDone`. Skipped on Edge. Counter lives in `snaptabs_meta` (not exported).
+- **Uninstall survey**: `configureUninstallSurvey()` (`links.ts`) calls `chrome.runtime.setUninstallURL(UNINSTALL_SURVEY_URL)` on install/update. Empty URL = disabled. Never append data to the URL.
 - **Session pinning**: pin sessions so they sort to the top and are exempt from auto-pruning. Available via the card context menu and the detail-view toolbar button.
 - **Import / Export**: download all sessions to a JSON file (`snaptabs-export-YYYY-MM-DD.json`) or load from a previous export. Import handles ID collisions by renaming on conflict and skipping exact re-imports (same id + timestamp).
 - **Omnibox search**: `st <query>` in Chrome's address bar fuzzy-matches tab titles and URLs across every saved session. Selecting a suggestion opens the tab (Alt+Enter for new tab); raw text with no selection falls back to Google search.
@@ -38,7 +44,7 @@ SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser
 - **Duplicate snapshot warning**: before saving a manual snapshot from the popup, compares the candidate tab set against the most recent session via a URL-set signature (order-, fragment-, trailing-slash-insensitive; `isRestorable`-filtered on both sides). If matched, shows a confirm modal with "Cancel" / "Save anyway". Context-menu and keyboard-shortcut snapshots bypass the check. Controlled by `warnOnDuplicateSnapshot` (default true).
 - **Excluded domains**: per-domain skip list applied at capture time (manual snapshot, live recording, auto-save on close). Exact host or subdomain match — `github.com` matches `api.github.com`. Input is normalized (strips protocol, `www.`, path, query, casing). Lives in `excludedDomains: string[]` setting.
 - **Storage management**: 10 MB quota with automatic pruning (oldest auto-saves removed first, pinned sessions never pruned). Configurable session limit (1-500). Storage usage bar in settings.
-- **Settings**: 9 options grouped into 6 sections in the order: **Auto-Save** (auto-snapshot on browser close [default false], auto-save on incognito close), **Snapshot** (warn on duplicate snapshot [default true], excluded domains [default []]), **Restore** (open in new window, auto-delete after restore, restore private to private), **Warnings** (show incognito warning), **Storage** (max sessions limit), **Data** (import/export, clear all in Danger zone). A **Feedback** section (link card to GitHub issues) sits between Data and the Danger zone. Section order is importance-first — Auto-Save is the headline behavior.
+- **Settings**: 11 options grouped into 6 sections in the order: **Auto-Save** (auto-snapshot on browser close [default false], auto-save on incognito close, rolling backup interval [default Off]), **Snapshot** (warn on duplicate snapshot [default true], excluded domains [default []]), **Restore** (open in new window, sleep restored tabs [default true], auto-delete after restore, restore private to private), **Warnings** (show incognito warning), **Storage** (max sessions limit), **Data** (import/export, clear all in Danger zone). A **Feedback** section (link card to GitHub issues) sits between Data and the Danger zone. Section order is importance-first — Auto-Save is the headline behavior.
 
 ### Permissions (minimal set)
 
@@ -48,6 +54,7 @@ SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser
 | `tabGroups` | Read and recreate tab group names, colors, and state |
 | `storage` | Persist sessions and settings locally |
 | `contextMenus` | Right-click "Save all tabs" option |
+| `alarms` | Schedule the optional rolling backup |
 
 Requires Chrome 93+ (`minimum_chrome_version`). Incognito mode: `"spanning"`.
 
@@ -67,8 +74,9 @@ Popup (Svelte UI)  ──sendMessage──►  Background (Service Worker)
 
 ### Data Flow
 
-- **Popup → Background**: Message protocol with action strings (`'snapshot'`, `'restore'`, `'delete'`, `'togglePin'`, `'startRecording'`, `'stopRecording'`, `'cancelRecording'`, `'getSessions'`, `'getStats'`, `'getSettings'`, `'updateSettings'`, `'getRecording'`). Import/export is invoked directly from the popup (no message round-trip needed).
-- **Background → Storage**: `chrome.storage.local` for persistent data (sessions, settings, `lastSnapshot` for browser-close recovery), `chrome.storage.session` for ephemeral data (live recording, window map, proactive per-window capture cache (`windowCache`: tabs + tab groups per window), pending-close buffer, `sessionMarker` for fresh-start detection).
+- **Popup → Background**: Message protocol with action strings (`'snapshot'`, `'restore'`, `'delete'`, `'rename'`, `'deleteAll'`, `'togglePin'`, `'dismissRatingPrompt'`, `'startRecording'`, `'stopRecording'`, `'cancelRecording'`, `'getSessions'`, `'getStats'`, `'getSettings'`, `'updateSettings'`, `'getRecording'`). Pages send via `sendMessage()` from `src/lib/messages.ts`, which throws when the SW replies `{ error }` (raw `chrome.runtime.sendMessage` resolves on failure). **Writes go through the SW** so they complete even if the popup closes mid-write; import/export are the exception (invoked directly from the popup, which awaits the result).
+- **Write serialization**: every read-modify-write of `sessions`, `settings`, `meta`, and the live recording runs under `withLock(key)` in `storage.ts` (Web Locks API, shared by the SW and all extension pages; in-context queue fallback). Never call a locked storage function from inside another lock on the same key.
+- **Background → Storage**: `chrome.storage.local` for persistent data (sessions, settings, `lastSnapshot` for browser-close recovery, `meta` for the rating prompt counter), `chrome.storage.session` for ephemeral data (live recording, window map, proactive per-window capture cache (`windowCache`: tabs + tab groups per window), pending-close buffer, `sessionMarker` for fresh-start detection, `backupRestartCheck`). `lastVersion` (local) is written by `recordVersion()` in `init()`: Chrome clears `storage.session` on extension updates too, so a missing `sessionMarker` alone doesn't mean a browser restart. On an update, the backup restart check is skipped and `recoverLastSnapshot` gets the currently open URLs, skipping recovery if nothing is missing.
 - **Storage quota**: 10 MB. Automatic pruning removes oldest auto-saves first when `maxSessions` is exceeded; pinned sessions are skipped. If all prunable sessions are pinned, `enforceLimit` breaks out and the list is allowed to exceed `maxSessions` as a soft cap.
 - **Omnibox**: `chrome.omnibox` `onInputChanged` / `onInputEntered` handlers live in `background.ts`. Suggestions are ranked by (title match 100 + url match 40 + session-name match 10 + pinned bonus 5), capped at 8 results, deduped by URL.
 
@@ -79,6 +87,10 @@ Popup (Svelte UI)  ──sendMessage──►  Background (Service Worker)
 - `src/lib/tabs.ts`: tab capture/restore logic. Exports `toSavedTab()` (shared mapper from `chrome.tabs.Tab` to `SavedTab`), `mergeGroups()` (the single dedupe-tab-groups-by-id helper, reused by `captureAllWindows`, `processNormalWindowClose`, and `writeLastSnapshot`), `isRestorable()`, `captureWindow()`, `captureAllWindows()`, `createSnapshot()` (reads `excludedDomains` from settings and filters captured tabs before saving; recomputes `hasIncognitoTabs` post-filter), `restoreSession()`, `getTabStats()`, plus dedup helpers `urlSetSignature()` and `findDuplicateSession()` (filters non-restorable URLs on both sides; only compares against most-recent session).
 - `src/lib/browserClose.ts`: pure, testable browser-close logic extracted from the service worker. Exports `createCloseChain()` (returns `{ enqueue, drain }` — serializes `onRemoved` work onto a single promise chain so concurrent multi-window close events can't race on the pending-close buffer), `processNormalWindowClose(tabs, groups, isLastWindow, now?)` (accumulates tabs and tab groups into the pending buffer, flushes a combined "Browser close" session — with `tabGroups` populated — when last window), `recoverLastSnapshot(settings)` (called at SW init; on a fresh browser start, promotes `lastSnapshot` — including its cached `groups` — to a `Browser close (recovered)` session if the handler-path save didn't land; dedupes via URL-set signature), and the `PENDING_CLOSE_STALE_MS` constant. (Group dedup uses the shared `mergeGroups` from `tabs.ts`.)
 - `src/entrypoints/background.ts`: service worker. Message router, badge management, proactive per-window capture cache (`windowCache` Map of `WindowCapture` — tabs + tab groups, unified for incognito and normal windows, refreshed via `captureWindow()` on every tab/window change and persisted in one write), window map, window lifecycle listeners, browser-close logic — `onRemoved` callbacks are funneled through a single `closeChain.enqueue` so they run serially, then dispatch to `processNormalWindowClose` (normal) or the inline incognito save path; live recording capture (filters `excludedDomains` per tab update); context menu; keyboard shortcut (`Alt+Shift+S`); omnibox handlers; debounced `writeLastSnapshot()` and init-time `recoverLastSnapshot()` for the SW-survival fallback.
+- `src/lib/sleepTabs.ts`: `sleepTabsWhenLoaded(tabIds)` — discards background tabs after `status: 'complete'`, or on a 15s timeout only if committed; one shared `onUpdated` listener.
+- `src/lib/backup.ts`: `scheduleBackup`, `runBackup`, `shouldKeepPrevious`, `BACKUP_ALARM`, `BACKUP_NAME`, `BACKUP_INTERVALS`. Storage side: `upsertBackup(session, keepPrevious)`, `retireBackup`, `setBackupRestartCheck` / `takeBackupRestartCheck`.
+- `src/lib/links.ts`: `REVIEW_URL`, `UNINSTALL_SURVEY_URL`, `configureUninstallSurvey`.
+- `src/lib/messages.ts`: `sendMessage` (throws on `{ error }`).
 - `src/entrypoints/popup/App.svelte`: root component managing views (`'main'` | `'detail'` | `'settings'`), global state, and handler functions including `handleTogglePin`, `handleExport`, `handleImport`, plus duplicate-snapshot pre-check (`checkDuplicateSnapshot`) and confirm modal (`dupModalOpen` / `confirmDuplicateSnapshot` / `cancelDuplicateSnapshot`).
 
 ### Popup Views
@@ -100,6 +112,7 @@ The popup is a fixed 400×600px window with three views:
 | SessionDetail | `src/components/SessionDetail.svelte` | Full session view with collapsible tab groups, favicons, restore/delete/rename |
 | Settings | `src/components/Settings.svelte` | Toggle rows, max sessions input, storage bar, GitHub feedback card, danger zone |
 | Toast | `src/components/Toast.svelte` | Success/error/warning notifications, auto-dismiss |
+| RatingPrompt | `src/components/RatingPrompt.svelte` | One-time "Enjoying SnapTabs?" banner above the session list |
 
 ## Svelte 5 Constraints
 
@@ -132,17 +145,21 @@ npx sharp-cli -i src/assets/icon.svg -o src/public/icon/16.png -- resize 16 16
 
 ### Unit Tests (Vitest)
 
-Tests use **Vitest** with a Chrome API mock (`tests/setup.ts`). 153 tests across 4 files:
-- `tests/types.test.ts`: `uuid()`, `formatSessionName()`, constants, `DEFAULT_SETTINGS` shape (9 fields), domain helpers (`normalizeDomain`, `getHostname`, `urlMatchesDomain`, `isExcludedUrl`) with subdomain/substring/case edge cases.
+Tests use **Vitest** with a Chrome API mock (`tests/setup.ts`, including `createEvent()` mocks with `emit` for `tabs.onUpdated` / `alarms.onAlarm`, and `alarms`). 238 tests across 10 files:
+- `tests/types.test.ts`: `uuid()`, `formatSessionName()`, constants, `DEFAULT_SETTINGS` shape (11 fields), domain helpers (`normalizeDomain`, `getHostname`, `urlMatchesDomain`, `isExcludedUrl`) with subdomain/substring/case edge cases.
 - `tests/storage.test.ts`: sessions CRUD, settings (including `warnOnDuplicateSnapshot`, `excludedDomains`, and backward compat with legacy stored settings), recordings, window map, window cache (tabs + groups), pending-close buffer, pinning (sort + enforce), import/export (valid/invalid payloads, collisions, limit enforcement).
-- `tests/tabs.test.ts`: `isRestorable()`, `toSavedTab()`, capture, snapshot (including excluded-domain filtering, subdomain matching, post-filter `hasIncognitoTabs` recompute, empty-after-filter), restore logic, `urlSetSignature()`, `findDuplicateSession()`.
+- `tests/tabs.test.ts`: `isRestorable()`, `toSavedTab()`, capture, snapshot (including excluded-domain filtering, subdomain matching, post-filter `hasIncognitoTabs` recompute, empty-after-filter), restore logic, `urlSetSignature()`, `findDuplicateSession()`, `splitByWindow()` (windowId + legacy heuristic), multi-window restore (current vs new windows, no interleaving, regular-before-incognito, focus, which tabs are slept).
+- `tests/sleepTabs.test.ts`: discard only after load, never before commit, commit-only on timeout, skip active/closed tabs, listener cleanup.
+- `tests/backup.test.ts`: alarm scheduling (incl. not re-creating an unchanged alarm), capture (incognito excluded, excluded domains), change detection, in-place update, `shouldKeepPrevious`, keep-previous after restart / big loss, session-limit exemption, `retireBackup`, and interactions with import, duplicate check and browser-close recovery.
+- `tests/concurrency.test.ts`: concurrent session/settings/meta/recording writes all land (fails without `withLock`), plus the no-Web-Locks fallback.
+- `tests/meta.test.ts`, `tests/links.test.ts`, `tests/messages.test.ts`: rating-prompt counter, uninstall survey hook, `sendMessage` error surfacing.
 - `tests/browserClose.test.ts`: `createCloseChain` (serial ordering, error resilience), `processNormalWindowClose` (single-window holds buffer, last-window flushes, stale reset, clears `lastSnapshot` on save, **preserves tab-group metadata and dedupes groups by id across windows**, serialized concurrent 3-window close + sanity-check that the unserialized version drops tabs), `recoverLastSnapshot` (no-op when marker set / feature off, promotes on fresh start **with cached groups**, dedupes via URL-set signature, re-applies excluded-domain filter, idempotent), and `lastSnapshot`/`sessionMarker` storage round-trips.
 
 Coverage: storage.ts 100%, tabs.ts ~70% (uncovered lines are Chrome group recreation internals), browserClose.ts ~100%.
 
 ### E2E Tests (Playwright)
 
-End-to-end tests use **Playwright** to launch real Chromium (or Brave via `--project=brave`) with the extension loaded. 76 tests across 11 files in `e2e/`:
+End-to-end tests use **Playwright** to launch real Chromium (or Brave via `--project=brave`) with the extension loaded. 93 tests across 13 files in `e2e/`:
 
 ```
 e2e/
@@ -162,7 +179,14 @@ e2e/
     ├── settings.spec.ts            # Toggles, input, storage bar, persistence
     ├── dedupe.spec.ts              # Duplicate-snapshot modal: trigger, Cancel, Save anyway, backdrop dismiss, bypass when setting off
     ├── excluded-domains.spec.ts    # Settings UI (empty state, add/remove, normalization, persistence) + snapshot integration (filtering, subdomain match)
+    ├── rating-prompt.spec.ts       # Threshold, restores counting, dismiss survives popup close, "Rate it" opens reviews
+    ├── welcome.spec.ts             # Welcome page steps, toggles write settings, shortcut, Done
     └── toast.spec.ts               # Toast appearance and auto-dismiss
+e2e/cdp/                            # Real-Chromium checks over raw CDP (`npm run test:e2e:cdp`)
+    ├── harness.mjs                 # Launch Chromium + extension, evaluate in SW/pages, reuse a profile across launches
+    ├── sleep-restore.mjs           # Multi-window restore + tab sleeping + groups + wake-on-click + snapshot while asleep
+    ├── backup.mjs                  # Backup alarm: on/off, survives SW restart, real alarm firing
+    └── backup-restart.mjs          # Crash case: pre-restart backup kept after a browser restart
 ```
 
 E2E tests require a build first (`npm run build`). They run headed (Chrome extensions cannot run headless). The `e2e/` directory is outside `src/` so it is never included in the extension build. `@playwright/test` is a devDependency only.
@@ -170,6 +194,10 @@ E2E tests require a build first (`npm run build`). They run headed (Chrome exten
 The `brave` project runs the same suite against the Brave binary (`npm run test:e2e:brave`); the fixture resolves the binary from `BRAVE_PATH` / `BROWSER_PATH` env vars or `testInfo.project.metadata.executablePath` (default platform paths in `playwright.config.ts`). Multi-window Cmd+Q can't be simulated reliably in Playwright, so the browser-close race fix is covered by `tests/browserClose.test.ts` rather than E2E.
 
 Key patterns:
-- **Fixture** (`e2e/fixtures/extension.ts`): Uses `chromium.launchPersistentContext` with `--load-extension` to load the built extension. Extracts the extension ID from the service worker URL, navigates to `chrome-extension://<id>/popup.html`.
+- **Fixture** (`e2e/fixtures/extension.ts`): Uses `chromium.launchPersistentContext` with `--load-extension` to load the built extension. Waits for the install-time welcome tab and closes it (failing if it never opens), applies `E2E_BASE_SETTINGS`, extracts the extension ID from the service worker URL, navigates to `chrome-extension://<id>/popup.html`.
+- **Tab sleeping vs Playwright**: Playwright loses its browser connection whenever a tab is discarded, so the Playwright suite runs with `sleepRestoredTabs: false` (`E2E_BASE_SETTINGS`, re-applied by `seedSettings`/`clearStorage`). Anything that discards tabs is tested in `e2e/cdp/`.
+- **CDP checks on Brave**: `BROWSER_PATH="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" npm run test:e2e:cdp`. Brave only reloads a discarded tab once it's visible, so focus the window before activating a tab.
+- **Chrome Web Store tabs** aren't surfaced as Playwright pages; assert on them via `chrome.tabs.query` in the service worker.
+- **Unpacked-extension updates** can't be simulated by `chrome.runtime.reload()` (the extension disappears) or by relaunching with changed files (Chrome keeps the old service worker and reports `reason: 'install'`). For an upgrade test, relaunch the same profile after deleting its `Default/Service Worker` directory.
 - **Storage seeding** (`e2e/helpers/storage.ts`): Evaluates `chrome.storage.local.set()` in the service worker context to pre-populate test data.
 - **Real site interaction**: Snapshot and recording tests open actual websites (example.com, wikipedia.org, httpbin.org) to verify end-to-end tab capture and restore.
