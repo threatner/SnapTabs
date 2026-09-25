@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { configureUninstallSurvey, REVIEW_URL, CHROME_WEB_STORE_ID } from '../src/lib/links';
+import { configureUninstallSurvey, REVIEW_URL, CHROME_WEB_STORE_ID, UNINSTALL_SURVEY_URL } from '../src/lib/links';
 
 describe('links', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -11,6 +11,12 @@ describe('links', () => {
   it('sets the uninstall survey URL as given, with nothing appended', async () => {
     await configureUninstallSurvey('https://forms.gle/example');
     expect(chrome.runtime.setUninstallURL).toHaveBeenCalledWith('https://forms.gle/example');
+  });
+
+  it('uses the configured form by default, with nothing appended', async () => {
+    expect(UNINSTALL_SURVEY_URL).toBe('https://forms.gle/MDhCnNiG4tGSHGEi8');
+    await configureUninstallSurvey();
+    expect(chrome.runtime.setUninstallURL).toHaveBeenCalledWith(UNINSTALL_SURVEY_URL);
   });
 
   it('does nothing while no survey URL is configured', async () => {

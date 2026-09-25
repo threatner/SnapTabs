@@ -22,7 +22,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Welcome page** on first install: two steps: pin SnapTabs to the toolbar (the extensions and pin icons are shown inline, and it detects when you've pinned), and opt in to save-on-close and the rolling backup. Only for new installs, never on updates.
 - **A one-time rating request.** After 5 manual snapshots or 3 restores (whichever comes first), the popup asks once whether you'd rate SnapTabs. Dismissing it or rating hides it for good. A permanent **Rate SnapTabs** link also sits in Settings > Feedback. Existing users are counted from the sessions they already have, so long-time users are asked soon after updating.
 - **Local usage stats.** SnapTabs now keeps simple counters on your device (manual snapshots, recordings, auto-saves, restores of snapshots vs auto-saves, first-seen date) to decide when to show one-time prompts. They never leave your browser and aren't included in exports.
-- **Optional uninstall feedback.** Groundwork for a short, optional "why are you leaving?" form after uninstalling (not active until a form is configured). Nothing is attached to it.
+- **Optional uninstall feedback.** After uninstalling, the browser opens a short, optional "Why did you uninstall SnapTabs?" form (Google Forms: no sign-in, no email collected). Nothing is attached to the link.
 
 ### Changed
 
