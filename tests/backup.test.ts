@@ -4,7 +4,7 @@ import { scheduleBackup, runBackup, shouldKeepPrevious, BACKUP_ALARM, BACKUP_NAM
 import { getSessions, saveSession, updateSettings, importSessions, togglePin, renameSession } from '../src/lib/storage';
 import { findDuplicateSession } from '../src/lib/tabs';
 import { recoverLastSnapshot } from '../src/lib/browserClose';
-import { saveLastSnapshot, retireBackup, setBackupRestartCheck, takeBackupRestartCheck } from '../src/lib/storage';
+import { saveLastSnapshot, retireBackup, setBackupRestartCheck, takeBackupRestartCheck, upsertBackup, recordVersion } from '../src/lib/storage';
 import { DEFAULT_SETTINGS } from '../src/lib/types';
 import type { Session, SavedTab } from '../src/lib/types';
 
@@ -395,5 +395,63 @@ describe('retireBackup (backup turned off)', () => {
     vi.mocked(chrome.storage.local.set).mockClear();
     await retireBackup();
     expect(chrome.storage.local.set).not.toHaveBeenCalled();
+  });
+});
+
+describe('backup races and limits (second review)', () => {
+  it('a backup run that finishes after the backup was turned off writes nothing', async () => {
+    await updateSettings({ autoBackupMinutes: 15 });
+    openWindow(1, ['https://a.com']);
+    const b = await runBackup(1000);
+    // Turned off (and retired) while a later run is still capturing tabs.
+    await updateSettings({ autoBackupMinutes: 0 });
+    await retireBackup();
+    const wrote = await upsertBackup({ ...b!, timestamp: 2000 });
+
+    expect(wrote).toBe(false);
+    const sessions = await getSessions();
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].isBackup).toBeUndefined();
+  });
+
+  it('never gives the backup an id another session already has', async () => {
+    await updateSettings({ autoBackupMinutes: 15 });
+    await saveSession(session({ id: 'taken' }));
+    await upsertBackup(session({ id: 'taken', isAutoSave: true }));
+    const ids = (await getSessions()).map((s) => s.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('a copy kept after a restart survives the write that keeps it, even at the limit', async () => {
+    await updateSettings({ autoBackupMinutes: 15, maxSessions: 2 });
+    openWindow(1, urls('work', 6));
+    await runBackup(1000);
+    await saveSession(session({ id: 'm1', timestamp: 5000 }));
+    await saveSession(session({ id: 'm2', timestamp: 6000 }));
+    await setBackupRestartCheck();
+    browser = {};
+    openWindow(5, ['https://homepage.com']);
+    await runBackup(7000);
+
+    const kept = (await getSessions()).filter((s) => !s.isBackup && s.isAutoSave);
+    expect(kept).toHaveLength(1);
+    expect(kept[0].tabs).toHaveLength(6);
+  });
+
+  it('turning backup off at the limit keeps the last backup', async () => {
+    await updateSettings({ autoBackupMinutes: 15, maxSessions: 1 });
+    openWindow(1, ['https://a.com']);
+    const b = await runBackup(1000);
+    await saveSession(session({ id: 'm1', timestamp: 5000 }));
+    await retireBackup();
+    expect((await getSessions()).map((s) => s.id)).toContain(b!.id);
+  });
+});
+
+describe('recordVersion', () => {
+  it('reports a change the first time and after an update, not on reruns', async () => {
+    expect(await recordVersion('1.9.0')).toBe(true);
+    expect(await recordVersion('1.9.0')).toBe(false);
+    expect(await recordVersion('1.9.1')).toBe(true);
   });
 });

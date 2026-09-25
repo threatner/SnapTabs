@@ -1,6 +1,6 @@
 import type { Session, SavedTab, SavedTabGroup, SnapTabsSettings } from './types';
 import { uuid, formatSessionName, isExcludedUrl } from './types';
-import { urlSetSignature, mergeGroups } from './tabs';
+import { urlSetSignature, mergeGroups, isRestorable, normalizeUrlForSig } from './tabs';
 import {
   getSessions,
   saveSession,
@@ -78,7 +78,12 @@ export async function processNormalWindowClose(
 // service worker starts in a fresh browser session (i.e. not a mid-session
 // SW restart). Deduplicates against a recent matching auto-save so a
 // successful in-handler save doesn't produce a duplicate.
-export async function recoverLastSnapshot(settings: SnapTabsSettings): Promise<Session | null> {
+//
+// `stillOpenUrls` is passed when the extension was just updated: Chrome
+// clears storage.session on updates too, so the start looks fresh even though
+// the browser never closed. If every tab in the snapshot is still open there
+// is nothing to recover.
+export async function recoverLastSnapshot(settings: SnapTabsSettings, stillOpenUrls?: string[]): Promise<Session | null> {
   if (await hasSessionMarker()) return null;
   await setSessionMarker();
 
@@ -98,6 +103,15 @@ export async function recoverLastSnapshot(settings: SnapTabsSettings): Promise<S
   if (filtered.length === 0) {
     await clearLastSnapshot();
     return null;
+  }
+
+  if (stillOpenUrls) {
+    const open = new Set(stillOpenUrls.map(normalizeUrlForSig));
+    const wanted = filtered.filter((t) => isRestorable(t.url));
+    if (wanted.every((t) => open.has(normalizeUrlForSig(t.url)))) {
+      await clearLastSnapshot();
+      return null;
+    }
   }
 
   // Dedupe against a recently-saved auto-save with the same URL set —

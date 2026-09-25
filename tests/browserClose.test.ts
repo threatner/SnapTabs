@@ -377,3 +377,28 @@ describe('storage: lastSnapshot and sessionMarker round-trips', () => {
     expect(settings.autoSnapshotOnBrowserClose).toBe(true);
   });
 });
+
+describe('recoverLastSnapshot after an extension update', () => {
+  beforeEach(() => resetChromeStorage());
+
+  it('skips recovery when every snapshot tab is still open (mid-session update)', async () => {
+    await saveLastSnapshot({ tabs: [tab('https://a.com'), tab('https://b.com/')], groups: [], windowCount: 1, updatedAt: 1 });
+    const result = await recoverLastSnapshot(settingsWith({ autoSnapshotOnBrowserClose: true }), ['https://a.com', 'https://b.com', 'chrome://newtab/']);
+    expect(result).toBeNull();
+    expect(await getSessions()).toHaveLength(0);
+    expect(await getLastSnapshot()).toBeNull();
+  });
+
+  it('still recovers when tabs are missing (update applied at a browser restart)', async () => {
+    await saveLastSnapshot({ tabs: [tab('https://a.com'), tab('https://b.com')], groups: [], windowCount: 1, updatedAt: 1 });
+    const result = await recoverLastSnapshot(settingsWith({ autoSnapshotOnBrowserClose: true }), ['https://a.com']);
+    expect(result).not.toBeNull();
+    expect(result!.tabs).toHaveLength(2);
+  });
+
+  it('behaves as before when no open-tab list is given (browser start)', async () => {
+    await saveLastSnapshot({ tabs: [tab('https://a.com')], groups: [], windowCount: 1, updatedAt: 1 });
+    expect(await recoverLastSnapshot(settingsWith({ autoSnapshotOnBrowserClose: true }))).not.toBeNull();
+  });
+});
+

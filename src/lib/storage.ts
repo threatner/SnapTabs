@@ -12,6 +12,7 @@ export const KEYS = {
   sessionMarker: 'snaptabs_session_marker',
   meta: 'snaptabs_meta',
   backupRestartCheck: 'snaptabs_backup_restart_check',
+  lastVersion: 'snaptabs_last_version',
 } as const;
 
 // Proactive per-window capture (tabs + tab groups), cached so auto-saves on
@@ -140,18 +141,29 @@ function retiredBackup(backup: Session, mode: 'rotated' | 'ended'): Session {
 // Replaces the rolling-backup session (there is only ever one). With
 // `keepPrevious`, the current backup is first kept as an ordinary auto-save
 // instead of being overwritten.
-export async function upsertBackup(session: Session, keepPrevious = false): Promise<void> {
-  await withLock(KEYS.sessions, async () => {
+// Returns false (writing nothing) when the backup was turned off while this
+// run was capturing tabs.
+export async function upsertBackup(session: Session, keepPrevious = false): Promise<boolean> {
+  return withLock(KEYS.sessions, async () => {
     const result = await chrome.storage.local.get([KEYS.sessions, KEYS.settings]);
     const all: Session[] = result[KEYS.sessions] ?? [];
     const settings: SnapTabsSettings = { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
+    if (settings.autoBackupMinutes <= 0) return false;
     const sessions = all.filter((s) => !s.isBackup);
+    const protect = new Set<string>();
     if (keepPrevious) {
-      for (const old of all.filter((s) => s.isBackup)) sessions.push(retiredBackup(old, 'rotated'));
+      for (const old of all.filter((s) => s.isBackup)) {
+        const kept = retiredBackup(old, 'rotated');
+        sessions.push(kept);
+        protect.add(kept.id);
+      }
     }
-    sessions.push({ ...session, isBackup: true });
-    enforceLimit(sessions, settings.maxSessions);
+    // Ids are unique; never let the backup take one another session holds.
+    const id = sessions.some((s) => s.id === session.id) ? uuid() : session.id;
+    sessions.push({ ...session, id, isBackup: true });
+    enforceLimit(sessions, settings.maxSessions, protect);
     await chrome.storage.local.set({ [KEYS.sessions]: sessions });
+    return true;
   });
 }
 
@@ -164,9 +176,21 @@ export async function retireBackup(): Promise<void> {
     if (!all.some((s) => s.isBackup)) return;
     const settings: SnapTabsSettings = { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
     const sessions = all.map((s) => (s.isBackup ? retiredBackup(s, 'ended') : s));
-    enforceLimit(sessions, settings.maxSessions);
+    const protect = new Set(all.filter((s) => s.isBackup).map((s) => s.id));
+    enforceLimit(sessions, settings.maxSessions, protect);
     await chrome.storage.local.set({ [KEYS.sessions]: sessions });
   });
+}
+
+// Records the running extension version; returns true when it differs from
+// the last one recorded (an update, or the first run of a version that
+// tracks this). Chrome clears chrome.storage.session on extension updates as
+// well as on browser restarts, so this tells the two apart.
+export async function recordVersion(version: string): Promise<boolean> {
+  const result = await chrome.storage.local.get(KEYS.lastVersion);
+  if (result[KEYS.lastVersion] === version) return false;
+  await chrome.storage.local.set({ [KEYS.lastVersion]: version });
+  return true;
 }
 
 // Set on a fresh browser start: the first backup afterwards must not
@@ -474,10 +498,12 @@ export async function getStorageUsage(): Promise<{ used: number; total: number }
 // ── Internal ──
 
 // The rolling backup neither counts toward `max` nor gets pruned, so turning
-// it on never evicts one of the user's sessions.
-function enforceLimit(sessions: Session[], max: number): void {
+// it on never evicts one of the user's sessions. `protect` shields sessions
+// created by this very write (a kept backup copy carries the backup's older
+// timestamp and would otherwise be the first auto-save pruned).
+function enforceLimit(sessions: Session[], max: number, protect: ReadonlySet<string> = new Set()): void {
   sessions.sort((a, b) => a.timestamp - b.timestamp);
-  const prunable = (s: Session) => !s.pinned && !s.isBackup;
+  const prunable = (s: Session) => !s.pinned && !s.isBackup && !protect.has(s.id);
   const counted = () => sessions.reduce((n, s) => n + (s.isBackup ? 0 : 1), 0);
   while (counted() > max) {
     let idx = sessions.findIndex((s) => s.isAutoSave && prunable(s));
