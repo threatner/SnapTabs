@@ -40,7 +40,10 @@ export async function launch({ port, ext = DEFAULT_EXT, userDataDir } = {}) {
   const proc = spawn(process.env.BROWSER_PATH || chromium.executablePath(), [
     `--user-data-dir=${dir}`, `--remote-debugging-port=${port}`,
     `--disable-extensions-except=${ext}`, `--load-extension=${ext}`,
-    '--no-first-run', '--no-default-browser-check', '--disable-sync', 'about:blank',
+    '--no-first-run', '--no-default-browser-check', '--disable-sync',
+    // As Playwright does: CI Linux runners block Chrome's sandbox.
+    '--no-sandbox',
+    'about:blank',
   ], { stdio: 'ignore' });
   const base = `http://127.0.0.1:${port}`;
 
