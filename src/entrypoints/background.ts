@@ -254,8 +254,14 @@ export default defineBackground(() => {
     // Persists in Chrome, so setting it on install and on every update is enough.
     await configureUninstallSurvey();
     if (details.reason === 'install') {
+      // Every existing user has stored settings (and uninstalling wipes
+      // them), so this only greets genuinely new users even if Chrome ever
+      // reports an update as an install.
+      const isNewUser = (await chrome.storage.local.get(KEYS.settings))[KEYS.settings] === undefined;
       await updateSettings({});
-      try { await chrome.tabs.create({ url: chrome.runtime.getURL('/welcome.html') }); } catch {}
+      if (isNewUser) {
+        try { await chrome.tabs.create({ url: chrome.runtime.getURL('/welcome.html') }); } catch {}
+      }
     }
     await updateBadge();
   });
