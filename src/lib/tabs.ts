@@ -10,7 +10,7 @@ export function isRestorable(url: string): boolean {
 // ── Duplicate detection ──
 
 // Strip trailing slash + fragment so trivial differences don't break the match.
-function normalizeUrlForSig(url: string): string {
+export function normalizeUrlForSig(url: string): string {
   let u = url.split('#')[0];
   if (u.endsWith('/')) u = u.slice(0, -1);
   return u;
@@ -168,7 +168,6 @@ export async function restoreSession(
   // land in the current window (when restoreInNewWindow is off).
   let usedCurrentWindow = false;
   const backgroundTabIds: number[] = [];
-
   for (const windowTabs of splitByWindow(session.tabs, session.windowCount)) {
     const restorable = windowTabs.filter((t) => isRestorable(t.url));
     const toIncognito = restoreIncognitoToIncognito ? restorable.filter((t) => t.isIncognito) : [];

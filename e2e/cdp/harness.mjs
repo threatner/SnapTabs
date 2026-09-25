@@ -9,14 +9,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 
-const EXT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.output', 'chrome-mv3');
+const DEFAULT_EXT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.output', 'chrome-mv3');
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function launch({ port = 9300 + Math.floor(Math.random() * 500) } = {}) {
-  const dir = mkdtempSync(path.join(tmpdir(), 'snaptabs-cdp-'));
+// Pass `userDataDir` to reuse a profile across launches (it is then kept on close).
+export async function launch({ port = 9300 + Math.floor(Math.random() * 500), ext = DEFAULT_EXT, userDataDir } = {}) {
+  const dir = userDataDir ?? mkdtempSync(path.join(tmpdir(), 'snaptabs-cdp-'));
   const proc = spawn(process.env.BROWSER_PATH || chromium.executablePath(), [
     `--user-data-dir=${dir}`, `--remote-debugging-port=${port}`,
-    `--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`,
+    `--disable-extensions-except=${ext}`, `--load-extension=${ext}`,
     '--no-first-run', '--no-default-browser-check', '--disable-sync', 'about:blank',
   ], { stdio: 'ignore' });
   const base = `http://127.0.0.1:${port}`;
@@ -82,9 +83,12 @@ export async function launch({ port = 9300 + Math.floor(Math.random() * 500) } =
       const target = await waitForTarget((t) => t.type === 'page' && t.url === url);
       return (body) => evaluate(target, body);
     },
-    close() {
-      proc.kill();
-      try { rmSync(dir, { recursive: true, force: true }); } catch {}
+    /** Quit the browser gracefully so the profile is flushed to disk. */
+    async close() {
+      const exited = new Promise((resolve) => proc.once('exit', resolve));
+      proc.kill('SIGTERM');
+      await Promise.race([exited, sleep(10_000)]);
+      if (!userDataDir) try { rmSync(dir, { recursive: true, force: true }); } catch {}
     },
   };
 }

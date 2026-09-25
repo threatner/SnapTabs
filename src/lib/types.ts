@@ -73,8 +73,8 @@ export interface LiveRecording {
   isActive: boolean;
 }
 
-export function formatSessionName(prefix: string): string {
-  return `${prefix} - ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`;
+export function formatSessionName(prefix: string, date: Date = new Date()): string {
+  return `${prefix} - ${date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`;
 }
 
 export function uuid(): string {
