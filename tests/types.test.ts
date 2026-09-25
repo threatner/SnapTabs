@@ -55,10 +55,11 @@ describe('DEFAULT_SETTINGS', () => {
     expect(DEFAULT_SETTINGS.sleepRestoredTabs).toBe(true);
     expect(DEFAULT_SETTINGS.warnOnDuplicateSnapshot).toBe(true);
     expect(DEFAULT_SETTINGS.excludedDomains).toEqual([]);
+    expect(DEFAULT_SETTINGS.autoBackupMinutes).toBe(0);
   });
 
   it('has all nine settings', () => {
-    expect(Object.keys(DEFAULT_SETTINGS)).toHaveLength(10);
+    expect(Object.keys(DEFAULT_SETTINGS)).toHaveLength(11);
   });
 });
 

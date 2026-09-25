@@ -37,6 +37,20 @@ export async function launch({ port = 9300 + Math.floor(Math.random() * 500) } =
     throw new Error('target not found');
   }
 
+  /** Send a raw CDP command to the browser target. */
+  async function browserCommand(method, params = {}) {
+    const { webSocketDebuggerUrl } = await (await fetch(`${base}/json/version`)).json();
+    const ws = new WebSocket(webSocketDebuggerUrl);
+    await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
+    const res = await new Promise((resolve) => {
+      ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id === 1) resolve(d); };
+      ws.send(JSON.stringify({ id: 1, method, params }));
+    });
+    ws.close();
+    if (res.error) throw new Error(res.error.message);
+    return res.result;
+  }
+
   async function evaluate(target, body) {
     const ws = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
@@ -58,6 +72,7 @@ export async function launch({ port = 9300 + Math.floor(Math.random() * 500) } =
     extensionId,
     targets,
     waitForTarget,
+    browserCommand,
     /** Evaluate an async function body in the extension service worker. */
     evalSW: async (body) => evaluate(await sw(), body),
     /** Open an extension page in a tab and return an evaluator for it. */

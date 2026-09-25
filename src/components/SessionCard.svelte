@@ -99,7 +99,9 @@
       {:else}
         <h3 class="card-name">{session.name}</h3>
       {/if}
-      {#if session.isAutoSave}
+      {#if session.isBackup}
+        <span class="badge badge-auto" title="Refreshed automatically with your open tabs">Backup</span>
+      {:else if session.isAutoSave}
         <span class="badge badge-auto">Auto</span>
       {/if}
       {#if session.hasIncognitoTabs}

@@ -16,6 +16,7 @@ import {
   stopRecording,
   cancelRecording,
   getWindowMap,
+  KEYS,
   saveWindowMap,
   getWindowCache,
   saveWindowCache,
@@ -23,6 +24,7 @@ import {
   clearLastSnapshot,
 } from '../lib/storage';
 import { createCloseChain, processNormalWindowClose, recoverLastSnapshot } from '../lib/browserClose';
+import { BACKUP_ALARM, scheduleBackup, runBackup } from '../lib/backup';
 
 export default defineBackground(() => {
   const windowMap = new Map<number, boolean>();
@@ -259,6 +261,28 @@ export default defineBackground(() => {
     });
   }
 
+  // ── Rolling backup ──
+
+  chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === BACKUP_ALARM) void runBackup().catch(() => {});
+  });
+
+  // Settings are written from the popup and the welcome page as well as here,
+  // so react to the stored value rather than to a message.
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !changes[KEYS.settings]) return;
+    const before = (changes[KEYS.settings].oldValue as Partial<SnapTabsSettings> | undefined)?.autoBackupMinutes ?? 0;
+    const after = (changes[KEYS.settings].newValue as Partial<SnapTabsSettings> | undefined)?.autoBackupMinutes ?? 0;
+    if (before === after) return;
+    void (async () => {
+      try {
+        await scheduleBackup(after);
+        // Take the first backup right away so turning it on has a visible result.
+        if (after > 0) await runBackup();
+      } catch {}
+    })();
+  });
+
   // ── Omnibox ──
 
   if (chrome.omnibox) {
@@ -434,6 +458,7 @@ export default defineBackground(() => {
       }
       await Promise.all(refreshes);
       await persistWindowMap();
+      await scheduleBackup((await getSettings()).autoBackupMinutes);
       await setupContextMenus();
       await updateBadge();
     } catch (e) {

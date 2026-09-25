@@ -86,4 +86,39 @@ test.describe('Settings', () => {
     await popupPage.locator('button[aria-label="Settings"]').click();
     await expect(popupPage.locator('.tv-switch').nth(1)).toBeChecked();
   });
+
+  test('rolling backup: picking an interval saves a Backup session right away', async ({ context, popupPage, extensionId }) => {
+    const site = await context.newPage();
+    await site.goto('https://example.com/?snaptabs=backup-e2e');
+
+    await popupPage.locator('button[aria-label="Settings"]').click();
+    const select = popupPage.locator('select[aria-label="Rolling backup interval"]');
+    await expect(select).toHaveValue('0');
+    await select.selectOption({ label: '15 min' });
+
+    await expect(async () => {
+      await reloadPopup(popupPage, extensionId);
+      const card = popupPage.locator('.card').filter({ hasText: 'Rolling backup' });
+      await expect(card).toHaveCount(1, { timeout: 500 });
+      await expect(card.locator('.badge')).toHaveText('Backup');
+    }).toPass({ timeout: 10_000 });
+
+    await popupPage.locator('button[aria-label="Settings"]').click();
+    await expect(popupPage.locator('select[aria-label="Rolling backup interval"]')).toHaveValue('15');
+    await site.close();
+  });
+
+  test('sleep restored tabs toggle is in Restore and persists', async ({ popupPage, extensionId }) => {
+    await popupPage.locator('button[aria-label="Settings"]').click();
+    const row = popupPage.locator('.setting-row').filter({ hasText: 'Sleep restored tabs' });
+    const toggle = row.locator('.tv-switch');
+    // The E2E baseline turns sleeping off (see E2E_BASE_SETTINGS).
+    await expect(toggle).not.toBeChecked();
+    await toggle.click();
+    await expect(toggle).toBeChecked();
+
+    await reloadPopup(popupPage, extensionId);
+    await popupPage.locator('button[aria-label="Settings"]').click();
+    await expect(popupPage.locator('.setting-row').filter({ hasText: 'Sleep restored tabs' }).locator('.tv-switch')).toBeChecked();
+  });
 });

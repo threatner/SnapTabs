@@ -6,7 +6,7 @@ export default defineConfig({
   manifest: {
     name: 'SnapTabs - Save & Restore Browser Tabs',
     description: 'Save, restore, and manage browser tabs. Tab groups, incognito, session manager, live recording, crash-safe auto-save.',
-    permissions: ['tabs', 'tabGroups', 'storage', 'contextMenus'],
+    permissions: ['tabs', 'tabGroups', 'storage', 'contextMenus', 'alarms'],
     omnibox: { keyword: 'st' },
     incognito: 'spanning',
     minimum_chrome_version: '93',
