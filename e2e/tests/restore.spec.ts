@@ -98,4 +98,14 @@ test.describe('Restore', () => {
       expect(at('b2').index).toBe(at('b1').index + 1);
     }).toPass({ timeout: 10_000 });
   });
+
+  test('restoring a session that no longer exists reports an error', async ({ context, popupPage, extensionId }) => {
+    await seedSessions(context, [createMockSession({ id: 'vanishing', name: 'Vanishing' })]);
+    await reloadPopup(popupPage, extensionId);
+    await popupPage.locator('.card').first().click();
+    // Deleted elsewhere (e.g. another popup) while this one is open.
+    await seedSessions(context, []);
+    await popupPage.locator('.restore-btn').click();
+    await expect(popupPage.locator('.toast-text')).toHaveText('Failed to restore');
+  });
 });

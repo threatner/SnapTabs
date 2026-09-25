@@ -2,15 +2,17 @@
   import { onMount, onDestroy } from 'svelte';
   import type { SnapTabsSettings } from '@/lib/types';
   import { DEFAULT_SETTINGS } from '@/lib/types';
-  import { getSettings, updateSettings } from '@/lib/storage';
+  import { getSettings } from '@/lib/storage';
+  import { sendMessage } from '@/lib/messages';
 
   // Interval offered here; the full set of choices lives in Settings.
   const WELCOME_BACKUP_MINUTES = 15;
 
   let settings: SnapTabsSettings = $state({ ...DEFAULT_SETTINGS });
   let loaded = $state(false);
-  // Settings writes are read-modify-write; run them one at a time.
-  let writes: Promise<void> = Promise.resolve();
+  // Settings are written by the service worker so a write completes even if
+  // this tab is closed right after a toggle. Done waits for pending writes.
+  let pending: Promise<unknown>[] = [];
   // null = unknown (API unavailable), so we just show the instructions.
   let pinned: boolean | null = $state(null);
   let shortcut = $state('');
@@ -39,7 +41,7 @@
 
   function set(partial: Partial<SnapTabsSettings>) {
     settings = { ...settings, ...partial };
-    writes = writes.then(() => updateSettings(partial)).catch(() => {});
+    pending.push(sendMessage({ action: 'updateSettings', settings: partial }).catch(() => {}));
   }
 
   function openShortcutSettings() {
@@ -47,6 +49,7 @@
   }
 
   async function closeTab() {
+    await Promise.all(pending);
     const tab = await chrome.tabs.getCurrent();
     if (tab?.id !== undefined) chrome.tabs.remove(tab.id);
   }

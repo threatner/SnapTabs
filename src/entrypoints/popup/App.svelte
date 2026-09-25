@@ -3,8 +3,12 @@
   import type { Session, SnapTabsSettings, LiveRecording, SessionSort } from '@/lib/types';
   import { DEFAULT_SETTINGS } from '@/lib/types';
   import { isExcludedUrl } from '@/lib/types';
-  import { getSessions, renameSession, deleteAllSessions, getSettings, updateSettings, getStorageUsage, getRecording, buildExportPayload, importSessions, getMeta, dismissRatingPrompt, shouldShowRatingPrompt } from '@/lib/storage';
+  // Writes go through the service worker (sendMessage) so they complete even
+  // if the popup closes mid-write. Import is the exception: the popup awaits
+  // it to show the result.
+  import { getSessions, getSettings, getStorageUsage, getRecording, buildExportPayload, importSessions, getMeta, shouldShowRatingPrompt } from '@/lib/storage';
   import { REVIEW_URL } from '@/lib/links';
+  import { sendMessage } from '@/lib/messages';
   import { getTabStats, findDuplicateSession } from '@/lib/tabs';
   import Header from '@/components/Header.svelte';
   import SnapshotBar from '@/components/SnapshotBar.svelte';
@@ -139,7 +143,7 @@
   }
 
   async function runSnapshot(windowId: number | undefined, name: string) {
-    await chrome.runtime.sendMessage({ action: 'snapshot', name: name || undefined, windowId });
+    await sendMessage({ action: 'snapshot', name: name || undefined, windowId });
     await refresh();
     toast('Snapshot saved!');
   }
@@ -163,7 +167,7 @@
 
   async function handleRestore(session: Session) {
     try {
-      await chrome.runtime.sendMessage({ action: 'restore', sessionId: session.id });
+      await sendMessage({ action: 'restore', sessionId: session.id });
       toast(`Restored: ${session.name}`);
       await refresh();
     } catch {
@@ -173,7 +177,7 @@
 
   async function handleDelete(session: Session) {
     try {
-      await chrome.runtime.sendMessage({ action: 'delete', sessionId: session.id });
+      await sendMessage({ action: 'delete', sessionId: session.id });
       sessions = sessions.filter((s) => s.id !== session.id);
       const storage = await getStorageUsage();
       storageUsed = storage.used;
@@ -186,7 +190,7 @@
 
   async function handleTogglePin(session: Session) {
     try {
-      const result = await chrome.runtime.sendMessage({ action: 'togglePin', sessionId: session.id }) as { pinned: boolean };
+      const result = await sendMessage({ action: 'togglePin', sessionId: session.id }) as { pinned: boolean };
       await refresh();
       if (selectedSession?.id === session.id) {
         selectedSession = { ...selectedSession, pinned: result.pinned };
@@ -199,7 +203,7 @@
 
   async function handleRename(session: Session, newName: string) {
     try {
-      await renameSession(session.id, newName);
+      await sendMessage({ action: 'rename', sessionId: session.id, name: newName });
       sessions = sessions.map((s) => s.id === session.id ? { ...s, name: newName } : s);
       if (selectedSession?.id === session.id) selectedSession = { ...selectedSession, name: newName };
       toast('Session renamed');
@@ -210,7 +214,7 @@
 
   async function handleDeleteAll() {
     try {
-      await deleteAllSessions();
+      await sendMessage({ action: 'deleteAll' });
       sessions = [];
       const storage = await getStorageUsage();
       storageUsed = storage.used;
@@ -266,7 +270,7 @@
 
   async function handleUpdateSettings(partial: Partial<SnapTabsSettings>) {
     try {
-      await updateSettings(partial);
+      await sendMessage({ action: 'updateSettings', settings: partial });
       settings = { ...settings, ...partial };
     } catch {
       toast('Failed to save settings', 'error');
@@ -284,7 +288,7 @@
           const w = await chrome.windows.getCurrent();
           windowId = w.id ?? -1;
         }
-        const result = await chrome.runtime.sendMessage({ action: 'startRecording', name: '', windowId });
+        const result = await sendMessage({ action: 'startRecording', name: '', windowId });
         recording = result as LiveRecording;
         toast('Recording started');
       } catch {
@@ -295,7 +299,7 @@
 
   async function handleStopRecording() {
     try {
-      const session = await chrome.runtime.sendMessage({ action: 'stopRecording' }) as Session | null;
+      const session = await sendMessage({ action: 'stopRecording' }) as Session | null;
       recording = null;
       if (session) {
         await refresh();
@@ -308,7 +312,7 @@
 
   async function handleCancelRecording() {
     try {
-      await chrome.runtime.sendMessage({ action: 'cancelRecording' });
+      await sendMessage({ action: 'cancelRecording' });
       recording = null;
       toast('Recording cancelled', 'warning');
     } catch {
@@ -318,13 +322,13 @@
 
   function handleRate() {
     showRatingPrompt = false;
-    // Record first: opening the tab closes the popup.
-    dismissRatingPrompt().catch(() => {}).finally(() => { chrome.tabs.create({ url: REVIEW_URL }); });
+    sendMessage({ action: 'dismissRatingPrompt' }).catch(() => {});
+    chrome.tabs.create({ url: REVIEW_URL });
   }
 
   function handleDismissRating() {
     showRatingPrompt = false;
-    dismissRatingPrompt().catch(() => {});
+    sendMessage({ action: 'dismissRatingPrompt' }).catch(() => {});
   }
 
   function handleSessionClick(session: Session) {
