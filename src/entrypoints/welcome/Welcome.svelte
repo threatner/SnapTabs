@@ -40,8 +40,14 @@
   }
 
   function set(partial: Partial<SnapTabsSettings>) {
+    const previous = Object.fromEntries(
+      Object.keys(partial).map((k) => [k, settings[k as keyof SnapTabsSettings]]),
+    ) as Partial<SnapTabsSettings>;
     settings = { ...settings, ...partial };
-    pending.push(sendMessage({ action: 'updateSettings', settings: partial }).catch(() => {}));
+    // If the write fails, flip the toggle back rather than show a false "on".
+    pending.push(sendMessage({ action: 'updateSettings', settings: partial }).catch(() => {
+      settings = { ...settings, ...previous };
+    }));
   }
 
   function openShortcutSettings() {
