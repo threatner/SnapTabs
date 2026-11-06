@@ -1,6 +1,6 @@
 # Onboarding
 
-Status: spec, as of 2026-11-06. Branch: `release/v1.10.0`. Ships in v1.10.0.
+Status: building (milestone 1 done), as of 2026-11-06. Branch: `release/v1.10.0`. Ships in v1.10.0.
 
 ## Why
 
@@ -45,6 +45,6 @@ Rows added to [the register](../decisions/README.md): D01 to D06. Rejected: a se
 
 ## Milestones
 
-1. **Guide**: R1 to R3 and R7. Done when the welcome and help E2E checks pass and the screenshots are reviewed.
+1. **Guide**: R1 to R3 and R7. Done when the welcome and help E2E checks pass and the screenshots are reviewed. **Done 2026-11-06**: 4 new E2E tests (3 fail with the help heading broken); built-page screenshots reviewed at 1280 and 375 and in the popup.
 2. **Tips**: R4 to R6. Done when the unit and tip E2E checks pass and the popup screenshots are reviewed.
 3. **Release notes**: CHANGELOG, CLAUDE.md, README updated in the same change as the code.

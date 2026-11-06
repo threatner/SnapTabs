@@ -81,4 +81,48 @@ test.describe('Welcome page', () => {
     await closed;
     expect(page.isClosed()).toBe(true);
   });
+
+  test('explains how SnapTabs works in three steps, above the setup steps', async ({ popupPage, extensionId }) => {
+    await openWelcome(popupPage, extensionId);
+    const how = popupPage.locator('[data-step="how"]');
+    await expect(how.locator('h2')).toHaveText('How SnapTabs works');
+    await expect(how.locator('.how-title')).toHaveText(['Save your tabs', 'Close them', 'Bring them back']);
+    await expect(how.locator('.rep-primary')).toContainText('Snapshot');
+    await expect(how.locator('.rep-secondary')).toContainText('Restore');
+    // The guide comes before the pin and auto-save steps.
+    const howBox = await how.boundingBox();
+    const pinBox = await popupPage.locator('[data-step="pin"]').boundingBox();
+    expect(howBox!.y).toBeLessThan(pinBox!.y);
+  });
+
+  test('opened from help, it reads as a guide and keeps the same content', async ({ popupPage, extensionId }) => {
+    await popupPage.goto(`chrome-extension://${extensionId}/welcome.html?from=help`);
+    await expect(popupPage.locator('h1')).toHaveText('How to use SnapTabs');
+    await expect(popupPage.locator('[data-step="how"] .how-title')).toHaveCount(3);
+    await expect(popupPage.locator('.step')).toHaveCount(2);
+  });
 });
+
+test.describe('Help entry points', () => {
+  async function openedGuide(context: import('@playwright/test').BrowserContext, extensionId: string) {
+    const url = `chrome-extension://${extensionId}/welcome.html?from=help`;
+    await expect.poll(() => context.pages().some((p) => p.url() === url)).toBe(true);
+    const page = context.pages().find((p) => p.url() === url)!;
+    await expect(page.locator('h1')).toHaveText('How to use SnapTabs');
+  }
+
+  test('the ? button in the popup header opens the guide', async ({ context, popupPage, extensionId }) => {
+    const help = popupPage.getByRole('link', { name: 'How to use SnapTabs' });
+    await expect(help).toBeVisible();
+    await help.click();
+    await openedGuide(context, extensionId);
+  });
+
+  test('Settings has a "How to use SnapTabs" card that opens the guide', async ({ context, popupPage, extensionId }) => {
+    await popupPage.locator('button[aria-label="Settings"]').click();
+    await expect(popupPage.locator('.section-label').filter({ hasText: 'Help & feedback' })).toBeVisible();
+    await popupPage.getByTestId('guide-link').click();
+    await openedGuide(context, extensionId);
+  });
+});
+

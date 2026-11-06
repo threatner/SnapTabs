@@ -1,0 +1,139 @@
+  body {
+    min-height: 100vh;
+  }
+  .welcome {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 56px 16px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .hero {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .hero-icon {
+    border-radius: 14px;
+    margin: 0 auto 16px;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+  }
+  .hero-sub {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--fg-muted);
+  }
+
+  .step {
+    display: flex;
+    gap: 14px;
+    padding: 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .step-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    background: oklch(0.65 0.19 255 / 0.18);
+    color: var(--primary);
+  }
+  .step-num--done {
+    background: oklch(0.65 0.18 145 / 0.2);
+    color: oklch(0.72 0.17 145);
+  }
+  .step-body {
+    flex: 1;
+    min-width: 0;
+  }
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--fg);
+    margin-top: 3px;
+  }
+  .step-text {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--fg-muted);
+  }
+  .step-text strong {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  .step-text--ok {
+    color: oklch(0.72 0.17 145);
+  }
+
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .option-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .option-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .option-desc {
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--fg-muted);
+  }
+
+
+  .footer {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  /* Inline stand-in for a browser toolbar button. */
+  .ui-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin: 0 2px;
+    vertical-align: -6px;
+    color: var(--fg);
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .done-btn {
+    padding: 9px 22px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-fg);
+    background: var(--primary);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: filter 0.15s;
+  }
+  .done-btn:hover { filter: brightness(1.1); }

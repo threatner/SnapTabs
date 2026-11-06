@@ -292,9 +292,19 @@
       <p class="data-hint">Download all sessions as JSON, or restore from a previous export.</p>
     </div>
 
-    <!-- Feedback -->
-    <h3 class="section-label">Feedback</h3>
+    <!-- Help & feedback -->
+    <h3 class="section-label">Help &amp; feedback</h3>
     <div class="section feedback-section">
+      <a class="feedback-card" data-testid="guide-link" href="/welcome.html?from=help" target="_blank" rel="noopener">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="feedback-icon"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+        <div class="setting-text">
+          <p class="setting-title">How to use SnapTabs</p>
+          <p class="setting-desc">A one-minute guide to saving and restoring tabs</p>
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feedback-arrow">
+          <path d="M7 7h10v10"/><path d="M7 17 17 7"/>
+        </svg>
+      </a>
       {#if showRateLink}
         <a class="feedback-card" data-testid="rate-link" href={REVIEW_URL} target="_blank" rel="noopener noreferrer" onclick={handleRateClick}>
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feedback-icon">
