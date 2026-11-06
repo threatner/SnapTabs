@@ -39,7 +39,8 @@ Adopted: all of the above, unchanged. Tips reuse the rating banner's shape so th
 
 ## Decision log
 
-- 2026-11-06: Rendered A and B at 1280 and 390. Found: in both, the step title repeated the button label ("Snapshot" next to a Snapshot button). Chose A (Assumed, shown to the user for veto) with outcome titles: "Save your tabs", "Close them", "Bring them back".
+- 2026-11-07: User reviewed the built screens and replied "confirmed" (D02-D07 and mockup A).
+- 2026-11-06: Rendered A and B at 1280 and 390. Found: in both, the step title repeated the button label ("Snapshot" next to a Snapshot button). Chose A (user confirmed 2026-11-07) with outcome titles: "Save your tabs", "Close them", "Bring them back".
 - 2026-11-06: User asked for "some sort of onboarding or a welcome page, simple, where we explain stuff", then "go ahead with all three" (guide, ways to reopen it, tips).
 
 ## Open questions
