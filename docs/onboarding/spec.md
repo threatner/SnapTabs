@@ -1,6 +1,6 @@
 # Onboarding
 
-Status: building (milestone 1 done), as of 2026-11-06. Branch: `release/v1.10.0`. Ships in v1.10.0.
+Status: built (milestones 1 and 2 done), as of 2026-11-06. Awaiting the user's live check and the v1.10 release. Branch: `release/v1.10.0`. Ships in v1.10.0.
 
 ## Why
 
@@ -46,5 +46,5 @@ Rows added to [the register](../decisions/README.md): D01 to D06. Rejected: a se
 ## Milestones
 
 1. **Guide**: R1 to R3 and R7. Done when the welcome and help E2E checks pass and the screenshots are reviewed. **Done 2026-11-06**: 4 new E2E tests (3 fail with the help heading broken); built-page screenshots reviewed at 1280 and 375 and in the popup.
-2. **Tips**: R4 to R6. Done when the unit and tip E2E checks pass and the popup screenshots are reviewed.
+2. **Tips**: R4 to R6. Done when the unit and tip E2E checks pass and the popup screenshots are reviewed. **Done 2026-11-06**: 7 unit tests, 4 tip E2E tests and a real-browser sleep-tip check; 3 unit tests and 1 E2E test fail with the first-snapshot rule broken; popup screenshots of both tips reviewed.
 3. **Release notes**: CHANGELOG, CLAUDE.md, README updated in the same change as the code.

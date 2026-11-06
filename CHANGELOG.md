@@ -4,6 +4,20 @@ All notable changes to SnapTabs are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 1.10.0
+
+### Added
+
+- **"How SnapTabs works" guide.** The welcome page now opens with three one-line steps (save your tabs, close them, bring them back), each next to a replica of the real popup button.
+- **Reopen the guide any time.** A **?** button in the popup header and a "How to use SnapTabs" card in **Settings > Help & feedback** open it as "How to use SnapTabs". Users who installed before v1.9 can now find it too.
+- **Two one-time tips.** After your first snapshot: "Saved! Your tabs are still open…". After your first restore that put tabs to sleep: "Restored tabs are asleep…" with a shortcut to Settings. Each shows once, can be dismissed, and takes the rating banner's place until then. Long-time users never get first-snapshot advice.
+
+### Internal
+
+- `npm run check` is the one gate (docs check, type check, unit tests, build); CI runs it. Specs live in `docs/<feature>/spec.md` and decisions in `docs/decisions/README.md`.
+- `npm run test:e2e:headless` and `test:e2e:cdp:headless` run the browser suites without opening windows.
+- `restoreSession` now returns how many tabs it put to sleep.
+
 ## [1.9.0] - 2026-09-25
 
 ### Fixed

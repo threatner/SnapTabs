@@ -163,7 +163,7 @@ export async function restoreSession(
   restoreIncognitoToIncognito: boolean,
   restoreInNewWindow: boolean,
   sleepRestoredTabs = false,
-): Promise<void> {
+): Promise<number> {
   // Each saved window comes back as its own window. Only the first one may
   // land in the current window (when restoreInNewWindow is off).
   let usedCurrentWindow = false;
@@ -196,6 +196,8 @@ export async function restoreSession(
   // Not awaited: sleeping waits for each tab to finish loading, and the
   // restore itself is already done.
   if (sleepRestoredTabs && backgroundTabIds.length > 0) void sleepTabsWhenLoaded(backgroundTabIds);
+  // How many tabs were put to sleep (feeds the one-time sleep tip).
+  return sleepRestoredTabs ? backgroundTabIds.length : 0;
 }
 
 // Splits a session's tabs into per-window lists, in the order windows were

@@ -50,6 +50,10 @@ test.describe('Rating prompt', () => {
       await reloadPopup(popupPage, extensionId);
     }
     expect((await readMeta(context)).stats.manualSnapshots).toBe(5);
+    // The first snapshot's one-time "Saved!" tip takes the banner's place
+    // until it's dismissed (D04).
+    await expect(popupPage.locator('.tip')).toContainText('Saved!');
+    await popupPage.getByLabel('Dismiss tip').click();
     await expect(popupPage.locator('.rating')).toContainText('Enjoying SnapTabs?');
   });
 

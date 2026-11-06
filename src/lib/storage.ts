@@ -75,12 +75,19 @@ export interface UsageStats {
   firstSeenAt: number;             // earliest known use (0 = unknown)
 }
 
+// One-time popup tips (docs/onboarding/spec.md R4-R6).
+export type TipId = 'firstSnapshot' | 'firstRestore';
+const TIP_IDS: readonly TipId[] = ['firstSnapshot', 'firstRestore'];
+
 export interface Meta {
   stats: UsageStats;
   // Set once stats were seeded from sessions saved before stats existed
   // (v1.9), so long-time users are counted from what they already have.
   statsBackfilled: boolean;
   ratingPromptDone: boolean;
+  // Tips waiting to be shown, oldest first. A tip is queued once, at the
+  // moment its count goes from 0 to 1, and leaves the queue when dismissed.
+  pendingTips: TipId[];
 }
 
 const EMPTY_STATS: UsageStats = {
@@ -104,6 +111,7 @@ export async function getMeta(): Promise<Meta> {
     statsBackfilled: stored.statsBackfilled ?? false,
     ratingPromptDone: stored.ratingPromptDone ?? false,
     stats: { ...EMPTY_STATS, ...stored.stats },
+    pendingTips: (stored.pendingTips ?? []).filter((t): t is TipId => TIP_IDS.includes(t)),
   };
 }
 
@@ -116,20 +124,43 @@ async function updateMeta(update: (meta: Meta) => Partial<Meta>): Promise<void> 
 
 export type UsageEvent = 'manualSnapshot' | 'recording' | 'autoSave' | 'restore';
 
+export interface UsageDetails {
+  // For 'restore': how many background tabs the restore put to sleep.
+  sleptTabs?: number;
+}
+
 // Counts one user action. `session` is the session restored (for 'restore').
-export async function recordUsage(event: UsageEvent, session?: Pick<Session, 'isAutoSave'>, now = Date.now()): Promise<void> {
-  await updateMeta(({ stats }) => {
+// Also queues a one-time tip when this is the user's first manual snapshot,
+// or their first restore that put tabs to sleep. Tips are only queued once
+// stats are backfilled, so a pre-1.9 user's history can't look like a
+// "first" (D05 in docs/decisions).
+export async function recordUsage(
+  event: UsageEvent,
+  session?: Pick<Session, 'isAutoSave'>,
+  now = Date.now(),
+  details: UsageDetails = {},
+): Promise<void> {
+  await updateMeta(({ stats, statsBackfilled, pendingTips }) => {
     const next = { ...stats, firstSeenAt: stats.firstSeenAt || now };
-    if (event === 'manualSnapshot') next.manualSnapshots++;
-    else if (event === 'recording') next.recordings++;
+    const tips = [...pendingTips];
+    const queue = (tip: TipId) => { if (statsBackfilled && !tips.includes(tip)) tips.push(tip); };
+    if (event === 'manualSnapshot') {
+      if (stats.manualSnapshots === 0) queue('firstSnapshot');
+      next.manualSnapshots++;
+    } else if (event === 'recording') next.recordings++;
     else if (event === 'autoSave') next.autoSaves++;
     else {
+      if (stats.restores === 0 && (details.sleptTabs ?? 0) > 0) queue('firstRestore');
       next.restores++;
       if (session?.isAutoSave) next.restoresOfAutoSaves++;
       else next.restoresOfManualSessions++;
     }
-    return { stats: next };
+    return { stats: next, pendingTips: tips };
   });
+}
+
+export async function dismissTip(tip: TipId): Promise<void> {
+  await updateMeta(({ pendingTips }) => ({ pendingTips: pendingTips.filter((t) => t !== tip) }));
 }
 
 // One-time seed from the sessions already saved, so users from before v1.9

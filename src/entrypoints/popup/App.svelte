@@ -7,6 +7,7 @@
   // if the popup closes mid-write. Import is the exception: the popup awaits
   // it to show the result.
   import { getSessions, getSettings, getStorageUsage, getRecording, buildExportPayload, importSessions, getMeta, shouldShowRatingPrompt } from '@/lib/storage';
+  import type { Meta, TipId } from '@/lib/storage';
   import { REVIEW_URL } from '@/lib/links';
   import { sendMessage } from '@/lib/messages';
   import { getTabStats, findDuplicateSession } from '@/lib/tabs';
@@ -18,6 +19,7 @@
   import Settings from '@/components/Settings.svelte';
   import Toast from '@/components/Toast.svelte';
   import RatingPrompt from '@/components/RatingPrompt.svelte';
+  import TipBanner from '@/components/TipBanner.svelte';
 
   type View = 'main' | 'detail' | 'settings';
 
@@ -34,6 +36,22 @@
   let selectedSession: Session | null = $state(null);
   let loading = $state(true);
   let showRatingPrompt = $state(false);
+  // One banner at a time: a pending one-time tip takes the rating banner's
+  // place until it's dismissed (D04 in docs/decisions).
+  let tip: TipId | null = $state(null);
+  let ratingEligible = false;
+
+  const TIPS: Record<TipId, { title: string; body: string; actionLabel?: string }> = {
+    firstSnapshot: {
+      title: 'Saved!',
+      body: 'Your tabs are still open. Close them whenever you like and restore them from here.',
+    },
+    firstRestore: {
+      title: 'Restored tabs are asleep',
+      body: 'Background tabs load when you click them, to save memory.',
+      actionLabel: 'Settings',
+    },
+  };
 
   // The review link points at the Chrome Web Store, so don't ask Edge users.
   const isEdge = navigator.userAgent.includes('Edg/');
@@ -81,7 +99,7 @@
       const [sess, sett, stats, storage, rec, meta] = await Promise.all([
         getSessions(), getSettings(), getTabStats(), getStorageUsage(), getRecording(), getMeta(),
       ]);
-      showRatingPrompt = !isEdge && shouldShowRatingPrompt(meta);
+      applyMeta(meta);
       sessions = sess;
       settings = sett;
       incognitoTabs = stats.incognitoTabs;
@@ -142,10 +160,33 @@
     }
   }
 
+  function applyMeta(meta: Meta) {
+    tip = meta.pendingTips[0] ?? null;
+    ratingEligible = !isEdge && shouldShowRatingPrompt(meta);
+    showRatingPrompt = !tip && ratingEligible;
+  }
+
   async function runSnapshot(windowId: number | undefined, name: string) {
     await sendMessage({ action: 'snapshot', name: name || undefined, windowId });
     await refresh();
+    // A first snapshot queues the "Saved!" tip; show it right away.
+    try { applyMeta(await getMeta()); } catch {}
     toast('Snapshot saved!');
+  }
+
+  function handleDismissTip() {
+    const dismissed = tip;
+    if (!dismissed) return;
+    tip = null;
+    showRatingPrompt = ratingEligible;
+    sendMessage({ action: 'dismissTip', tip: dismissed }).catch(() => {});
+  }
+
+  function handleTipAction() {
+    if (tip === 'firstRestore') {
+      handleDismissTip();
+      view = 'settings';
+    }
   }
 
   async function confirmDuplicateSnapshot() {
@@ -322,12 +363,14 @@
 
   function handleRate() {
     showRatingPrompt = false;
+    ratingEligible = false;
     sendMessage({ action: 'dismissRatingPrompt' }).catch(() => {});
     chrome.tabs.create({ url: REVIEW_URL });
   }
 
   function handleDismissRating() {
     showRatingPrompt = false;
+    ratingEligible = false;
     sendMessage({ action: 'dismissRatingPrompt' }).catch(() => {});
   }
 
@@ -412,7 +455,15 @@
       onCancelRecording={handleCancelRecording}
     />
 
-    {#if showRatingPrompt}
+    {#if tip}
+      <TipBanner
+        title={TIPS[tip].title}
+        body={TIPS[tip].body}
+        actionLabel={TIPS[tip].actionLabel}
+        onAction={TIPS[tip].actionLabel ? handleTipAction : undefined}
+        onDismiss={handleDismissTip}
+      />
+    {:else if showRatingPrompt}
       <RatingPrompt onRate={handleRate} onDismiss={handleDismissRating} />
     {/if}
 

@@ -814,4 +814,16 @@ describe('restoreSession (incognito window saved first)', () => {
     ]);
     expect(chrome.windows.create).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://p1.com', incognito: true }));
   });
+
+  it('reports how many tabs it put to sleep', async () => {
+    vi.mocked(chrome.tabs.create).mockImplementation(async (opts) => ({ id: Math.floor(Math.random() * 1e6), windowId: opts.windowId ?? 1 }) as chrome.tabs.Tab);
+    vi.mocked(chrome.tabs.get).mockImplementation(async (id) => ({ id, windowId: 1 }) as chrome.tabs.Tab);
+    const t = (url: string, index: number): SavedTab => ({ url, title: url, pinned: false, isIncognito: false, index, windowId: 7 });
+    const s: Session = { id: 's', name: 'S', timestamp: 0, tabGroups: [], windowCount: 1, hasIncognitoTabs: false, isAutoSave: false,
+      tabs: [t('https://a.com', 0), t('https://b.com', 1), t('https://c.com', 2)] };
+
+    expect(await restoreSession(s, true, false, true)).toBe(2);
+    expect(await restoreSession(s, true, false, false)).toBe(0);
+  });
 });
+

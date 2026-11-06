@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resetChromeStorage } from './setup';
 import {
-  getMeta, recordUsage, backfillUsageStats, dismissRatingPrompt, shouldShowRatingPrompt, saveSession,
+  getMeta, recordUsage, backfillUsageStats, dismissRatingPrompt, shouldShowRatingPrompt, saveSession, dismissTip,
   RATING_PROMPT_AFTER_RESTORES, RATING_PROMPT_AFTER_MANUAL_SNAPSHOTS,
 } from '../src/lib/storage';
 import type { Session } from '../src/lib/types';
@@ -138,3 +138,62 @@ describe('rating prompt rule', () => {
     expect(shouldShowRatingPrompt(await getMeta())).toBe(false);
   });
 });
+
+describe('one-time tips', () => {
+  beforeEach(() => resetChromeStorage());
+
+  // A brand-new user: install-time backfill found nothing.
+  async function newUser() {
+    await backfillUsageStats();
+  }
+
+  it('queues the "Saved!" tip on the first manual snapshot only', async () => {
+    await newUser();
+    await recordUsage('manualSnapshot');
+    expect((await getMeta()).pendingTips).toEqual(['firstSnapshot']);
+    await dismissTip('firstSnapshot');
+    await recordUsage('manualSnapshot');
+    expect((await getMeta()).pendingTips).toEqual([]);
+  });
+
+  it('never shows "first snapshot" advice to a long-time user after the update backfill', async () => {
+    await saveSession(session('old1'));
+    await backfillUsageStats();
+    await recordUsage('manualSnapshot');
+    expect((await getMeta()).pendingTips).toEqual([]);
+  });
+
+  it('queues nothing before stats are backfilled', async () => {
+    await recordUsage('manualSnapshot');
+    await recordUsage('restore', { isAutoSave: false }, Date.now(), { sleptTabs: 3 });
+    expect((await getMeta()).pendingTips).toEqual([]);
+  });
+
+  it('queues the sleep tip on the first restore that put tabs to sleep', async () => {
+    await newUser();
+    await recordUsage('restore', { isAutoSave: false }, Date.now(), { sleptTabs: 4 });
+    expect((await getMeta()).pendingTips).toEqual(['firstRestore']);
+  });
+
+  it('no sleep tip when the first restore slept nothing, and not on later restores', async () => {
+    await newUser();
+    await recordUsage('restore', { isAutoSave: false }, Date.now(), { sleptTabs: 0 });
+    await recordUsage('restore', { isAutoSave: false }, Date.now(), { sleptTabs: 5 });
+    expect((await getMeta()).pendingTips).toEqual([]);
+  });
+
+  it('keeps both tips in order and dismisses them one at a time', async () => {
+    await newUser();
+    await recordUsage('manualSnapshot');
+    await recordUsage('restore', { isAutoSave: false }, Date.now(), { sleptTabs: 2 });
+    expect((await getMeta()).pendingTips).toEqual(['firstSnapshot', 'firstRestore']);
+    await dismissTip('firstSnapshot');
+    expect((await getMeta()).pendingTips).toEqual(['firstRestore']);
+  });
+
+  it('ignores unknown tip ids in storage', async () => {
+    await chrome.storage.local.set({ snaptabs_meta: { statsBackfilled: true, pendingTips: ['bogus', 'firstRestore'] } });
+    expect((await getMeta()).pendingTips).toEqual(['firstRestore']);
+  });
+});
+
