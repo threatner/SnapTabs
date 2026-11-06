@@ -8,6 +8,11 @@
   // Interval offered here; the full set of choices lives in Settings.
   const WELCOME_BACKUP_MINUTES = 15;
 
+  // The same page is the install welcome and the guide behind the popup's
+  // ? button and Settings card (welcome.html?from=help); only the heading
+  // changes (D02 in docs/decisions).
+  const fromHelp = new URLSearchParams(location.search).get('from') === 'help';
+
   let settings: SnapTabsSettings = $state({ ...DEFAULT_SETTINGS });
   let loaded = $state(false);
   // Settings are written by the service worker so a write completes even if
@@ -61,9 +66,53 @@
 <main class="welcome">
   <header class="hero">
     <img src="/icon/128.png" alt="" width="56" height="56" class="hero-icon" />
-    <h1>SnapTabs is installed</h1>
-    <p class="hero-sub">Two quick steps and you're set.</p>
+    <h1>{fromHelp ? 'How to use SnapTabs' : 'SnapTabs is installed'}</h1>
+    <p class="hero-sub">
+      {fromHelp ? 'Save your tabs, close them, and bring them back any time.' : "Here's how it works, plus two quick settings."}
+    </p>
   </header>
+
+  <section class="how" data-step="how" aria-labelledby="how-heading">
+    <h2 id="how-heading" class="how-heading">How SnapTabs works</h2>
+    <ol class="how-list">
+      <li class="how-row">
+        <div class="how-rep" aria-hidden="true">
+          <span class="rep rep-primary">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Snapshot
+          </span>
+        </div>
+        <div class="how-text">
+          <p class="how-title">Save your tabs</p>
+          <p class="how-desc">Click <strong>Snapshot</strong> in the SnapTabs popup. Every tab in the window is saved, and your tabs stay open.</p>
+        </div>
+      </li>
+      <li class="how-row">
+        <div class="how-rep" aria-hidden="true">
+          <span class="rep rep-tab">
+            <span class="tab-title">Research…</span>
+            <span class="tab-x"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+          </span>
+        </div>
+        <div class="how-text">
+          <p class="how-title">Close them</p>
+          <p class="how-desc">Close tabs whenever you like. They're safe in SnapTabs.</p>
+        </div>
+      </li>
+      <li class="how-row">
+        <div class="how-rep" aria-hidden="true">
+          <span class="rep rep-secondary">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            Restore
+          </span>
+        </div>
+        <div class="how-text">
+          <p class="how-title">Bring them back</p>
+          <p class="how-desc">Open a saved session in the popup and click <strong>Restore</strong>. Your tabs come back.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
 
   <section class="step" data-step="pin">
     <div class="step-num" class:step-num--done={pinned === true}>
@@ -154,6 +203,101 @@
     margin-top: 8px;
     font-size: 14px;
     color: var(--fg-muted);
+  }
+
+  /* "How SnapTabs works": replicas copy the popup's real controls
+     (.snap-btn in SnapshotBar, .restore-btn in SessionDetail). */
+  .how {
+    padding: 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .how-heading {
+    margin: 0 0 14px;
+  }
+  .how-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .how-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .how-rep {
+    flex: 0 0 132px;
+    display: flex;
+  }
+  .how-text {
+    min-width: 0;
+  }
+  .how-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .how-desc {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--fg-muted);
+  }
+  .how-desc strong {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  .rep {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    border-radius: 6px;
+  }
+  .rep-primary {
+    padding: 7px 14px;
+    color: var(--primary-fg);
+    background: var(--primary);
+  }
+  .rep-secondary {
+    padding: 6px 12px;
+    color: var(--fg);
+    background: var(--secondary);
+    border: 1px solid var(--border);
+  }
+  .rep-tab {
+    gap: 10px;
+    padding: 6px 8px 6px 12px;
+    font-weight: 500;
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+  }
+  .tab-title {
+    color: var(--fg-muted);
+  }
+  .tab-x {
+    display: inline-flex;
+    padding: 2px;
+    color: var(--fg);
+    background: var(--accent);
+    border-radius: 4px;
+  }
+  @media (max-width: 480px) {
+    .how-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .how-rep {
+      flex: none;
+    }
   }
 
   .step {

@@ -1,0 +1,212 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>A: steps</title>
+<link rel="stylesheet" href="../tokens.css"><style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--fg)}
+/* Toggle switch */
+.tv-switch {
+  appearance: none;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--muted);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.tv-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--fg-muted);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tv-switch:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.tv-switch:checked::after {
+  transform: translateX(16px);
+  background: white;
+}
+
+  body {
+    min-height: 100vh;
+  }
+  .welcome {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 56px 16px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .hero {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .hero-icon {
+    border-radius: 14px;
+    margin: 0 auto 16px;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+  }
+  .hero-sub {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--fg-muted);
+  }
+
+  .step {
+    display: flex;
+    gap: 14px;
+    padding: 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .step-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    background: oklch(0.65 0.19 255 / 0.18);
+    color: var(--primary);
+  }
+  .step-num--done {
+    background: oklch(0.65 0.18 145 / 0.2);
+    color: oklch(0.72 0.17 145);
+  }
+  .step-body {
+    flex: 1;
+    min-width: 0;
+  }
+  h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--fg);
+    margin-top: 3px;
+  }
+  .step-text {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--fg-muted);
+  }
+  .step-text strong {
+    color: var(--fg);
+    font-weight: 600;
+  }
+  .step-text--ok {
+    color: oklch(0.72 0.17 145);
+  }
+
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .option-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .option-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .option-desc {
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--fg-muted);
+  }
+
+
+  .footer {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  /* Inline stand-in for a browser toolbar button. */
+  .ui-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin: 0 2px;
+    vertical-align: -6px;
+    color: var(--fg);
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .done-btn {
+    padding: 9px 22px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary-fg);
+    background: var(--primary);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: filter 0.15s;
+  }
+  .done-btn:hover { filter: brightness(1.1); }
+
+.hero-icon{display:block;width:56px;height:56px;border-radius:14px;margin:0 auto 16px;background:linear-gradient(135deg,#3b82f6,#2563eb)}
+
+  .rep { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; border-radius:6px; white-space:nowrap; line-height:1; }
+  .rep-primary { padding:7px 14px; color:var(--primary-fg); background:var(--primary); }
+  .rep-secondary { padding:6px 12px; color:var(--fg); background:var(--secondary); border:1px solid var(--border); }
+  .rep-tab { gap:10px; padding:6px 8px 6px 12px; font-weight:500; color:var(--fg); background:var(--secondary); border:1px solid var(--border); border-radius:8px 8px 0 0; border-bottom:none; }
+  .tab-title { color:var(--fg-muted); font-weight:500; }
+  .tab-x { display:inline-flex; color:var(--fg); padding:2px; border-radius:4px; background:var(--accent); }
+
+
+.how { padding:18px; background:var(--card); border:1px solid var(--border); border-radius:12px; }
+.how-heading { margin:0 0 14px; font-size:15px; }
+.how-list { list-style:none; display:flex; flex-direction:column; gap:14px; }
+.how-row { display:flex; align-items:center; gap:16px; }
+.how-rep { flex:0 0 132px; display:flex; }
+.how-title { font-size:13px; font-weight:600; color:var(--fg); }
+.how-desc { margin-top:2px; font-size:12px; line-height:1.45; color:var(--fg-muted); }
+@media (max-width:480px){ .how-row{align-items:flex-start; flex-direction:column; gap:8px} .how-rep{flex:none} }
+
+</style></head><body>
+<main class="welcome">
+  <header class="hero"><div class="hero-icon"></div><h1>SnapTabs is installed</h1><p class="hero-sub"></p></header>
+  <section class="how"><h2 class="how-heading">How SnapTabs works</h2><ol class="how-list"><li class="how-row"><div class="how-rep"><span class="rep rep-primary"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Snapshot</span></div><div class="how-text"><p class="how-title">Snapshot</p><p class="how-desc">Saves every tab in this window. Your tabs stay open.</p></div></li><li class="how-row"><div class="how-rep"><span class="rep rep-tab"><span class="tab-title">Research…</span><span class="tab-x"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></span></div><div class="how-text"><p class="how-title">Close them</p><p class="how-desc">Close tabs whenever you like. They're safe in SnapTabs.</p></div></li><li class="how-row"><div class="how-rep"><span class="rep rep-secondary"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Restore</span></div><div class="how-text"><p class="how-title">Restore</p><p class="how-desc">Open a session and click Restore. Your tabs come back.</p></div></li></ol></section>
+  
+  <section class="step"><div class="step-num">1</div><div class="step-body"><h2>Pin SnapTabs to your toolbar</h2><p class="step-text">Click the extensions icon at the top right of your browser, then the pin next to SnapTabs.</p></div></section>
+  <section class="step"><div class="step-num">2</div><div class="step-body"><h2>Choose how SnapTabs keeps you safe</h2><p class="step-text">Both are off until you turn them on. Everything stays on this device.</p>
+    <label class="option"><div class="option-text"><p class="option-title">Save my tabs when I close the browser</p><p class="option-desc">Every window is saved when you quit, ready to restore next time.</p></div><input type="checkbox" class="tv-switch"></label>
+    <label class="option"><div class="option-text"><p class="option-title">Keep a rolling backup</p><p class="option-desc">Saves a fresh copy of your open tabs every 15 minutes, in case the browser crashes.</p></div><input type="checkbox" class="tv-switch"></label></div></section>
+  <footer class="footer"><button class="done-btn">Done</button></footer>
+
+</main><script>
+  const f = (location.hash.match(/frame=(\d)/) || [])[1] || '1';
+  document.querySelector('h1').textContent = f === '2' ? 'How to use SnapTabs' : 'SnapTabs is installed';
+  document.querySelector('.hero-sub').textContent = f === '2' ? 'Save your tabs, close them, and bring them back any time.' : 'Here\'s how it works, plus two quick settings.';
+</script></body></html>
