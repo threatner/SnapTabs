@@ -2,7 +2,7 @@ import { defineBackground } from 'wxt/sandbox';
 import type { Session, SavedTab, SavedTabGroup, SnapTabsSettings } from '../lib/types';
 import { uuid, formatSessionName, isExcludedUrl } from '../lib/types';
 import { createSnapshot, restoreSession, getTabStats, captureWindow, toSavedTab, mergeGroups, isRestorable } from '../lib/tabs';
-import type { WindowCapture, UsageEvent } from '../lib/storage';
+import type { WindowCapture, UsageEvent, UsageDetails, TipId } from '../lib/storage';
 import {
   getSessions,
   getSettings,
@@ -24,6 +24,7 @@ import {
   clearLastSnapshot,
   recordUsage,
   backfillUsageStats,
+  dismissTip,
   renameSession,
   deleteAllSessions,
   dismissRatingPrompt,
@@ -49,8 +50,8 @@ export default defineBackground(() => {
 
   // Usage stats only feed one-time prompts; a failed count must never make
   // the action it counts fail.
-  async function track(event: UsageEvent, session?: Session): Promise<void> {
-    try { await recordUsage(event, session); } catch {}
+  async function track(event: UsageEvent, session?: Session, details?: UsageDetails): Promise<void> {
+    try { await recordUsage(event, session, Date.now(), details); } catch {}
   }
 
   // ── Persistence helpers ──
@@ -432,8 +433,8 @@ export default defineBackground(() => {
         const session = sessions.find((s) => s.id === msg.sessionId);
         if (!session) throw new Error('Session not found');
         const settings = await getSettings();
-        await restoreSession(session, settings.restoreIncognitoToIncognito, settings.restoreInNewWindow, settings.sleepRestoredTabs);
-        await track('restore', session);
+        const sleptTabs = await restoreSession(session, settings.restoreIncognitoToIncognito, settings.restoreInNewWindow, settings.sleepRestoredTabs);
+        await track('restore', session, { sleptTabs });
         if (settings.autoDeleteAfterRestore) await deleteSession(session.id);
         return { success: true };
       }
@@ -451,6 +452,10 @@ export default defineBackground(() => {
       }
       case 'dismissRatingPrompt': {
         await dismissRatingPrompt();
+        return { success: true };
+      }
+      case 'dismissTip': {
+        await dismissTip(msg.tip as TipId);
         return { success: true };
       }
       case 'togglePin': {

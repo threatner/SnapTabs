@@ -72,6 +72,20 @@ try {
     }
   });
 
+  // First restore that slept tabs queues the one-time sleep tip, and the
+  // popup shows it (docs/onboarding/spec.md R5).
+  const tipMeta = await browser.evalSW(`return (await chrome.storage.local.get('snaptabs_meta')).snaptabs_meta;`);
+  const tipPopup = await browser.openExtensionPage('popup.html');
+  const tipText = await eventually(async () => {
+    const t = await tipPopup(`return document.querySelector('.tip')?.textContent ?? '';`);
+    assert.ok(t.includes('Restored tabs are asleep'));
+    return t;
+  });
+  check('the first restore that slept tabs shows the one-time sleep tip', () => {
+    assert.deepEqual(tipMeta.pendingTips, ['firstRestore']);
+    assert.ok(tipText.includes('Background tabs load when you click them'));
+  });
+
   // Snapshot all windows while tabs are asleep: every URL must be captured.
   const snap = await popup(`return chrome.runtime.sendMessage({ action: 'snapshot', name: 'while asleep' });`);
   check('a snapshot of sleeping tabs captures every URL', () => {
