@@ -1,0 +1,12 @@
+{
+  "required_sections": {
+    "docs/*/spec.md": [
+      "Why",
+      "Scope",
+      "Not in scope",
+      "Decisions",
+      "Validation",
+      "Milestones"
+    ]
+  }
+}

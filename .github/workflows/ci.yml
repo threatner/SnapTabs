@@ -22,9 +22,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx tsc --noEmit -p .
-      - run: npm test
-      - run: npm run build
+      # Docs check, type check, unit tests, build (the repo's one gate).
+      - run: npm run check
 
   e2e:
     name: Browser tests (Chromium)

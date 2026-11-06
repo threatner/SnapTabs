@@ -4,7 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Dev Commands
 
+**Run `npm run check` before claiming any change is done** (docs check, type check, unit tests, build). Browser suites (`test:e2e`, `test:e2e:cdp`) open windows, so run them separately; CI runs everything.
+
+Specs live in `docs/<feature>/spec.md` and every material choice gets a row in [`docs/decisions/README.md`](docs/decisions/README.md) (who decided, why, what was rejected). Update the spec before the code when they disagree.
+
 ```bash
+npm run check          # The gate: docs check + tsc + unit tests + build
 npm run dev            # WXT dev server with hot reload (Chrome)
 npm run build          # Production build → .output/chrome-mv3/
 npm run zip            # Package as .zip for distribution

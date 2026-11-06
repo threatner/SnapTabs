@@ -30,6 +30,7 @@
     "build:firefox": "wxt build --browser firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip --browser firefox",
+    "check": "python3 scripts/check_docs.py && tsc --noEmit -p . && vitest run && wxt build",
     "postinstall": "wxt prepare",
     "test": "vitest run",
     "test:watch": "vitest",
