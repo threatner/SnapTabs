@@ -20,6 +20,8 @@ npm run test:e2e       # Run E2E tests against Chromium (Playwright, requires bu
 npm run test:e2e:debug # Run E2E tests in debug mode
 npm run test:e2e:brave # Run E2E tests against Brave (set BRAVE_PATH if non-default)
 npm run test:e2e:cdp   # Real-Chromium checks Playwright can't drive (requires build first)
+npm run test:e2e:headless      # Playwright suite without opening windows (Chromium's new headless mode)
+npm run test:e2e:cdp:headless  # CDP checks without opening windows
 ```
 
 ## What is SnapTabs

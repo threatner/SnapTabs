@@ -60,8 +60,13 @@ function resolveExecutablePath(metadataPath: unknown): string | undefined {
 export const test = base.extend<ExtensionFixtures>({
   context: async ({}, use, testInfo) => {
     const executablePath = resolveExecutablePath(testInfo.project.metadata?.executablePath);
+    // HEADLESS=1 runs without windows. Extensions need Chromium's new
+    // headless mode, which Playwright uses with channel 'chromium' (its
+    // default headless shell can't load extensions).
+    const headless = !!process.env.HEADLESS;
     const context = await chromium.launchPersistentContext('', {
-      headless: false,
+      headless,
+      ...(headless && !executablePath ? { channel: 'chromium' } : {}),
       ...(executablePath ? { executablePath } : {}),
       args: [
         `--disable-extensions-except=${EXTENSION_PATH}`,
