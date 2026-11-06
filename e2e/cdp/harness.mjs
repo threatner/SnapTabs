@@ -43,6 +43,8 @@ export async function launch({ port, ext = DEFAULT_EXT, userDataDir } = {}) {
     '--no-first-run', '--no-default-browser-check', '--disable-sync',
     // As Playwright does: CI Linux runners block Chrome's sandbox.
     '--no-sandbox',
+    // HEADLESS=1: Chromium's new headless mode, which still runs extensions.
+    ...(process.env.HEADLESS ? ['--headless=new', '--window-size=1280,800'] : []),
     'about:blank',
   ], { stdio: 'ignore' });
   const base = `http://127.0.0.1:${port}`;
