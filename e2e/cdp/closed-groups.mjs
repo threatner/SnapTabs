@@ -80,7 +80,7 @@ try {
   await check('a group closed while the service worker is stopped is still saved', async () => {
     const g = await makeGroup('Asleep', 2, 'purple');
     await b.evalSW(`globalThis.__beforeStop = true;`);
-    const sw = (await b.targets()).find((t) => t.type === 'service_worker' && t.url.endsWith('/background.js'));
+    const sw = (await b.targets()).find((t) => t.type === 'service_worker' && t.url === `chrome-extension://${b.extensionId}/background.js`);
     await b.browserCommand('Target.closeTarget', { targetId: sw.id });
     await sleep(500);
     // Close it from the popup page: the stopped worker wakes for the events.

@@ -4,6 +4,7 @@
 // with the built extension and evaluates code in extension contexts.
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +12,15 @@ import { chromium } from '@playwright/test';
 
 const DEFAULT_EXT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.output', 'chrome-mv3');
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Chrome's ID for an unpacked extension: the first 32 hex digits of the
+// SHA-256 of its absolute path, written with the letters a-p. Used to find
+// SnapTabs' own service worker: newer Chromium builds ship component
+// extensions whose worker is also called background.js.
+export function unpackedExtensionId(dir) {
+  return [...createHash('sha256').update(path.resolve(dir)).digest('hex').slice(0, 32)]
+    .map((h) => String.fromCharCode(97 + parseInt(h, 16))).join('');
+}
 
 // Every CDP round trip gets a deadline so a dead target fails the check
 // instead of hanging the run.
@@ -43,6 +53,9 @@ export async function launch({ port, ext = DEFAULT_EXT, userDataDir, args = [] }
     '--no-first-run', '--no-default-browser-check', '--disable-sync',
     // As Playwright does: CI Linux runners block Chrome's sandbox.
     '--no-sandbox',
+    // As Playwright does: never touch the macOS keychain (a new browser
+    // build otherwise triggers a "wants to use your keychain" prompt).
+    '--use-mock-keychain',
     // HEADLESS=1: Chromium's new headless mode, which still runs extensions.
     ...(process.env.HEADLESS ? ['--headless=new', '--window-size=1280,800'] : []),
     ...args,
@@ -107,8 +120,9 @@ export async function launch({ port, ext = DEFAULT_EXT, userDataDir, args = [] }
     return res.result?.result?.value;
   }
 
-  const sw = () => waitForTarget((t) => t.type === 'service_worker' && t.url.endsWith('/background.js'));
-  const extensionId = (await sw()).url.split('/')[2];
+  const extensionId = unpackedExtensionId(ext);
+  const sw = () => waitForTarget((t) => t.type === 'service_worker' && t.url === `chrome-extension://${extensionId}/background.js`);
+  await sw();
 
   // The worker target can be listed before it answers (seen on Brave's first
   // start); wait until it evaluates.

@@ -43,7 +43,7 @@ try {
   await check('a service-worker restart does not postpone the alarm', async () => {
     const before = await alarm();
     await browser.evalSW(`globalThis.__beforeRestart = true;`);
-    const sw = (await browser.targets()).find((t) => t.type === 'service_worker' && t.url.endsWith('/background.js'));
+    const sw = (await browser.targets()).find((t) => t.type === 'service_worker' && t.url === `chrome-extension://${browser.extensionId}/background.js`);
     await browser.browserCommand('Target.closeTarget', { targetId: sw.id });
     await sleep(500);
     // Wake it again with a message, as the popup would.
