@@ -2,7 +2,7 @@
   import type { SnapTabsSettings } from '@/lib/types';
   import { normalizeDomain } from '@/lib/types';
   import { BACKUP_INTERVALS } from '@/lib/backup';
-  import { REVIEW_URL } from '@/lib/links';
+  import { REVIEW_URL, REPO_URL, ISSUES_URL } from '@/lib/links';
   import { sendMessage } from '@/lib/messages';
   import { formatBytes, plural } from '@/lib/format';
   import { onMount } from 'svelte';
@@ -295,6 +295,13 @@
 
     <section class="section" aria-labelledby="sec-help">
       <h3 id="sec-help" class="section-label">Help</h3>
+      <a class="link-row" data-testid="repo-link" href={REPO_URL} target="_blank" rel="noopener noreferrer">
+        <span class="link-label">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 2.89-.39c.98 0 1.96.13 2.89.39 2.2-1.49 3.16-1.18 3.16-1.18.63 1.59.24 2.76.12 3.05.74.81 1.18 1.83 1.18 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .3.2.67.79.55A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+          SnapTabs is open source: view it on GitHub
+        </span>
+        {@render external()}
+      </a>
       <a class="link-row" data-testid="guide-link" href="/welcome.html?from=help" target="_blank" rel="noopener">
         How to use SnapTabs
         {@render external()}
@@ -305,14 +312,14 @@
           {@render external()}
         </a>
       {/if}
-      <a class="link-row" data-testid="issues-link" href="https://github.com/threatner/SnapTabs/issues" target="_blank" rel="noopener noreferrer">
+      <a class="link-row" data-testid="issues-link" href={ISSUES_URL} target="_blank" rel="noopener noreferrer">
         Report a problem or suggest a feature
         {@render external()}
       </a>
     </section>
 
     {#if version}
-      <p class="settings-footer">SnapTabs {version}</p>
+      <p class="settings-footer">SnapTabs {version} · Free and open source</p>
     {/if}
   </div>
 </div>
@@ -524,6 +531,7 @@
     text-decoration: none;
   }
   .link-row:last-child { border-bottom: none; }
+  .link-label { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
   .link-arrow { flex-shrink: 0; color: var(--fg-muted); transition: color 0.15s; }
   .link-row:hover { color: var(--primary); }
   .link-row:hover .link-arrow { color: var(--primary); }

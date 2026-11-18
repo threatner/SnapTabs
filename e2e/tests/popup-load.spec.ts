@@ -21,11 +21,14 @@ test.describe('Popup Loading', () => {
     await expect(popupPage.locator('.scope-btn')).toContainText('This window');
   });
 
-  test('header has only the guide and Settings buttons (D23)', async ({ popupPage }) => {
+  test('header has the guide, an open-source GitHub link and Settings (D26)', async ({ popupPage }) => {
     const actions = popupPage.locator('.header .actions').locator('a, button');
-    await expect(actions).toHaveCount(2);
+    await expect(actions).toHaveCount(3);
     await expect(popupPage.getByRole('link', { name: 'How to use SnapTabs' })).toBeVisible();
-    await expect(popupPage.locator('.header a[href*="github.com"]')).toHaveCount(0);
+    const gh = popupPage.getByRole('link', { name: 'SnapTabs on GitHub (open source)' });
+    await expect(gh).toHaveAttribute('href', 'https://github.com/threatner/SnapTabs');
+    await expect(gh).toHaveAttribute('target', '_blank');
+    await expect(gh).toHaveAttribute('title', 'SnapTabs is open source. View it on GitHub');
   });
 
   test('record button is labelled for screen readers', async ({ popupPage }) => {

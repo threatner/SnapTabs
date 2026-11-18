@@ -98,11 +98,14 @@ test.describe('Settings', () => {
     await expect(popupPage.locator('.danger-btn')).toBeDisabled();
   });
 
-  test('Help links and the version footer', async ({ popupPage }) => {
+  test('Help links (open source first) and the version footer', async ({ popupPage }) => {
     await popupPage.locator('button[aria-label="Settings"]').click();
+    const help = popupPage.locator('.link-row');
+    await expect(help.first()).toHaveText('SnapTabs is open source: view it on GitHub');
+    await expect(popupPage.getByTestId('repo-link')).toHaveAttribute('href', 'https://github.com/threatner/SnapTabs');
     await expect(popupPage.getByTestId('guide-link')).toHaveText('How to use SnapTabs');
     await expect(popupPage.getByTestId('issues-link')).toHaveAttribute('href', 'https://github.com/threatner/SnapTabs/issues');
-    await expect(popupPage.locator('.settings-footer')).toHaveText(/^SnapTabs \d+\.\d+\.\d+$/);
+    await expect(popupPage.locator('.settings-footer')).toHaveText(/^SnapTabs \d+\.\d+\.\d+ · Free and open source$/);
   });
 
   test('settings persist across popup reloads', async ({ popupPage, extensionId }) => {

@@ -1,5 +1,10 @@
 // External links used by the extension.
 
+// SnapTabs is open source (MIT); the popup, Settings and the welcome page link
+// here (D26).
+export const REPO_URL = 'https://github.com/threatner/SnapTabs';
+export const ISSUES_URL = `${REPO_URL}/issues`;
+
 export const CHROME_WEB_STORE_ID = 'cgkpmhbpejmdjgeipmkbihbjcniflpnl';
 export const REVIEW_URL = `https://chromewebstore.google.com/detail/${CHROME_WEB_STORE_ID}/reviews`;
 
