@@ -1,0 +1,78 @@
+SnapTabs is a free session manager and tab saver. Save every open tab in one click, close them all, and bring them back later with tab groups, pinned tabs and windows the way you left them.
+
+Keeping tabs open because you are afraid of losing them? Save them as a named session ("Tax research", "Sprint kickoff", "Lisbon trip"), close the window, and get a quiet browser back. When you need them again, one click restores the whole session.
+
+HOW IT WORKS
+
+1. Save. Click the SnapTabs icon and press Snapshot, or press Alt+Shift+S. Name the session or let SnapTabs date it. Your tabs stay open until you close them.
+2. Close. Close the tabs or the whole window. Nothing is lost.
+3. Restore. Open SnapTabs, pick a session and press Restore. Tabs come back in the current window or a new one. Background tabs sleep until you click them, so even a 60-tab session opens quickly.
+
+New to it? The ? button in the popup opens a short guide at any time.
+
+WHAT COMES BACK
+
+- Tab groups, with their names, colors and collapsed state
+- Pinned tabs, pinned again
+- Sessions saved from several windows, as several windows in their original order
+- Incognito tabs, in an incognito window (when you allow SnapTabs in incognito)
+
+SAFETY NETS (ALL OFF UNTIL YOU TURN THEM ON)
+
+- Save on browser close: when you quit the browser or close the last window, your tabs are saved as a "Browser close" session. Several windows closed at once become one session. If the browser stops the extension during shutdown, a recovery copy kept on your device is turned into a session on the next start.
+- Rolling backup: keeps one fresh copy of your open windows, updated every 5, 15, 30 or 60 minutes, and only when something changed. After a crash, or when a big window is closed by mistake, the previous copy is kept as its own session. Incognito windows are never included.
+- Save closed tab groups (new): close a whole tab group and SnapTabs keeps a copy named after the group, in its color, so you can reopen it later.
+- Save incognito tabs when an incognito window closes.
+
+FIND AND ORGANIZE
+
+- Search every saved session by name, tab title or URL
+- Sort by newest, oldest, name or number of tabs
+- Address bar search: type st, a space, then a word to find any saved tab without opening the popup
+- Pin the sessions you rely on so they stay on top and are never cleaned up automatically
+- Rename, delete, or delete a session automatically after restoring it
+
+MORE TOOLS
+
+- Live recording: press record and every new tab you open is added to the session, without duplicates
+- Excluded domains: never save tabs from sites you list, such as banking or email (subdomains included)
+- Duplicate warning: SnapTabs asks before saving the same set of tabs twice in a row
+- Right-click the toolbar icon to save all tabs
+- Import and export all sessions as a file, to back up or move to another computer
+- Keep up to 500 sessions; when you reach your limit, the oldest automatic saves are removed first and pinned sessions are never removed
+
+PRIVATE BY DESIGN
+
+- Free. No paid tier, no account, no sign-in
+- Your sessions are stored on your device. No cloud sync, no analytics, no ads
+- Five permissions, listed below. SnapTabs does not request access to your browsing history, cookies or website content
+- If you uninstall, an optional one-question feedback form opens. Nothing is attached to it
+- Open source under the MIT license, so anyone can read the code on GitHub
+
+PERMISSIONS
+
+- tabs: read your open tabs to save them, and open tabs when you restore
+- tabGroups: save and recreate group names and colors
+- storage: keep sessions and settings on your device
+- contextMenus: the "Save all tabs" item on the toolbar icon menu
+- alarms: run the optional rolling backup on schedule
+
+WORKS IN
+
+Chrome 93 or later and other Chromium browsers such as Brave and Edge. Save on browser close includes extra handling for Brave, which stops extensions faster at shutdown.
+
+QUESTIONS
+
+Does saving close my tabs?
+No. Your tabs stay open until you close them, and you can save as often as you like.
+
+Will my tab groups come back?
+Yes: name, color and collapsed state, for manual saves and automatic saves alike.
+
+Can I move sessions to another computer?
+Yes. Export a file in Settings, then import it on the other computer. There is no automatic sync.
+
+Is there anything it cannot restore?
+The exact window position, and built-in browser pages such as settings pages, which extensions are not allowed to open.
+
+Bugs and ideas: https://github.com/threatner/SnapTabs/issues
