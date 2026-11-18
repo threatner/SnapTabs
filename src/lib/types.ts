@@ -44,6 +44,7 @@ export interface SnapTabsSettings {
   warnOnDuplicateSnapshot: boolean;
   excludedDomains: string[];
   autoBackupMinutes: number;
+  saveClosedGroups: boolean;
 }
 
 export const DEFAULT_SETTINGS: SnapTabsSettings = {
@@ -58,6 +59,7 @@ export const DEFAULT_SETTINGS: SnapTabsSettings = {
   warnOnDuplicateSnapshot: true,
   excludedDomains: [],
   autoBackupMinutes: 0,
+  saveClosedGroups: false,
 };
 
 // Ordering options for the popup session list. Pinned sessions always sort

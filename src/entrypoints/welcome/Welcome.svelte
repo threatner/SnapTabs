@@ -144,7 +144,7 @@
     <div class="step-num">2</div>
     <div class="step-body">
       <h2>Choose how SnapTabs keeps you safe</h2>
-      <p class="step-text">Both are off until you turn them on. Everything stays on this device.</p>
+      <p class="step-text">All are off until you turn them on. Everything stays on this device.</p>
 
       <label class="option">
         <div class="option-text">
@@ -154,6 +154,16 @@
         <input type="checkbox" class="tv-switch" aria-label="Save my tabs when I close the browser" disabled={!loaded}
           checked={settings.autoSnapshotOnBrowserClose}
           onchange={() => set({ autoSnapshotOnBrowserClose: !settings.autoSnapshotOnBrowserClose })} />
+      </label>
+
+      <label class="option">
+        <div class="option-text">
+          <p class="option-title">Save tab groups when I close them</p>
+          <p class="option-desc">Closing a whole tab group keeps a copy of its tabs in SnapTabs.</p>
+        </div>
+        <input type="checkbox" class="tv-switch" aria-label="Save tab groups when I close them" disabled={!loaded}
+          checked={settings.saveClosedGroups}
+          onchange={() => set({ saveClosedGroups: !settings.saveClosedGroups })} />
       </label>
 
       <label class="option">

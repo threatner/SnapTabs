@@ -36,6 +36,7 @@ import {
 import { createCloseChain, processNormalWindowClose, recoverLastSnapshot } from '../lib/browserClose';
 import { BACKUP_ALARM, scheduleBackup, runBackup } from '../lib/backup';
 import { configureUninstallSurvey } from '../lib/links';
+import { createClosedGroupTracker, closedGroupSession, saveClosedGroup, SETTLE_MS } from '../lib/closedGroups';
 
 export default defineBackground(() => {
   const windowMap = new Map<number, boolean>();
@@ -79,8 +80,8 @@ export default defineBackground(() => {
 
   async function refreshWindowCache(windowId: number) {
     try {
-      const { tabs, groups } = await captureWindow(windowId);
-      windowCache.set(windowId, { tabs, groups });
+      const { tabs, groups, tabIds } = await captureWindow(windowId);
+      windowCache.set(windowId, { tabs, groups, tabIds });
       await persistWindowCache();
       scheduleSnapshotUpdate();
     } catch {}
@@ -232,9 +233,55 @@ export default defineBackground(() => {
     if (tab.windowId !== undefined) await refreshWindowCache(tab.windowId);
   });
 
-  chrome.tabs.onRemoved.addListener(async (_tabId, info) => {
-    if (!info.isWindowClosing && windowMap.has(info.windowId)) await refreshWindowCache(info.windowId);
+  // Refreshes after removals and group changes wait a moment, so every tab
+  // of a closing group is still in the cache when its removal is handled (D13).
+  const delayedRefresh = new Map<number, ReturnType<typeof setTimeout>>();
+  function refreshWindowCacheSoon(windowId: number) {
+    clearTimeout(delayedRefresh.get(windowId));
+    delayedRefresh.set(windowId, setTimeout(() => {
+      delayedRefresh.delete(windowId);
+      void refreshWindowCache(windowId);
+    }, 300));
+  }
+
+  // ── Closed tab groups (docs/closed-groups/spec.md) ──
+
+  const closedGroups = createClosedGroupTracker();
+
+  chrome.tabs.onRemoved.addListener(async (tabId, info) => {
+    // After a service-worker wake-up, the cache is reloaded from storage first.
+    await stateRestored;
+    if (info.isWindowClosing) return;
+    const cap = windowCache.get(info.windowId);
+    const i = cap?.tabIds?.indexOf(tabId) ?? -1;
+    const tab = i >= 0 ? cap!.tabs[i] : undefined;
+    if (tab?.groupId !== undefined && !windowMap.get(info.windowId)) {
+      const groupSize = cap!.tabs.filter((t) => t.groupId === tab.groupId).length;
+      closedGroups.tabRemoved(tab.groupId, tab, groupSize, Date.now());
+    }
+    if (windowMap.has(info.windowId)) refreshWindowCacheSoon(info.windowId);
   });
+
+  if (chrome.tabGroups?.onRemoved) {
+    chrome.tabGroups.onRemoved.addListener((group) => {
+      // The group event can arrive before its last tab's removal; decide after.
+      setTimeout(() => void saveIfWholeGroupClosed(group), SETTLE_MS);
+    });
+  }
+
+  async function saveIfWholeGroupClosed(group: chrome.tabGroups.TabGroup) {
+    try {
+      const tabs = closedGroups.settle(group.id);
+      if (!tabs) return;
+      const settings = await getSettings();
+      if (!settings.saveClosedGroups) return;
+      const kept = tabs.filter((t) => !isExcludedUrl(t.url, settings.excludedDomains));
+      if (!kept.some((t) => isRestorable(t.url))) return;
+      const meta = { id: group.id, title: group.title ?? '', color: group.color, collapsed: group.collapsed };
+      await saveClosedGroup(closedGroupSession(meta, kept));
+      await track('autoSave');
+    } catch {}
+  }
 
   // ── Recording state (in-memory to avoid storage reads on every tab update) ──
 
@@ -245,6 +292,10 @@ export default defineBackground(() => {
   chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
     if (tab.windowId !== undefined && changeInfo.status === 'complete') {
       await refreshWindowCache(tab.windowId);
+    } else if (tab.windowId !== undefined && 'groupId' in changeInfo) {
+      // Joining or leaving a group: keep group membership current for
+      // closed-group detection.
+      refreshWindowCacheSoon(tab.windowId);
     }
     if (changeInfo.status !== 'complete' || !tab.url) return;
     if (!isRestorable(tab.url)) return;
@@ -506,7 +557,7 @@ export default defineBackground(() => {
 
   async function init() {
     try {
-      await restoreState();
+      await stateRestored;
       // Before anything below saves a session, so nothing is counted twice.
       try { await backfillUsageStats(); } catch {}
       // Read before recovery, which sets the marker. storage.session is also
@@ -545,5 +596,6 @@ export default defineBackground(() => {
     }
   }
 
+  const stateRestored = restoreState();
   const ready = init();
 });

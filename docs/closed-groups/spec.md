@@ -1,6 +1,6 @@
 # Save tab groups when they're closed
 
-Status: spec, as of 2026-11-18. Branch: `release/v1.10.0`. Ships in v1.10.0.
+Status: built (milestones 1 and 2 done), as of 2026-11-18. Awaiting the user's live check with a real **Close group** click. Branch: `release/v1.10.0`. Ships in v1.10.0.
 
 ## Why
 
@@ -43,7 +43,7 @@ Chrome gives extensions no way to read a group after it's closed (documented: `c
 
 ## Decisions
 
-Rows added to [the register](../decisions/README.md): D08 to D12. Rejected: on by default (could flood the list for people who close groups all day, and breaks the opt-in rule since v1.3.1); a new session on every close (duplicates); reading SnapTabs' window cache at close time (proven unreliable above).
+Rows added to [the register](../decisions/README.md): D08 to D11 and D13 (D12 superseded by the simpler D13). Rejected: on by default (could flood the list for people who close groups all day, and breaks the opt-in rule since v1.3.1); a new session on every close (duplicates); reading SnapTabs' window cache at close time (proven unreliable above).
 
 ## Validation
 
@@ -57,6 +57,6 @@ Rows added to [the register](../decisions/README.md): D08 to D12. Rejected: on b
 
 ## Milestones
 
-1. **Detection and save**: R2 to R7 behind the setting, with unit and real-browser checks.
-2. **Setting UI**: R1 in Settings and on the welcome page, with E2E checks and screenshots.
+1. **Detection and save**: R2 to R7 behind the setting, with unit and real-browser checks. **Done 2026-11-18**: 13 unit tests; 8 real-browser checks pass (incl. a stopped service worker); widening the burst window breaks the one-by-one unit and real-browser checks.
+2. **Setting UI**: R1 in Settings and on the welcome page, with E2E checks and screenshots. **Done 2026-11-18.**
 3. **Docs**: CHANGELOG, CLAUDE.md, store listing copy.

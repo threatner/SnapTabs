@@ -124,5 +124,13 @@ test.describe('Help entry points', () => {
     await popupPage.getByTestId('guide-link').click();
     await openedGuide(context, extensionId);
   });
+
+  test('turning on "Save tab groups when I close them" writes the setting', async ({ popupPage, extensionId }) => {
+    await openWelcome(popupPage, extensionId);
+    const toggle = popupPage.getByLabel('Save tab groups when I close them');
+    await expect(toggle).not.toBeChecked();
+    await toggle.click();
+    await expect.poll(async () => (await storedSettings(popupPage)).saveClosedGroups).toBe(true);
+  });
 });
 

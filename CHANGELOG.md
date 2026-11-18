@@ -12,11 +12,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Reopen the guide any time.** A **?** button in the popup header and a "How to use SnapTabs" card in **Settings > Help & feedback** open it as "How to use SnapTabs". Users who installed before v1.9 can now find it too.
 - **Two one-time tips.** After your first snapshot: "Saved! Your tabs are still open…". After your first restore that put tabs to sleep: "Restored tabs are asleep…" with a shortcut to Settings. Each shows once, can be dismissed, and takes the rating banner's place until then. Long-time users never get first-snapshot advice.
 
+- **Save tab groups when you close them** (off by default, Settings > Auto-Save, also on the welcome page). Chrome doesn't let extensions see a group after it's closed, so SnapTabs keeps a copy at the moment you close a whole group, named "<group> (closed group)" with its colour. Ungrouping, closing tabs one by one, and closing the window don't count. Closing the same group again with the same tabs replaces the earlier copy. Works even if SnapTabs' background worker was asleep.
+
 ### Internal
 
 - `npm run check` is the one gate (docs check, type check, unit tests, build); CI runs it. Specs live in `docs/<feature>/spec.md` and decisions in `docs/decisions/README.md`.
 - `npm run test:e2e:headless` and `test:e2e:cdp:headless` run the browser suites without opening windows.
 - `restoreSession` now returns how many tabs it put to sleep.
+- The window cache records tab ids, refreshes after tab removals and group changes are delayed 300 ms, and grouping a tab now refreshes the cache (it didn't before).
 
 ## [1.9.0] - 2026-09-25
 

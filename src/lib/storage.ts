@@ -21,6 +21,8 @@ export const KEYS = {
 export interface WindowCapture {
   tabs: SavedTab[];
   groups: SavedTabGroup[];
+  // Chrome tab ids, index-aligned with `tabs` (absent in caches from before v1.10).
+  tabIds?: number[];
 }
 
 export interface PendingClose {
@@ -303,6 +305,18 @@ export async function takeBackupRestartCheck(): Promise<boolean> {
   if (!result[KEYS.backupRestartCheck]) return false;
   await chrome.storage.session.remove(KEYS.backupRestartCheck);
   return true;
+}
+
+// Adds a session, first removing any existing session `isSame` matches.
+export async function replaceOrAddSession(session: Session, isSame: (s: Session) => boolean): Promise<void> {
+  await withLock(KEYS.sessions, async () => {
+    const result = await chrome.storage.local.get([KEYS.sessions, KEYS.settings]);
+    const sessions: Session[] = (result[KEYS.sessions] ?? []).filter((s: Session) => !isSame(s));
+    const settings: SnapTabsSettings = { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
+    sessions.push(session);
+    enforceLimit(sessions, settings.maxSessions);
+    await chrome.storage.local.set({ [KEYS.sessions]: sessions });
+  });
 }
 
 export async function renameSession(id: string, name: string): Promise<void> {

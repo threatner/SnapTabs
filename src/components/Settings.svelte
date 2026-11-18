@@ -118,6 +118,14 @@
       </label>
       <label class="setting-row">
         <div class="setting-text">
+          <p class="setting-title">Save tab groups when you close them</p>
+          <p class="setting-desc">Keeps a copy when you close a whole group</p>
+        </div>
+        <input type="checkbox" class="tv-switch" checked={settings.saveClosedGroups}
+          onchange={() => onUpdateSettings({ saveClosedGroups: !settings.saveClosedGroups })} />
+      </label>
+      <label class="setting-row">
+        <div class="setting-text">
           <p class="setting-title">Rolling backup</p>
           <p class="setting-desc">Keep one always-fresh copy of your open tabs, in case Chrome crashes or a window closes</p>
         </div>
