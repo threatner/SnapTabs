@@ -19,7 +19,8 @@ The popup works, but Settings is hard to scan (7 sections, one of them a single 
 | R7. Detail header in two rows | Row 1: back, name (up to two lines), "8 tabs · 1 window · saved 2h ago". Row 2: Restore (primary) and a "…" menu with Pin, Rename, Delete, the same as cards. |
 | R8. Keyboard, motion, labels | One `:focus-visible` ring everywhere; `prefers-reduced-motion` stops all animation; only recording loops; record button has `aria-label` + `aria-pressed`; scope button and group headers have `aria-expanded`; the duplicate modal is `aria-modal`, closes on Escape, and focuses "Save anyway". |
 | R9. Wording | Sentence case ("This window", "All windows", "Stop & save"); "the browser", not "Chrome", in descriptions; imports report "sessions"; "Clear All Data" becomes "Delete all sessions…" (quiet red text; armed state names the count). |
-| R10. Header | Only **?** and Settings; the GitHub link lives in Settings > Help (D23). |
+| R10. Header | **?**, a GitHub link and Settings. The GitHub link points at the repository and says it's open source (D26, replacing D23's header-without-GitHub). |
+| R12. Open source is visible | The header's GitHub link ("SnapTabs is open source. View it on GitHub"), a first Help row in Settings ("SnapTabs is open source: view it on GitHub"), a Settings footer "SnapTabs <version> · Free and open source", and a line on the welcome page beside Done ("Free and open source. View SnapTabs on GitHub"). All point at the repository, from one `REPO_URL` in `links.ts`. |
 | R11. Welcome page | Option titles match Settings; caption "Off by default. Everything stays on this device."; step numbers sit inline with their headings and the button replicas sit on the right, so all text starts at one left edge at every width, and options span the card width. Replicas match the current buttons (Snapshot primary, the card's small Restore). |
 
 ## Not in scope
@@ -28,7 +29,7 @@ Renaming Snapshot to Save, a "Save N tabs" bar, smarter default names, a new ico
 
 ## Decisions
 
-Rows added to [the register](../decisions/README.md): D20 to D25.
+Rows added to [the register](../decisions/README.md): D20 to D26.
 
 ## Validation
 

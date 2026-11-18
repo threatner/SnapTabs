@@ -18,7 +18,7 @@ Planned as 1.10.0; the redesign below made it 2.0.0.
 - **Easier to read.** Dates read "Nov 4" instead of "11/4/2026", details are separated with dots, "1 tab" is no longer "1 tabs", muted text and buttons have stronger contrast, and wording is in plain sentence case ("This window", "All windows").
 - **The card "…" menu** no longer repeats Restore (it's already a button on every card).
 - **Keyboard and accessibility.** A visible focus ring everywhere, the "…" menu shows when a card has keyboard focus, menus close with Escape, the duplicate-snapshot dialog focuses "Save anyway" and closes with Escape, buttons have screen-reader labels, and animations stop when your system asks for reduced motion. Only recording still pulses.
-- **The popup header** shows just the guide (**?**) and Settings; "Report a problem" lives in Settings > Help.
+- **Open source, out loud.** The GitHub icon in the popup header now says "SnapTabs is open source. View it on GitHub", Settings > Help starts with "SnapTabs is open source: view it on GitHub" (above "Report a problem or suggest a feature"), the Settings footer reads "Free and open source", and the welcome page links to GitHub next to Done.
 - **"Clear All Data"** is now "Delete all sessions…", which is what it does, and tells you how many sessions it will delete before you confirm.
 - **Welcome page** options use the same names as Settings, and every card's text lines up, on desktop and phone widths.
 

@@ -24,6 +24,13 @@ test.describe('Welcome page', () => {
     await expect(popupPage.getByLabel('Rolling backup every 15 minutes')).not.toBeChecked();
   });
 
+  test('says it is open source and links to GitHub (D26)', async ({ popupPage, extensionId }) => {
+    await openWelcome(popupPage, extensionId);
+    const gh = popupPage.getByRole('link', { name: 'Free and open source. View SnapTabs on GitHub' });
+    await expect(gh).toBeVisible();
+    await expect(gh).toHaveAttribute('href', 'https://github.com/threatner/SnapTabs');
+  });
+
   test('explains how to pin, showing the extensions and pin icons', async ({ popupPage, extensionId }) => {
     await openWelcome(popupPage, extensionId);
     const pin = popupPage.locator('[data-step="pin"]');
