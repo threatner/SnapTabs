@@ -14,7 +14,7 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 | | |
 |---|---|
-| Latest version | 1.10.0 |
+| Latest version | 2.0.0 |
 | Browser | Chrome 93+ |
 | Manifest | V3 |
 | Storage | Local only. No cloud sync |
@@ -44,13 +44,13 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 - **One-click Restore and no duplicates.** Every session card has a Restore button, and restoring skips tabs that are already open.
 - **No network for site icons.** Saved tabs' icons come from the browser's local cache.
 - **Multi-window restore.** Sessions saved from several windows come back as several windows, each in its original tab order, including sessions saved by older versions.
-- **Sleep restored tabs.** After a restore, background tabs unload once loaded and wake when you click them, so big sessions don't eat your memory. On by default; toggle in **Settings > Restore**.
-- **Rolling backup.** An optional, always-fresh backup of your open tabs, refreshed every 5 to 60 minutes. If a crash or a closed window would make it lose tabs, the previous backup is kept as its own session. Off by default; **Settings > Auto-Save**.
+- **Sleep restored tabs.** After a restore, background tabs unload once loaded and wake when you click them, so big sessions don't eat your memory. On by default; toggle in **Settings > Restoring**.
+- **Rolling backup.** An optional, always-fresh backup of your open tabs, refreshed every 5 to 60 minutes. If a crash or a closed window would make it lose tabs, the previous backup is kept as its own session. Off by default; **Settings > Save automatically**.
 - **Welcome page.** New installs get a short setup page: pin the extension (with the toolbar icons shown inline) and opt in to the automatic saves.
 - **Clean toolbar icon.** The persistent session-count number on the toolbar badge is gone — the count now shows inside the popup header, where you're actually looking. The badge is reserved for the red recording dot.
 - **Session sorting.** Order the list by newest, oldest, name, or most tabs. Pinned sessions always stay on top.
 - **Duplicate snapshot warning.** If the tabs you are about to snapshot match your most recent session, SnapTabs asks before saving another copy. Skips trivial differences like trailing slashes and URL fragments. Turn off in Settings if you want every click to save unconditionally.
-- **Excluded domains.** Add domains you never want captured (banking, email, internal tools) in **Settings > Snapshot > Excluded domains**. Tabs from those domains are skipped in snapshots, recordings, and auto-saves. Subdomains match the parent rule.
+- **Excluded domains.** Add domains you never want captured (banking, email, internal tools) in **Settings > Saving > Never save these sites**. Tabs from those domains are skipped in snapshots, recordings, and auto-saves. Subdomains match the parent rule.
 - **Auto-snapshot on browser close.** Quit Chrome with Cmd+Q or close the last window and your tabs are waiting for you on the next launch. Multi-window quits are captured as a single combined session.
 - **Session pinning.** Pin the sessions you use often so they stay at the top and survive auto-pruning when you hit the storage limit.
 - **Omnibox search.** Type `st` in the address bar, press space, then type a query to search every tab across every saved session without opening the popup.
@@ -83,11 +83,11 @@ No. Everything is stored in `chrome.storage.local` on your device. There is no c
 
 ### What happens to my tabs if Chrome (or Brave) crashes?
 
-Turn on **Settings > Auto-Save > Save on browser close** (off by default). While it's on, every window's tabs land in a combined session named "Browser close" when the last window closes — including the multi-window `Cmd+Q` case.
+Turn on **Settings > Save automatically > When I quit the browser** (off by default). While it's on, every window's tabs land in a combined session named "Browser close" when the last window closes — including the multi-window `Cmd+Q` case.
 
 If the browser kills the extension's service worker mid-shutdown before the save lands (Brave is more aggressive about this than Chrome), SnapTabs falls back to a continuously-updated snapshot it keeps in local storage. On the next browser start, that snapshot is promoted to a session named "Browser close (recovered)". Either way your tabs come back.
 
-You can also turn on **Settings > Auto-Save > Rolling backup**. It keeps a single session with your open tabs up to date every few minutes. After a restart, if the backup would lose tabs that were open before, the pre-restart backup is kept as its own session.
+You can also turn on **Settings > Save automatically > Rolling backup**. It keeps a single session with your open tabs up to date every few minutes. After a restart, if the backup would lose tabs that were open before, the pre-restart backup is kept as its own session.
 
 For critical tab sets, also take a manual snapshot (`Alt+Shift+S`) — it goes through a different code path and is the most belt-and-braces option.
 
@@ -97,7 +97,7 @@ Yes. Pinned tabs come back pinned. Tab groups come back with their original name
 
 ### Can I sync sessions between devices?
 
-Not automatically. Sessions stay on the device where they were created. Use **Settings > Data > Export** to download a JSON file, then **Import** it on another machine.
+Not automatically. Sessions stay on the device where they were created. Use **Settings > Storage & data > Export** to download a JSON file, then **Import** it on another machine.
 
 ### How is this different from "reopen closed window" in Chrome?
 

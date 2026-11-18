@@ -42,9 +42,9 @@ SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser
 - **Rolling backup** (`autoBackupMinutes`: 0 = off / 5 / 15 / 30 / 60, default 0): `backup.ts`. A `chrome.alarms` schedule refreshes a single `isBackup` session with every normal (non-incognito) window, only when a fingerprint changed. `scheduleBackup` leaves an existing alarm with the same period alone (re-creating it on each SW start would postpone it forever). Before overwriting, the previous backup is kept as an ordinary auto-save when tabs would be lost on the first backup after a fresh browser start (crash case; flagged via `setBackupRestartCheck` in `init()`), or on a big loss (≥5 tabs and ≥ half). The backup is excluded from `maxSessions` and pruning, the duplicate-snapshot check, and browser-close recovery dedupe; imports strip `isBackup`; turning it off (`retireBackup`) turns it into a normal auto-save. Backup runs and retirement are queued in the SW (`queueBackup` / `queueRetire`) and wait for `init()`; `upsertBackup` re-checks the setting under the lock. `enforceLimit(sessions, max, protect)` never prunes sessions created by the same write (kept backup copies carry an older timestamp).
 - **Welcome page / guide** (`src/entrypoints/welcome/`): opened by `onInstalled` only when no settings were stored yet (a genuinely new user; don't trust `reason` alone). A "How SnapTabs works" card (three steps with replicas of the real Snapshot/Restore buttons) sits above the two setup steps: pin detection via `chrome.action.getUserSettings()`, and opt-in toggles for save-on-close and a 15-minute rolling backup. `welcome.html?from=help` is the same page with the heading "How to use SnapTabs"; the popup header's **?** and the Settings "How to use SnapTabs" card open it. Keep it minimal: it explains only save → close → restore (D02/D03 in `docs/decisions`). Spec: `docs/onboarding/spec.md`.
 - **Save closed tab groups** (`saveClosedGroups`, default false; `src/lib/closedGroups.ts`, spec `docs/closed-groups/spec.md`): Chrome can't show extensions a closed group, so SnapTabs saves it as it closes. `tabs.onRemoved` (not window-closing, not incognito) looks the tab up in `windowCache` by `tabIds` and feeds `createClosedGroupTracker().tabRemoved(groupId, tab, groupSize)`; `tabGroups.onRemoved` calls `settle()` after `SETTLE_MS` (600) and saves only if every tab of the group, and at least `MIN_GROUP_TABS` (2), was removed within `CLOSE_BURST_MS` (500), as "<title> (closed group)" (D18: a lone tab closing is what the end of a one-by-one close looks like). Tabs moving between windows (`onAttached`/`onDetached`) refresh both windows; `handleWindowRemoved` cancels a pending delayed refresh, and `refreshWindowCache` ignores windows no longer in `windowMap`. `saveClosedGroup` → `replaceOrAddSession` replaces an auto-save with the same name and URL set (D09), keeping its pin. Cache refreshes after removals/group changes are delayed 300 ms (`refreshWindowCacheSoon`) so a whole burst is looked up against the pre-close cache, and removal handlers `await stateRestored` so a woken service worker has its cache back (D13).
-- **One-time tips** (`TipBanner.svelte`): `Meta.pendingTips` (`'firstSnapshot' | 'firstRestore'`) is filled by `recordUsage` at the 0→1 transition (first manual snapshot; first restore whose `restoreSession` return value says tabs were slept) and only once `statsBackfilled`, so pre-1.9 users never get first-snapshot advice. The popup shows `pendingTips[0]` in place of the rating banner (one banner at a time); dismissing sends `'dismissTip'`.
+- **One-time tips** (`Banner.svelte`, `kind="tip"`): `Meta.pendingTips` (`'firstSnapshot' | 'firstRestore'`) is filled by `recordUsage` at the 0→1 transition (first manual snapshot; first restore whose `restoreSession` return value says tabs were slept) and only once `statsBackfilled`, so pre-1.9 users never get first-snapshot advice. The popup shows `pendingTips[0]` in place of the rating banner (one banner at a time); dismissing sends `'dismissTip'`. The click that brings up the first-snapshot tip skips the "Snapshot saved!" toast (D22); later snapshots get it even while the tip shows.
 - **Usage stats** (`snaptabs_meta`, local only, not exported): `UsageStats` counts `manualSnapshots` (popup, shortcut, context menu), `recordings`, `autoSaves` (browser close, incognito close, recovered), `restores` split into `restoresOfManualSessions` / `restoresOfAutoSaves`, plus `firstSeenAt`. Recorded in the SW via `track()` → `recordUsage()` (failures swallowed; never break the action). `backfillUsageStats()` runs once at the top of `init()` to seed counts from existing sessions for pre-1.9 users (`statsBackfilled`). Use these for any future "show X after Y" logic.
-- **Rating prompt**: `shouldShowRatingPrompt` = not dismissed and (≥ `RATING_PROMPT_AFTER_MANUAL_SNAPSHOTS` (5) manual snapshots or ≥ `RATING_PROMPT_AFTER_RESTORES` (3) restores). The popup shows `RatingPrompt.svelte` once; rating or dismissing sets `ratingPromptDone`. Settings > Feedback also has a permanent "Enjoying SnapTabs?" link (`data-testid="rate-link"`) that sets `ratingPromptDone` too. Both skipped on Edge.
+- **Rating prompt**: `shouldShowRatingPrompt` = not dismissed and (≥ `RATING_PROMPT_AFTER_MANUAL_SNAPSHOTS` (5) manual snapshots or ≥ `RATING_PROMPT_AFTER_RESTORES` (3) restores). The popup shows it once as a `Banner` (`kind="rating"`); rating or dismissing sets `ratingPromptDone`. Settings > Help also has a permanent "Rate SnapTabs on the Chrome Web Store" link (`data-testid="rate-link"`) that sets `ratingPromptDone` too. Both skipped on Edge.
 - **Uninstall survey**: `configureUninstallSurvey()` (`links.ts`) calls `chrome.runtime.setUninstallURL(UNINSTALL_SURVEY_URL)` on install/update. Empty URL = disabled. Never append data to the URL.
 - **Session pinning**: pin sessions so they sort to the top and are exempt from auto-pruning. Available via the card context menu and the detail-view toolbar button.
 - **Import / Export**: download all sessions to a JSON file (`snaptabs-export-YYYY-MM-DD.json`) or load from a previous export. Import handles ID collisions by renaming on conflict and skipping exact re-imports (same id + timestamp).
@@ -54,7 +54,7 @@ SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser
 - **Duplicate snapshot warning**: before saving a manual snapshot from the popup, compares the candidate tab set against the most recent session via a URL-set signature (order-, fragment-, trailing-slash-insensitive; `isRestorable`-filtered on both sides). If matched, shows a confirm modal with "Cancel" / "Save anyway". Context-menu and keyboard-shortcut snapshots bypass the check. Controlled by `warnOnDuplicateSnapshot` (default true).
 - **Excluded domains**: per-domain skip list applied at capture time (manual snapshot, live recording, auto-save on close). Exact host or subdomain match — `github.com` matches `api.github.com`. Input is normalized (strips protocol, `www.`, path, query, casing). Lives in `excludedDomains: string[]` setting.
 - **Storage management**: 10 MB quota with automatic pruning (oldest auto-saves removed first, pinned sessions never pruned). Configurable session limit (1-500). Storage usage bar in settings.
-- **Settings**: 12 options grouped into 6 sections in the order: **Auto-Save** (auto-snapshot on browser close [default false], auto-save on incognito close, save closed tab groups [default false], rolling backup interval [default Off]), **Snapshot** (warn on duplicate snapshot [default true], excluded domains [default []]), **Restore** (open in new window, sleep restored tabs [default true], auto-delete after restore, restore private to private), **Warnings** (show incognito warning), **Storage** (max sessions limit), **Data** (import/export, clear all in Danger zone). A **Help & feedback** section ("How to use SnapTabs" guide card, "Enjoying SnapTabs?" rate card, then a GitHub issues card) sits between Data and the Danger zone. Section order is importance-first — Auto-Save is the headline behavior.
+- **Settings** (D21, `docs/ui-refresh/spec.md`): 11 options in 4 sections plus Help, in the order: **Save automatically** (caption "Off by default. Everything stays on this device."; When I quit the browser [`autoSnapshotOnBrowserClose`, default false], When I close a tab group [`saveClosedGroups`, default false], When I close an incognito window [`autoSnapshotOnClose`], Rolling backup [`autoBackupMinutes`, default Off]), **Saving** (Ask before saving a duplicate [`warnOnDuplicateSnapshot`, default true], Never save these sites [`excludedDomains`, default []]), **Restoring** (Open in a new window, Sleep restored tabs [default true], Incognito tabs open in an incognito window [`restoreIncognitoToIncognito`], Delete a session after restoring it), **Storage & data** (Keep up to N sessions, storage line + bar, Export / Import, "Delete all sessions…" two-click with the count), **Help** (link rows: How to use SnapTabs `guide-link`, Rate SnapTabs `rate-link`, Report a problem `issues-link`), then a "SnapTabs <version>" footer. The two incognito rows show only when `chrome.extension.isAllowedIncognitoAccess()` is true (D24). `showIncognitoWarning` was removed (D20): `getSettings` drops it via `REMOVED_SETTINGS`.
 
 ### Permissions (minimal set)
 
@@ -115,16 +115,16 @@ The popup is a fixed 400×600px window with three views:
 
 | Component | File | Role |
 |---|---|---|
-| Header | `src/components/Header.svelte` | Logo, brand name, session count ("N sessions saved"), recording indicator, ? guide link, GitHub link, settings button |
-| SnapshotBar | `src/components/SnapshotBar.svelte` | Scope dropdown, snapshot button, record toggle, incognito warning |
-| RecordingBar | `src/components/RecordingBar.svelte` | Timer, tab count, recent tabs preview, stop/cancel buttons |
+| Header | `src/components/Header.svelte` | Logo, brand name, session count ("N sessions saved"), recording indicator, ? guide link, settings button (GitHub moved to Settings > Help, D23) |
+| SnapshotBar | `src/components/SnapshotBar.svelte` | Scope dropdown (This window / All windows), Snapshot button (secondary while recording), record toggle (hidden while recording), incognito notice |
+| RecordingBar | `src/components/RecordingBar.svelte` | Timer, tab count, recent tabs preview, primary "Stop & save" (the one stop control) and a quiet Cancel |
 | SessionList | `src/components/SessionList.svelte` | Search input, sort dropdown, scrollable list of SessionCards, empty states |
-| SessionCard | `src/components/SessionCard.svelte` | Session name (inline rename), badges, metadata, tab group chips, always-visible Restore button (`.card-restore`), hover "…" context menu |
-| SessionDetail | `src/components/SessionDetail.svelte` | Full session view with collapsible tab groups, favicons, restore/delete/rename |
-| Settings | `src/components/Settings.svelte` | Toggle rows, max sessions input, storage bar, rate + GitHub feedback cards, danger zone |
-| Toast | `src/components/Toast.svelte` | Success/error/warning notifications, auto-dismiss |
-| RatingPrompt | `src/components/RatingPrompt.svelte` | One-time "Enjoying SnapTabs?" banner above the session list |
-| TipBanner | `src/components/TipBanner.svelte` | One-time onboarding tip (same shape as RatingPrompt); takes its place while pending |
+| SessionCard | `src/components/SessionCard.svelte` | Session name (inline rename), badges, metadata, tab group chips, always-visible Restore button (`.card-restore`), "…" SessionMenu shown on hover and keyboard focus (`.card:focus-within`) |
+| SessionDetail | `src/components/SessionDetail.svelte` | Two-row header (back + name up to 2 lines + meta; primary "Restore N tabs" + SessionMenu), collapsible tab groups, favicons |
+| Settings | `src/components/Settings.svelte` | 4 sections + Help (see Features > Settings), version footer |
+| Toast | `src/components/Toast.svelte` | Bottom of the popup, card surface with a coloured icon, in an always-present `role="status"` region; auto-dismiss after 2.5 s |
+| Banner | `src/components/Banner.svelte` | The one banner style: one-time tips (`kind="tip"`) and the "Enjoying SnapTabs?" prompt (`kind="rating"`); a pending tip takes the rating banner's place |
+| SessionMenu | `src/components/SessionMenu.svelte` | The "…" menu (Pin / Rename / Delete) shared by SessionCard and SessionDetail; Escape closes; keys don't reach the card |
 
 ## Svelte 5 Constraints
 
@@ -135,8 +135,12 @@ The popup is a fixed 400×600px window with three views:
 
 ## UI Theme
 
-Dark theme using oklch color space. CSS variables defined in `src/entrypoints/popup/style.css`:
-- `--bg`, `--card`, `--fg`, `--fg-muted`, `--primary`, `--secondary`, `--border`, `--muted`, `--destructive`, `--recording`, `--warning`
+Dark theme using oklch color space. Tokens and shared primitives live in `src/entrypoints/popup/style.css` (also imported by the welcome page); components use them instead of raw values:
+- Colours: `--bg`, `--card`, `--fg`, `--fg-muted`, `--primary` (icons, rings, accents), `--primary-fill` (behind white text; `--primary` itself is ~3.3:1 with white), `--secondary`, `--accent`, `--border`, `--muted`, `--destructive` (text only), `--recording`, `--warning`, `--success`.
+- Radii `--r-sm` 4 / `--r` 6 / `--r-lg` 8 / `--r-pill`; type `--text-xs` 11 / `--text-sm` 12 / `--text-md` 13 / `--text-lg` 14.
+- Classes: `.btn` + `.btn-primary` / `.btn-secondary` / `.btn-ghost` / `.btn-danger-text`, `.btn-sm`; `.icon-btn` (28px); `.menu`, `.menu-item`, `.menu-item--danger`, `.menu-divider`, `.menu-backdrop`; `.tv-switch`.
+- One global `:focus-visible` ring; `prefers-reduced-motion` stops all animation. Only recording loops (pulsing dot).
+- Display helpers: `plural`, `relativeTime` ("Nov 4" after a week), `formatBytes` in `src/lib/format.ts`.
 - Tab group colors are in `TAB_GROUP_COLORS` (types.ts), not CSS variables.
 
 ## Blocked URLs
@@ -157,9 +161,10 @@ npx sharp-cli -i src/assets/icon.svg -o src/public/icon/16.png -- resize 16 16
 
 ### Unit Tests (Vitest)
 
-Tests use **Vitest** with a Chrome API mock (`tests/setup.ts`, including `createEvent()` mocks with `emit` for `tabs.onUpdated` / `alarms.onAlarm`, and `alarms`). 279 tests across 12 files:
-- `tests/types.test.ts`: `uuid()`, `formatSessionName()`, constants, `DEFAULT_SETTINGS` shape (12 fields), domain helpers (`normalizeDomain`, `getHostname`, `urlMatchesDomain`, `isExcludedUrl`) with subdomain/substring/case edge cases.
-- `tests/storage.test.ts`: sessions CRUD, settings (including `warnOnDuplicateSnapshot`, `excludedDomains`, and backward compat with legacy stored settings), recordings, window map, window cache (tabs + groups), pending-close buffer, pinning (sort + enforce), import/export (valid/invalid payloads, collisions, limit enforcement).
+Tests use **Vitest** with a Chrome API mock (`tests/setup.ts`, including `createEvent()` mocks with `emit` for `tabs.onUpdated` / `alarms.onAlarm`, and `alarms`). 285 tests across 13 files:
+- `tests/types.test.ts`: `uuid()`, `formatSessionName()`, constants, `DEFAULT_SETTINGS` shape (11 fields), domain helpers (`normalizeDomain`, `getHostname`, `urlMatchesDomain`, `isExcludedUrl`) with subdomain/substring/case edge cases.
+- `tests/format.test.ts`: `plural`, `relativeTime` (minutes to "Yesterday", "Nov 4", year for earlier years), `formatBytes`.
+- `tests/storage.test.ts`: sessions CRUD, settings (including `warnOnDuplicateSnapshot`, `excludedDomains`, backward compat with legacy stored settings, and dropping the removed `showIncognitoWarning`), recordings, window map, window cache (tabs + groups), pending-close buffer, pinning (sort + enforce), import/export (valid/invalid payloads, collisions, limit enforcement).
 - `tests/tabs.test.ts`: `isRestorable()`, `toSavedTab()`, capture, snapshot (including excluded-domain filtering, subdomain matching, post-filter `hasIncognitoTabs` recompute, empty-after-filter), restore logic, `urlSetSignature()`, `findDuplicateSession()`, `splitByWindow()` (windowId + legacy heuristic), multi-window restore (current vs new windows, no interleaving, regular-before-incognito, focus, which tabs are slept).
 - `tests/sleepTabs.test.ts`: discard only after load, never before commit, commit-only on timeout, skip active/closed tabs, listener cleanup.
 - `tests/backup.test.ts`: alarm scheduling (incl. not re-creating an unchanged alarm), capture (incognito excluded, excluded domains), change detection, in-place update, `shouldKeepPrevious`, keep-previous after restart / big loss, session-limit exemption, `retireBackup`, and interactions with import, duplicate check and browser-close recovery.
@@ -172,7 +177,7 @@ Coverage: storage.ts 100%, tabs.ts ~70% (uncovered lines are Chrome group recrea
 
 ### E2E Tests (Playwright)
 
-End-to-end tests use **Playwright** to launch real Chromium (or Brave via `--project=brave`) with the extension loaded. 107 tests across 14 files in `e2e/`:
+End-to-end tests use **Playwright** to launch real Chromium (or Brave via `--project=brave`) with the extension loaded. 115 tests across 14 files in `e2e/`:
 
 ```
 e2e/
@@ -188,14 +193,14 @@ e2e/
     ├── recording.spec.ts           # Opens sites during recording, verifies capture & dedup
     ├── session-list.spec.ts        # Session display, badges, metadata, search, sort (incl. pinned-on-top)
     ├── session-detail.spec.ts      # Detail view, tab groups, collapse/expand
-    ├── session-actions.spec.ts     # Context menu, rename, delete, confirmation flows
-    ├── settings.spec.ts            # Toggles, input, storage bar, persistence
-    ├── dedupe.spec.ts              # Duplicate-snapshot modal: trigger, Cancel, Save anyway, backdrop dismiss, bypass when setting off
+    ├── session-actions.spec.ts     # Card and detail "…" menus (Pin/Rename/Delete), keyboard focus + Escape, rename, delete
+    ├── settings.spec.ts            # 4 sections + Help, incognito rows hidden without access, toggles, delete-all count, persistence
+    ├── dedupe.spec.ts              # Duplicate-snapshot modal: trigger, focus + Escape, Cancel, Save anyway, backdrop dismiss, bypass when setting off
     ├── excluded-domains.spec.ts    # Settings UI (empty state, add/remove, normalization, persistence) + snapshot integration (filtering, subdomain match)
     ├── rating-prompt.spec.ts       # Threshold, restores counting, dismiss survives popup close, "Rate it" opens reviews
     ├── welcome.spec.ts             # Welcome page: how-it-works guide, help heading, setup toggles, Done; ? button and Settings card open the guide
-    ├── tips.spec.ts                # One-time tips: first snapshot, sleep tip → Settings, tip before rating banner, none for long-time users
-    └── toast.spec.ts               # Toast appearance and auto-dismiss
+    ├── tips.spec.ts                # One-time tips: first snapshot (tip instead of toast), sleep tip → Settings, tip before rating banner, none for long-time users
+    └── toast.spec.ts               # Toast at the bottom in a status region, auto-dismiss
 e2e/cdp/                            # Real-Chromium checks over raw CDP (`npm run test:e2e:cdp`)
     ├── harness.mjs                 # Launch Chromium + extension, evaluate in SW/pages, reuse a profile across launches
     ├── sleep-restore.mjs           # Multi-window restore + tab sleeping + groups + sleep tip + wake-on-click + snapshot while asleep
@@ -214,7 +219,7 @@ Key patterns:
 - **Tab sleeping vs Playwright**: Playwright loses its browser connection whenever a tab is discarded, so the Playwright suite runs with `sleepRestoredTabs: false` (`E2E_BASE_SETTINGS`, re-applied by `seedSettings`/`clearStorage`). Anything that discards tabs is tested in `e2e/cdp/`.
 - **CDP checks on Brave**: `BROWSER_PATH="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" npm run test:e2e:cdp`. Brave only reloads a discarded tab once it's visible, so focus the window before activating a tab; headless Brave never shows a window, so `sleep-restore.mjs` skips (and says so) its wake-on-click step there. Run Brave headed to cover it.
 - **Finding SnapTabs' worker**: Chromium 159+ also runs component extensions whose service worker is `background.js`, so the CDP harness and `getServiceWorker()` match SnapTabs by its unpacked-extension ID (SHA-256 of the build path, letters a-p), never by file name. The harness passes `--use-mock-keychain` (like Playwright) so a new browser build doesn't trigger a macOS keychain prompt.
-- **Install warnings**: `chrome.management.getPermissionWarningsByManifest()` (callable from an extension page) returns the exact warnings for a manifest; v1.9 and v1.10 return the same two (`favicon` is covered by `tabs`).
+- **Install warnings**: `chrome.management.getPermissionWarningsByManifest()` (callable from an extension page) returns the exact warnings for a manifest; v1.9 and v2.0 return the same two (`favicon` is covered by `tabs`).
 - **Chrome Web Store tabs** aren't surfaced as Playwright pages; assert on them via `chrome.tabs.query` in the service worker.
 - **Unpacked-extension updates** can't be simulated by `chrome.runtime.reload()` (the extension disappears) or by relaunching with changed files (Chrome keeps the old service worker and reports `reason: 'install'`). For an upgrade test, relaunch the same profile after deleting its `Default/Service Worker` directory.
 - **Storage seeding** (`e2e/helpers/storage.ts`): Evaluates `chrome.storage.local.set()` in the service worker context to pre-populate test data.

@@ -86,7 +86,7 @@ LANG=en_US.UTF-8 pbcopy < docs/growth/listing-draft.txt
 
 ## Privacy practices tab (developer dashboard)
 
-Not shown on the listing. The dashboard's **Privacy practices** tab asks for a single-purpose statement and a justification for every permission. v1.9.0 added `alarms` and v1.10.0 adds `favicon`; paste the text below for any permission the dashboard asks about. (`alarms` shows no install-time warning, so updating users are not asked to re-approve anything and the extension is not disabled.)
+Not shown on the listing. The dashboard's **Privacy practices** tab asks for a single-purpose statement and a justification for every permission. v1.9.0 added `alarms` and v2.0.0 adds `favicon`; paste the text below for any permission the dashboard asks about. (`alarms` shows no install-time warning, so updating users are not asked to re-approve anything and the extension is not disabled.)
 
 **Single purpose**
 > SnapTabs saves the user's open browser tabs as named sessions (including tab groups, pinned and incognito tabs) and restores them later, entirely on the user's device.

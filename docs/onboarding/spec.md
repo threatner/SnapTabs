@@ -1,6 +1,6 @@
 # Onboarding
 
-Status: built (milestones 1 and 2 done), as of 2026-11-06. Awaiting the user's live check and the v1.10 release. Branch: `release/v1.10.0`. Ships in v1.10.0.
+Status: built (milestones 1 and 2 done), as of 2026-11-06. Awaiting the user's live check and the v2.0 release. Branch: `release/v2.0.0`. Ships in v2.0.0 (planned as v1.10.0, D25).
 
 ## Why
 
