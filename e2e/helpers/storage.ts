@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { BrowserContext } from '@playwright/test';
 import type { Session, SavedTab, SavedTabGroup, SnapTabsSettings } from '../../src/lib/types';
 import { DEFAULT_SETTINGS } from '../../src/lib/types';
@@ -57,10 +60,18 @@ export function createMockSessionWithGroups(): Session {
   });
 }
 
+// SnapTabs' service worker, matched by URL: newer Chromium builds also run
+// component extensions whose worker is called background.js. The ID of an
+// unpacked extension is derived from its path (see e2e/cdp/harness.mjs).
+const EXTENSION_ID = [...createHash('sha256')
+  .update(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '.output', 'chrome-mv3'))
+  .digest('hex').slice(0, 32)].map((h) => String.fromCharCode(97 + parseInt(h, 16))).join('');
+const isSnapTabs = (url: string) => url === `chrome-extension://${EXTENSION_ID}/background.js`;
+
 export async function getServiceWorker(context: BrowserContext) {
-  let [sw] = context.serviceWorkers();
-  if (!sw) sw = await context.waitForEvent('serviceworker');
-  return sw;
+  const sw = context.serviceWorkers().find((w) => isSnapTabs(w.url()));
+  if (sw) return sw;
+  return context.waitForEvent('serviceworker', { predicate: (w) => isSnapTabs(w.url()) });
 }
 
 export async function seedSessions(context: BrowserContext, sessions: Session[]): Promise<void> {
