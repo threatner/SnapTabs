@@ -54,7 +54,7 @@ SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser
 - **Duplicate snapshot warning**: before saving a manual snapshot from the popup, compares the candidate tab set against the most recent session via a URL-set signature (order-, fragment-, trailing-slash-insensitive; `isRestorable`-filtered on both sides). If matched, shows a confirm modal with "Cancel" / "Save anyway". Context-menu and keyboard-shortcut snapshots bypass the check. Controlled by `warnOnDuplicateSnapshot` (default true).
 - **Excluded domains**: per-domain skip list applied at capture time (manual snapshot, live recording, auto-save on close). Exact host or subdomain match — `github.com` matches `api.github.com`. Input is normalized (strips protocol, `www.`, path, query, casing). Lives in `excludedDomains: string[]` setting.
 - **Storage management**: 10 MB quota with automatic pruning (oldest auto-saves removed first, pinned sessions never pruned). Configurable session limit (1-500). Storage usage bar in settings.
-- **Settings** (D21, `docs/ui-refresh/spec.md`): 11 options in 4 sections plus Help, in the order: **Save automatically** (caption "Off by default. Everything stays on this device."; When I quit the browser [`autoSnapshotOnBrowserClose`, default false], When I close a tab group [`saveClosedGroups`, default false], When I close an incognito window [`autoSnapshotOnClose`], Rolling backup [`autoBackupMinutes`, default Off]), **Saving** (Ask before saving a duplicate [`warnOnDuplicateSnapshot`, default true], Never save these sites [`excludedDomains`, default []]), **Restoring** (Open in a new window, Sleep restored tabs [default true], Incognito tabs open in an incognito window [`restoreIncognitoToIncognito`], Delete a session after restoring it), **Storage & data** (Keep up to N sessions, storage line + bar, Export / Import, "Delete all sessions…" two-click with the count), **Help** (link rows: How to use SnapTabs `guide-link`, Rate SnapTabs `rate-link`, Report a problem `issues-link`), then a "SnapTabs <version>" footer. The two incognito rows show only when `chrome.extension.isAllowedIncognitoAccess()` is true (D24). `showIncognitoWarning` was removed (D20): `getSettings` drops it via `REMOVED_SETTINGS`.
+- **Settings** (D21, `docs/ui-refresh/spec.md`): 11 options in 4 sections plus Help, in the order: **Save automatically** (caption "Off by default. Everything stays on this device."; When I quit the browser [`autoSnapshotOnBrowserClose`, default false], When I close a tab group [`saveClosedGroups`, default false], When I close an incognito window [`autoSnapshotOnClose`], Rolling backup [`autoBackupMinutes`, default Off]), **Saving** (Ask before saving a duplicate [`warnOnDuplicateSnapshot`, default true], Never save these sites [`excludedDomains`, default []]), **Restoring** (Open in a new window, Sleep restored tabs [default true], Incognito tabs open in an incognito window [`restoreIncognitoToIncognito`], Delete a session after restoring it), **Storage & data** (Keep up to N sessions, storage line + bar, Export / Import, "Delete all sessions…" two-click with the count), **Help** (link rows: "SnapTabs is open source: view it on GitHub" `repo-link`, How to use SnapTabs `guide-link`, Rate SnapTabs `rate-link`, Report a problem `issues-link`), then a "SnapTabs <version> · Free and open source" footer. Repo and issues URLs live in `links.ts` (`REPO_URL`, `ISSUES_URL`); the welcome page also links to the repo beside Done (D26). The two incognito rows show only when `chrome.extension.isAllowedIncognitoAccess()` is true (D24). `showIncognitoWarning` was removed (D20): `getSettings` drops it via `REMOVED_SETTINGS`.
 
 ### Permissions (minimal set)
 
@@ -115,7 +115,7 @@ The popup is a fixed 400×600px window with three views:
 
 | Component | File | Role |
 |---|---|---|
-| Header | `src/components/Header.svelte` | Logo, brand name, session count ("N sessions saved"), recording indicator, ? guide link, settings button (GitHub moved to Settings > Help, D23) |
+| Header | `src/components/Header.svelte` | Logo, brand name, session count ("N sessions saved"), recording indicator, ? guide link, GitHub link to the repo ("SnapTabs is open source", D26), settings button |
 | SnapshotBar | `src/components/SnapshotBar.svelte` | Scope dropdown (This window / All windows), Snapshot button (secondary while recording), record toggle (hidden while recording), incognito notice |
 | RecordingBar | `src/components/RecordingBar.svelte` | Timer, tab count, recent tabs preview, primary "Stop & save" (the one stop control) and a quiet Cancel |
 | SessionList | `src/components/SessionList.svelte` | Search input, sort dropdown, scrollable list of SessionCards, empty states |
@@ -177,7 +177,7 @@ Coverage: storage.ts 100%, tabs.ts ~70% (uncovered lines are Chrome group recrea
 
 ### E2E Tests (Playwright)
 
-End-to-end tests use **Playwright** to launch real Chromium (or Brave via `--project=brave`) with the extension loaded. 115 tests across 14 files in `e2e/`:
+End-to-end tests use **Playwright** to launch real Chromium (or Brave via `--project=brave`) with the extension loaded. 116 tests across 14 files in `e2e/`:
 
 ```
 e2e/
