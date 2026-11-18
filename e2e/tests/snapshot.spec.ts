@@ -17,7 +17,8 @@ test.describe('Snapshot', () => {
     // Take a snapshot from the popup
     await popupPage.bringToFront();
     await popupPage.locator('.snap-btn').click();
-    await expect(popupPage.locator('.toast-text')).toHaveText('Snapshot saved!', { timeout: 5_000 });
+    // The first snapshot is confirmed by the "Saved!" tip, not a toast (D22).
+    await expect(popupPage.locator('.tip')).toContainText('Saved!', { timeout: 5_000 });
 
     // Session card should appear with correct tab count
     const card = popupPage.locator('.card').first();
@@ -42,13 +43,13 @@ test.describe('Snapshot', () => {
 
     // Switch to All Windows
     await popupPage.locator('.scope-btn').click();
-    await popupPage.locator('.dropdown-item', { hasText: 'All Windows' }).click();
-    await expect(popupPage.locator('.scope-btn')).toContainText('All Windows');
+    await expect(popupPage.locator('.scope-btn')).toHaveAttribute('aria-expanded', 'true');
+    await popupPage.locator('.dropdown-item', { hasText: 'All windows' }).click();
+    await expect(popupPage.locator('.scope-btn')).toContainText('All windows');
 
     // Snapshot
     await popupPage.locator('.snap-btn').click();
-    await expect(popupPage.locator('.toast-text')).toHaveText('Snapshot saved!', { timeout: 5_000 });
-    await expect(popupPage.locator('.card')).toHaveCount(1);
+    await expect(popupPage.locator('.card')).toHaveCount(1, { timeout: 5_000 });
   });
 
   test('multiple snapshots create separate session cards', async ({ context, popupPage }) => {
@@ -58,8 +59,7 @@ test.describe('Snapshot', () => {
 
     await popupPage.bringToFront();
     await popupPage.locator('.snap-btn').click();
-    await expect(popupPage.locator('.toast-text')).toHaveText('Snapshot saved!', { timeout: 5_000 });
-    await expect(popupPage.locator('.toast-wrap')).not.toBeVisible({ timeout: 5_000 });
+    await expect(popupPage.locator('.card')).toHaveCount(1, { timeout: 5_000 });
 
     // Open another site and snapshot again
     const page2 = await context.newPage();
@@ -68,5 +68,7 @@ test.describe('Snapshot', () => {
     await popupPage.bringToFront();
     await popupPage.locator('.snap-btn').click();
     await expect(popupPage.locator('.card')).toHaveCount(2, { timeout: 5_000 });
+    // Later snapshots get the toast.
+    await expect(popupPage.locator('.toast-text')).toHaveText('Snapshot saved!');
   });
 });

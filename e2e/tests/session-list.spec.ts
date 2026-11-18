@@ -38,6 +38,7 @@ test.describe('Session List', () => {
     const meta = popupPage.locator('.card').first().locator('.card-meta');
     await expect(meta).toContainText('2 tabs');
     await expect(meta).toContainText('1 window');
+    await expect(meta).toContainText('·');
   });
 
   test('search filters sessions by name', async ({ popupPage }) => {
@@ -54,7 +55,8 @@ test.describe('Session List', () => {
 
   test('search shows no results message', async ({ popupPage }) => {
     await popupPage.locator('.search-input').fill('nonexistent query xyz');
-    await expect(popupPage.locator('.empty-title')).toHaveText('No results found');
+    await expect(popupPage.locator('.empty-title')).toHaveText('No matches');
+    await expect(popupPage.locator('.empty-desc')).toContainText('nonexistent query xyz');
   });
 
   test('clearing search restores full list', async ({ popupPage }) => {

@@ -47,7 +47,7 @@
   <div class="rec-bar">
     <div class="rec-info">
       <div class="rec-meta">
-        <span class="rec-dot"></span>
+        <span class="rec-dot" aria-hidden="true"></span>
         <span class="rec-label">REC</span>
         <span class="rec-time">{elapsed}</span>
       </div>
@@ -69,11 +69,11 @@
     {/if}
 
     <div class="rec-actions">
-      <button class="rec-stop" onclick={stop} disabled={stopping}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-        {stopping ? 'Saving...' : 'Stop & Save'}
+      <button class="btn btn-primary rec-stop" onclick={stop} disabled={stopping}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+        {stopping ? 'Saving…' : 'Stop & save'}
       </button>
-      <button class="rec-cancel" onclick={onCancelRecording}>Cancel</button>
+      <button class="btn btn-ghost rec-cancel" onclick={onCancelRecording}>Cancel</button>
     </div>
   </div>
 {/if}
@@ -133,7 +133,7 @@
     align-items: center;
     gap: 8px;
     padding: 3px 8px;
-    border-radius: 4px;
+    border-radius: var(--r-sm);
     background: oklch(0.55 0.2 25 / 0.04);
   }
   .rec-tab-dot {
@@ -155,7 +155,6 @@
     font-size: 10px;
     font-weight: 500;
     color: var(--fg-muted);
-    opacity: 0.5;
     padding-left: 8px;
   }
   .rec-actions {
@@ -163,34 +162,5 @@
     gap: 8px;
     margin-top: 10px;
   }
-  .rec-stop {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--fg);
-    background: var(--secondary);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .rec-stop:hover { background: var(--accent); }
-  .rec-stop:disabled { opacity: 0.4; }
-  .rec-cancel {
-    padding: 6px 14px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--destructive);
-    background: none;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .rec-cancel:hover { background: oklch(0.55 0.2 25 / 0.08); }
+  .rec-stop { flex: 1; }
 </style>

@@ -12,17 +12,38 @@
   --bg: oklch(0.13 0.008 280);
   --card: oklch(0.16 0.008 280);
   --fg: oklch(0.95 0 0);
-  --fg-muted: oklch(0.6 0.01 280);
+  /* 0.65 keeps muted text >= 4.5:1 on --muted surfaces too (0.6 was ~4.4). */
+  --fg-muted: oklch(0.65 0.01 280);
   --primary: oklch(0.65 0.19 255);
   --primary-fg: oklch(0.98 0 0);
   --secondary: oklch(0.22 0.008 280);
   --accent: oklch(0.25 0.012 280);
   --border: oklch(0.28 0.01 280);
   --muted: oklch(0.22 0.008 280);
-  --destructive: oklch(0.55 0.2 25);
+  /* Used as text only (no white-on-red fills remain), so it's lightened to
+     pass 4.5:1 on --bg and --card. */
+  --destructive: oklch(0.63 0.2 25);
   --ring: oklch(0.65 0.19 255);
   --recording: oklch(0.65 0.22 25);
   --warning: oklch(0.75 0.18 85);
+  --success: oklch(0.72 0.16 150);
+  /* Fill behind white text: --primary itself is ~3.3:1 with white, this is
+     ~4.8:1. --primary stays for icons, rings and accents. */
+  --primary-fill: oklch(0.56 0.2 258);
+
+  /* Radii: controls, panels, menus; pills for chips and switches. */
+  --r-sm: 4px;
+  --r: 6px;
+  --r-lg: 8px;
+  --r-pill: 999px;
+
+  /* Type scale. */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 14px;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 body {
@@ -33,6 +54,105 @@ body {
   color: var(--fg);
 }
 
+/* One focus ring for every control (keyboard only). */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Buttons. Components add a variant and, if needed, a size. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, filter 0.15s;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-sm { height: 26px; padding: 0 10px; font-size: var(--text-xs); gap: 5px; }
+.btn-primary { background: var(--primary-fill); color: var(--primary-fg); }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.12); }
+.btn-secondary { background: var(--secondary); border-color: var(--border); color: var(--fg); }
+.btn-secondary:hover:not(:disabled) { background: var(--accent); }
+.btn-ghost { background: none; color: var(--fg-muted); }
+.btn-ghost:hover:not(:disabled) { background: var(--accent); color: var(--fg); }
+.btn-danger-text { background: none; color: var(--destructive); }
+.btn-danger-text:hover:not(:disabled) { background: oklch(0.63 0.2 25 / 0.1); }
+
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--r);
+  background: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.icon-btn:hover { background: var(--accent); color: var(--fg); }
+
+/* Dropdown menus (card and detail "..." menus, snapshot scope). */
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 4px;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: menu-in 0.12s ease;
+}
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg);
+  background: none;
+  border: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.menu-item:hover { background: var(--accent); }
+.menu-item--danger { color: var(--destructive); }
+.menu-item--danger:hover { background: oklch(0.63 0.2 25 / 0.1); }
+.menu-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.menu-backdrop { position: fixed; inset: 0; z-index: 40; }
+
 ::selection {
   background: oklch(0.65 0.19 255 / 0.3);
 }
@@ -42,7 +162,7 @@ body {
 /* Chromium */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--r-pill); }
 ::-webkit-scrollbar-thumb:hover { background: var(--fg-muted); }
 
 /* Toggle switch */
@@ -50,7 +170,7 @@ body {
   appearance: none;
   width: 36px;
   height: 20px;
-  border-radius: 10px;
+  border-radius: var(--r-pill);
   background: var(--muted);
   position: relative;
   cursor: pointer;

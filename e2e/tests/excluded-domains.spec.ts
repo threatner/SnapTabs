@@ -3,17 +3,17 @@ import { reloadPopup } from '../fixtures/extension';
 import { seedSettings, clearStorage } from '../helpers/storage';
 
 test.describe('Excluded Domains — Settings UI', () => {
-  test('section is visible under the Snapshot category', async ({ popupPage }) => {
+  test('section is visible under the Saving category', async ({ popupPage }) => {
     await popupPage.locator('button[aria-label="Settings"]').click();
-    await expect(popupPage.locator('.section-label').filter({ hasText: 'Snapshot' })).toBeVisible();
-    await expect(popupPage.locator('.setting-title').filter({ hasText: 'Excluded domains' })).toBeVisible();
+    await expect(popupPage.locator('.section-label').filter({ hasText: 'Saving' })).toBeVisible();
+    await expect(popupPage.locator('.setting-title').filter({ hasText: 'Never save these sites' })).toBeVisible();
     await expect(popupPage.locator('.domain-input')).toBeVisible();
   });
 
-  test('shows no chips and no count when no domains are configured', async ({ popupPage }) => {
+  test('shows no chips when no domains are configured', async ({ popupPage }) => {
     await popupPage.locator('button[aria-label="Settings"]').click();
     await expect(popupPage.locator('.domain-chip')).toHaveCount(0);
-    await expect(popupPage.locator('.count-pill')).not.toBeVisible();
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(0);
   });
 
   test('adds a domain via the Add button', async ({ popupPage }) => {
@@ -29,7 +29,7 @@ test.describe('Excluded Domains — Settings UI', () => {
 
     await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
     await expect(popupPage.locator('.domain-chip').first()).toContainText('mail.google.com');
-    await expect(popupPage.locator('.count-pill')).toHaveText('1');
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
     await expect(input).toHaveValue('');
   });
 
@@ -65,7 +65,7 @@ test.describe('Excluded Domains — Settings UI', () => {
     await input.fill('foo.com');
     await input.press('Enter');
     await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
-    await expect(popupPage.locator('.count-pill')).toHaveText('1');
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
   });
 
   test('does not add blank input', async ({ popupPage }) => {
@@ -75,7 +75,7 @@ test.describe('Excluded Domains — Settings UI', () => {
     await input.fill('   ');
     await input.press('Enter');
     await expect(popupPage.locator('.domain-chip')).toHaveCount(0);
-    await expect(popupPage.locator('.count-pill')).not.toBeVisible();
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(0);
   });
 
   test('removes a domain via the X button', async ({ popupPage }) => {
@@ -87,12 +87,12 @@ test.describe('Excluded Domains — Settings UI', () => {
     await input.fill('two.com');
     await input.press('Enter');
     await expect(popupPage.locator('.domain-chip')).toHaveCount(2);
-    await expect(popupPage.locator('.count-pill')).toHaveText('2');
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(2);
 
     await popupPage.locator('button[aria-label="Remove one.com"]').click();
     await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
     await expect(popupPage.locator('.domain-chip').first()).toContainText('two.com');
-    await expect(popupPage.locator('.count-pill')).toHaveText('1');
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
   });
 
   test('returns to empty state after removing the last domain', async ({ popupPage }) => {
@@ -105,7 +105,7 @@ test.describe('Excluded Domains — Settings UI', () => {
 
     await popupPage.locator('button[aria-label="Remove only.com"]').click();
     await expect(popupPage.locator('.domain-chip')).toHaveCount(0);
-    await expect(popupPage.locator('.count-pill')).not.toBeVisible();
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(0);
   });
 
   test('excluded domains persist across popup reloads', async ({ popupPage, extensionId }) => {
@@ -121,7 +121,7 @@ test.describe('Excluded Domains — Settings UI', () => {
 
     await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
     await expect(popupPage.locator('.domain-chip').first()).toContainText('persist.com');
-    await expect(popupPage.locator('.count-pill')).toHaveText('1');
+    await expect(popupPage.locator('.domain-chip')).toHaveCount(1);
   });
 });
 

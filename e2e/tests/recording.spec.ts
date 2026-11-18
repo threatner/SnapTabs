@@ -25,7 +25,11 @@ test.describe('Recording', () => {
     await expect(popupPage.locator('.rec-bar')).toBeVisible();
 
     await expect(popupPage.locator('.rec-stop')).toBeVisible();
-    await expect(popupPage.locator('.rec-stop')).toContainText('Stop & Save');
+    await expect(popupPage.locator('.rec-stop')).toContainText('Stop & save');
+    // One way to stop: the record toggle hides, and Stop & save leads (R6).
+    await expect(popupPage.locator('.rec-toggle')).toHaveCount(0);
+    await expect(popupPage.locator('.rec-stop')).toHaveClass(/btn-primary/);
+    await expect(popupPage.locator('.snap-btn')).toHaveClass(/btn-secondary/);
     await expect(popupPage.locator('.rec-cancel')).toBeVisible();
     await expect(popupPage.locator('.rec-cancel')).toHaveText('Cancel');
   });

@@ -24,6 +24,11 @@ test.describe('One-time tips', () => {
     await popupPage.locator('.snap-btn').click();
     await expect(popupPage.locator('.tip')).toContainText('Saved!');
     await expect(popupPage.locator('.tip')).toContainText('Your tabs are still open');
+    // One confirmation per click: the tip replaces the toast (D22). A toast
+    // would be on screen for 2.5 s, so a one-off count (not a retrying
+    // assertion, which would pass once it fades) is the real check.
+    await popupPage.waitForTimeout(300);
+    expect(await popupPage.locator('.toast-wrap').count()).toBe(0);
 
     await popupPage.getByLabel('Dismiss tip').click();
     await expect(popupPage.locator('.tip')).toHaveCount(0);

@@ -2,6 +2,8 @@
   import { tick } from 'svelte';
   import type { Session } from '@/lib/types';
   import { TAB_GROUP_COLORS } from '@/lib/types';
+  import { plural, relativeTime } from '@/lib/format';
+  import SessionMenu from './SessionMenu.svelte';
 
   interface Props {
     session: Session;
@@ -14,13 +16,11 @@
 
   let { session, onClick, onRestore, onDelete, onRename, onTogglePin }: Props = $props();
 
-  let menuOpen = $state(false);
   let renaming = $state(false);
   let renameValue = $state('');
   let renameInput: HTMLInputElement | undefined = $state(undefined);
 
   async function startRename() {
-    menuOpen = false;
     renameValue = session.name;
     renaming = true;
     await tick();
@@ -43,20 +43,6 @@
     e.stopPropagation();
     if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
     if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
-  }
-
-  function relativeTime(ts: number): string {
-    const diff = Date.now() - ts;
-    const s = Math.floor(diff / 1000);
-    if (s < 60) return 'Just now';
-    const m = Math.floor(s / 60);
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    const d = Math.floor(h / 24);
-    if (d === 1) return 'Yesterday';
-    if (d < 7) return `${d}d ago`;
-    return new Date(ts).toLocaleDateString();
   }
 
   let tabCount = $derived(session.tabs.length);
@@ -105,20 +91,13 @@
         <span class="badge badge-auto">Auto</span>
       {/if}
       {#if session.hasIncognitoTabs}
-        <span class="badge badge-private">
-          <span class="private-dot"></span>
-          Private
-        </span>
+        <span class="badge badge-private" title="Includes incognito tabs">Private</span>
       {/if}
     </div>
 
-    <div class="card-meta">
-      <span>{tabCount} tabs</span>
-      <span class="meta-sep">|</span>
-      <span>{session.windowCount} {session.windowCount === 1 ? 'window' : 'windows'}</span>
-      <span class="meta-sep">|</span>
-      <span>{time}</span>
-    </div>
+    <p class="card-meta">
+      {plural(tabCount, 'tab')}<span class="meta-sep" aria-hidden="true">·</span>{plural(session.windowCount, 'window')}<span class="meta-sep" aria-hidden="true">·</span>{time}
+    </p>
 
     {#if displayGroups.length > 0}
       <div class="card-groups">
@@ -136,53 +115,20 @@
     {/if}
   </div>
 
-  <!-- Hover actions -->
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div class="card-actions" onclick={(e) => e.stopPropagation()}>
-    <div class="menu-wrap">
-      <button class="action-btn" onclick={(e) => { e.stopPropagation(); menuOpen = !menuOpen; }} aria-label="Actions">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
-        </svg>
-      </button>
-      {#if menuOpen}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div class="menu-backdrop" onclick={() => menuOpen = false} onkeydown={() => {}}></div>
-        <div class="context-menu">
-          <button class="menu-item" onclick={() => { menuOpen = false; onRestore(session); }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-            </svg>
-            Restore Session
-          </button>
-          <button class="menu-item" onclick={() => { menuOpen = false; onTogglePin(session); }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 17v5"/>
-              <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
-            </svg>
-            {session.pinned ? 'Unpin' : 'Pin to top'}
-          </button>
-          <button class="menu-item" onclick={startRename}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>
-            </svg>
-            Rename
-          </button>
-          <div class="menu-divider"></div>
-          <button class="menu-item menu-item--danger" onclick={() => { menuOpen = false; onDelete(session); }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-            </svg>
-            Delete
-          </button>
-        </div>
-      {/if}
-    </div>
+  <!-- Shown on hover and on keyboard focus -->
+  <div class="card-actions">
+    <SessionMenu
+      name={session.name}
+      pinned={!!session.pinned}
+      onTogglePin={() => onTogglePin(session)}
+      onRename={startRename}
+      onDelete={() => onDelete(session)}
+    />
   </div>
 
   <!-- Always visible: restoring is the main thing to do with a session (D15). -->
   <button
-    class="card-restore"
+    class="btn btn-sm btn-secondary card-restore"
     onclick={(e) => { e.stopPropagation(); onRestore(session); }}
     onkeydown={(e) => e.stopPropagation()}
     aria-label="Restore {session.name}"
@@ -227,7 +173,7 @@
     margin-bottom: 4px;
   }
   .card-name {
-    font-size: 13px;
+    font-size: var(--text-md);
     font-weight: 500;
     color: var(--fg);
     white-space: nowrap;
@@ -249,7 +195,7 @@
     color: var(--fg);
     background: var(--bg);
     border: 1.5px solid var(--primary);
-    border-radius: 4px;
+    border-radius: var(--r-sm);
     outline: none;
     box-shadow: 0 0 0 2px oklch(0.65 0.19 255 / 0.2);
   }
@@ -258,11 +204,8 @@
     font-size: 10px;
     font-weight: 600;
     padding: 1px 6px;
-    border-radius: 4px;
+    border-radius: var(--r-sm);
     flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
     line-height: 16px;
   }
   .badge-auto {
@@ -273,26 +216,15 @@
     background: oklch(0.65 0.22 25 / 0.15);
     color: var(--recording);
   }
-  .private-dot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: currentColor;
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
 
   .card-meta {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
+    font-size: var(--text-sm);
     color: var(--fg-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .meta-sep { color: var(--border); }
+  .meta-sep { margin: 0 6px; opacity: 0.6; }
 
   .card-groups {
     display: flex;
@@ -306,7 +238,7 @@
     align-items: center;
     gap: 4px;
     padding: 2px 8px;
-    border-radius: 4px;
+    border-radius: var(--r-sm);
     background: oklch(0.22 0.008 280 / 0.5);
   }
   .group-dot {
@@ -325,104 +257,25 @@
   }
   .group-count {
     font-size: 10px;
-    color: oklch(0.6 0.01 280 / 0.6);
+    color: var(--fg-muted);
   }
   .groups-more {
     font-size: 10px;
     color: var(--fg-muted);
   }
 
-  /* Hover actions */
+  /* "…" menu: on hover, on keyboard focus anywhere in the card, and while open */
   .card-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
     opacity: 0;
     transition: opacity 0.15s;
   }
-  .card:hover .card-actions { opacity: 1; }
-  .card-restore {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    margin-left: 4px;
-    padding: 5px 10px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--fg);
-    background: var(--secondary);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: all 0.15s;
+  .card:hover .card-actions,
+  .card:focus-within .card-actions {
+    opacity: 1;
   }
-  .card-restore:hover {
+  .card-restore:hover:not(:disabled) {
     border-color: var(--primary);
     color: var(--primary);
-  }
-
-  .action-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
-    border: none;
-    background: none;
-    color: var(--fg-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.1s;
-  }
-  .action-btn:hover { background: var(--accent); color: var(--fg); }
-
-  /* Context menu */
-  .menu-wrap { position: relative; }
-  .menu-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 40;
-  }
-  .context-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    width: 180px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 4px;
-    z-index: 50;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-    animation: menu-in 0.12s ease;
-  }
-  @keyframes menu-in {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .menu-item {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 10px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--fg);
-    background: none;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.1s;
-  }
-  .menu-item:hover { background: var(--accent); }
-  .menu-item--danger { color: var(--destructive); }
-  .menu-item--danger:hover { background: oklch(0.55 0.2 25 / 0.1); }
-  .menu-divider {
-    height: 1px;
-    background: var(--border);
-    margin: 4px 0;
+    background: var(--secondary);
   }
 </style>

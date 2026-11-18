@@ -3,6 +3,8 @@
   import { tick } from 'svelte';
   import type { Session } from '@/lib/types';
   import { TAB_GROUP_COLORS } from '@/lib/types';
+  import { plural, relativeTime } from '@/lib/format';
+  import SessionMenu from './SessionMenu.svelte';
 
   interface Props {
     session: Session;
@@ -15,7 +17,6 @@
 
   let { session, onBack, onRestore, onDelete, onRename, onTogglePin }: Props = $props();
 
-  let confirmDelete = $state(false);
   let renaming = $state(false);
   let renameValue = $state('');
   let renameInput: HTMLInputElement | undefined = $state(undefined);
@@ -78,15 +79,11 @@
 
   function openTab(url: string) { chrome.tabs.create({ url }); }
 
-  function handleDelete() {
-    if (confirmDelete) {
-      onDelete(session);
-      confirmDelete = false;
-    } else {
-      confirmDelete = true;
-      setTimeout(() => { confirmDelete = false; }, 3000);
-    }
-  }
+  // "saved 2h ago", "saved yesterday", "saved Nov 4"
+  let savedWhen = $derived.by(() => {
+    const t = relativeTime(session.timestamp);
+    return t === 'Just now' || t === 'Yesterday' ? t.toLowerCase() : t;
+  });
 
   // All groups start expanded - use $derived to properly track session prop
   let initialGroups = $derived(new Set(session.tabGroups.map((g) => g.id)));
@@ -107,50 +104,56 @@
 </script>
 
 <div class="detail">
-  <!-- Header -->
+  <!-- Header: name on its own row so it isn't squeezed by the actions (R7) -->
   <div class="detail-header">
-    <button class="back-btn" onclick={onBack} aria-label="Back">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/>
-      </svg>
-    </button>
-    <div class="detail-title">
-      {#if renaming}
-        <input
-          bind:this={renameInput}
-          bind:value={renameValue}
-          onkeydown={onRenameKeydown}
-          onblur={commitRename}
-          class="rename-input"
-        />
-      {:else}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <h2 ondblclick={startRename} title="Double-click to rename">{session.name}</h2>
-      {/if}
-      <p>{session.tabs.length} tabs in {session.windowCount} {session.windowCount === 1 ? 'window' : 'windows'}</p>
+    <div class="detail-top">
+      <button class="icon-btn back-btn" onclick={onBack} aria-label="Back" title="Back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+      </button>
+      <div class="detail-title">
+        {#if renaming}
+          <input
+            bind:this={renameInput}
+            bind:value={renameValue}
+            onkeydown={onRenameKeydown}
+            onblur={commitRename}
+            class="rename-input"
+            aria-label="Session name"
+          />
+        {:else}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <h2 ondblclick={startRename} title="Double-click to rename">
+            {#if session.pinned}
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="pin-icon" aria-label="Pinned">
+                <path d="M12 17v5"/>
+                <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
+              </svg>
+            {/if}
+            {session.name}
+          </h2>
+        {/if}
+        <p class="detail-meta">
+          {plural(session.tabs.length, 'tab')}<span class="meta-sep" aria-hidden="true">·</span>{plural(session.windowCount, 'window')}<span class="meta-sep" aria-hidden="true">·</span>saved {savedWhen}
+        </p>
+      </div>
     </div>
-    <button class="restore-btn" onclick={() => onRestore(session)}>
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-      </svg>
-      Restore
-    </button>
-    <button class="pin-btn" class:pin-active={session.pinned} onclick={() => onTogglePin(session)} aria-label={session.pinned ? 'Unpin' : 'Pin'} title={session.pinned ? 'Unpin' : 'Pin to top'}>
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={session.pinned ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 17v5"/>
-        <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
-      </svg>
-    </button>
-    <button class="rename-btn" onclick={startRename} aria-label="Rename">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>
-      </svg>
-    </button>
-    <button class="del-btn" class:del-active={confirmDelete} onclick={handleDelete} aria-label="Delete">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-      </svg>
-    </button>
+    <div class="detail-actions">
+      <button class="btn btn-primary restore-btn" onclick={() => onRestore(session)}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+        </svg>
+        Restore {plural(session.tabs.length, 'tab')}
+      </button>
+      <SessionMenu
+        name={session.name}
+        pinned={!!session.pinned}
+        onTogglePin={() => onTogglePin(session)}
+        onRename={startRename}
+        onDelete={() => onDelete(session)}
+      />
+    </div>
   </div>
 
   <!-- Tab list -->
@@ -174,8 +177,8 @@
   <div class="detail-body">
     {#each groupedTabs.groups as group}
       <div class="tab-group">
-        <button class="group-header" onclick={() => toggleGroup(group.id!)}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-chevron" class:group-expanded={expandedGroups.has(group.id!)}>
+        <button class="group-header" onclick={() => toggleGroup(group.id!)} aria-expanded={expandedGroups.has(group.id!)}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="group-chevron" class:group-expanded={expandedGroups.has(group.id!)}>
             <polyline points="9 18 15 12 9 6"/>
           </svg>
           <span class="group-dot" style="background: {group.color}"></span>
@@ -213,127 +216,68 @@
   }
   .detail-header {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    gap: 10px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
     background: var(--card);
     flex-shrink: 0;
   }
-  .back-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    border: none;
-    background: none;
-    color: var(--fg-muted);
-    cursor: pointer;
+  .detail-top {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.1s;
-    flex-shrink: 0;
+    align-items: flex-start;
+    gap: 8px;
   }
-  .back-btn:hover { background: var(--accent); color: var(--fg); }
+  .back-btn { margin-left: -6px; }
   .detail-title {
     flex: 1;
     min-width: 0;
+    padding-top: 4px;
   }
   .detail-title h2 {
-    font-size: 13px;
-    font-weight: 500;
+    font-size: var(--text-lg);
+    font-weight: 600;
+    line-height: 1.3;
     color: var(--fg);
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
     cursor: text;
   }
-  .detail-title h2:hover { color: var(--primary); }
+  .pin-icon {
+    color: var(--primary);
+    display: inline;
+    vertical-align: -1px;
+    margin-right: 2px;
+  }
   .rename-input {
     width: 100%;
-    padding: 1px 6px;
-    font-size: 13px;
-    font-weight: 500;
+    padding: 2px 6px;
+    font-family: inherit;
+    font-size: var(--text-lg);
+    font-weight: 600;
     color: var(--fg);
     background: var(--bg);
     border: 1.5px solid var(--primary);
-    border-radius: 4px;
+    border-radius: var(--r-sm);
     outline: none;
     box-shadow: 0 0 0 2px oklch(0.65 0.19 255 / 0.2);
   }
-  .detail-title p {
-    font-size: 11px;
+  .detail-meta {
+    margin-top: 2px;
+    font-size: var(--text-xs);
     color: var(--fg-muted);
   }
-  .restore-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--fg);
-    background: var(--secondary);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-    flex-shrink: 0;
-  }
-  .restore-btn:hover { background: var(--accent); }
-  .rename-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    border: none;
-    background: none;
-    color: var(--fg-muted);
-    cursor: pointer;
+  .meta-sep { margin: 0 5px; opacity: 0.6; }
+  .detail-actions {
     display: flex;
     align-items: center;
-    justify-content: center;
-    transition: all 0.1s;
-    flex-shrink: 0;
+    gap: 8px;
   }
-  .rename-btn:hover { background: var(--accent); color: var(--fg); }
-  .pin-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    border: none;
-    background: none;
-    color: var(--fg-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.1s;
-    flex-shrink: 0;
-  }
-  .pin-btn:hover { background: var(--accent); color: var(--fg); }
-  .pin-active {
-    color: var(--primary) !important;
-    background: oklch(0.65 0.19 255 / 0.12);
-  }
-  .del-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    border: none;
-    background: none;
-    color: var(--destructive);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.1s;
-    flex-shrink: 0;
-  }
-  .del-btn:hover { background: oklch(0.55 0.2 25 / 0.1); }
-  .del-active {
-    background: var(--destructive) !important;
-    color: white !important;
-  }
+  .restore-btn { flex: 1; }
 
   .detail-body {
     flex: 1;
@@ -348,9 +292,10 @@
     gap: 8px;
     width: 100%;
     padding: 6px 8px;
-    border-radius: 6px;
+    border-radius: var(--r);
     background: oklch(0.22 0.008 280 / 0.3);
     border: none;
+    font-family: inherit;
     cursor: pointer;
     transition: background 0.1s;
   }
@@ -368,7 +313,7 @@
     flex-shrink: 0;
   }
   .group-title {
-    font-size: 12px;
+    font-size: var(--text-sm);
     font-weight: 500;
     color: var(--fg);
     flex: 1;
@@ -380,7 +325,7 @@
     color: var(--fg-muted);
     background: var(--secondary);
     padding: 1px 6px;
-    border-radius: 4px;
+    border-radius: var(--r-sm);
   }
   .group-tabs {
     margin-left: 20px;
@@ -402,9 +347,10 @@
     gap: 8px;
     width: 100%;
     padding: 5px 8px;
-    border-radius: 4px;
+    border-radius: var(--r-sm);
     background: none;
     border: none;
+    font-family: inherit;
     cursor: pointer;
     transition: background 0.1s;
     text-align: left;
@@ -424,7 +370,7 @@
   }
   .tab-title {
     flex: 1;
-    font-size: 12px;
+    font-size: var(--text-sm);
     color: var(--fg);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -436,5 +382,6 @@
     transition: opacity 0.1s;
     flex-shrink: 0;
   }
-  .tab-item:hover .tab-ext { opacity: 1; }
+  .tab-item:hover .tab-ext,
+  .tab-item:focus-visible .tab-ext { opacity: 1; }
 </style>
