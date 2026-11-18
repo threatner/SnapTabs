@@ -68,7 +68,7 @@
     <img src="/icon/128.png" alt="" width="56" height="56" class="hero-icon" />
     <h1>{fromHelp ? 'How to use SnapTabs' : 'SnapTabs is installed'}</h1>
     <p class="hero-sub">
-      {fromHelp ? 'Save your tabs, close them, and bring them back any time.' : "Here's how it works, plus two quick settings."}
+      {fromHelp ? 'Save your tabs, close them, and bring them back any time.' : "Here's how it works, plus a few quick settings."}
     </p>
   </header>
 

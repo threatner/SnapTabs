@@ -69,7 +69,7 @@ const slides: Slide[] = [
     raw: '4-safety-nets.png',
     out: '4-safety-nets.png',
     eyebrow: 'Safety nets',
-    headline: 'Never lose\nyour tabs.',
+    headline: 'Safety nets,\nif you want them.',
     subhead: 'Save when you quit, keep a rolling backup, save tab groups as you close them. All off until you turn them on.',
   },
   {

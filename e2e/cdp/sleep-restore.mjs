@@ -96,17 +96,23 @@ try {
   });
 
   // Clicking a sleeping tab wakes it. A click also brings its window to the
-  // front; Brave only reloads a discarded tab once it is actually visible.
-  await browser.evalSW(`
-    await chrome.windows.update(${state.a2.windowId}, { focused: true });
-    await chrome.tabs.update(${state.a2.id}, { active: true });`);
-  const woken = await eventually(async () => {
-    const s = await byUrl();
-    assert.equal(s.a2.discarded, false);
-    assert.equal(s.a2.title, 'Example Domain');
-    return s;
-  });
-  check('a sleeping tab wakes up when opened', () => assert.equal(woken.a2.active, true));
+  // front; Brave only reloads a discarded tab once it is actually visible,
+  // and headless Brave never shows a window, so run Brave headed for this.
+  const headlessBrave = !!process.env.HEADLESS && /brave/i.test(process.env.BROWSER_PATH ?? '');
+  if (headlessBrave) {
+    console.log('  - skipped: a sleeping tab wakes up when opened (headless Brave never shows a window; run Brave headed)');
+  } else {
+    await browser.evalSW(`
+      await chrome.windows.update(${state.a2.windowId}, { focused: true });
+      await chrome.tabs.update(${state.a2.id}, { active: true });`);
+    const woken = await eventually(async () => {
+      const s = await byUrl();
+      assert.equal(s.a2.discarded, false);
+      assert.equal(s.a2.title, 'Example Domain');
+      return s;
+    });
+    check('a sleeping tab wakes up when opened', () => assert.equal(woken.a2.active, true));
+  }
 
   for (const [name, fn] of checks) {
     try { fn(); console.log(`  ✓ ${name}`); } catch (e) { failed++; console.log(`  ✘ ${name}\n    ${e.message}`); }

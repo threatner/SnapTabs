@@ -79,6 +79,8 @@ export default defineBackground(() => {
   }
 
   async function refreshWindowCache(windowId: number) {
+    // A delayed refresh can fire after its window closed; don't resurrect it.
+    if (!windowMap.has(windowId)) return;
     try {
       const { tabs, groups, tabIds } = await captureWindow(windowId);
       windowCache.set(windowId, { tabs, groups, tabIds });
@@ -185,6 +187,8 @@ export default defineBackground(() => {
   });
 
   async function handleWindowRemoved(windowId: number) {
+    clearTimeout(delayedRefresh.get(windowId));
+    delayedRefresh.delete(windowId);
     const wasIncognito = windowMap.get(windowId);
     const cap = windowCache.get(windowId);
     const cached = cap?.tabs;
@@ -260,6 +264,14 @@ export default defineBackground(() => {
       closedGroups.tabRemoved(tab.groupId, tab, groupSize, Date.now());
     }
     if (windowMap.has(info.windowId)) refreshWindowCacheSoon(info.windowId);
+  });
+
+  // Tabs (or whole groups) dragged between windows change both windows.
+  chrome.tabs.onDetached.addListener((_tabId, info) => {
+    if (windowMap.has(info.oldWindowId)) refreshWindowCacheSoon(info.oldWindowId);
+  });
+  chrome.tabs.onAttached.addListener((_tabId, info) => {
+    if (windowMap.has(info.newWindowId)) refreshWindowCacheSoon(info.newWindowId);
   });
 
   if (chrome.tabGroups?.onRemoved) {

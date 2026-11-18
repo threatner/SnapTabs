@@ -53,7 +53,7 @@ Run through this for every CWS submission so the listing never lags the source a
 7. **Upload to the CWS Developer Dashboard**:
    - Item page → Package tab → upload the new zip.
    - Store listing tab → Graphic assets → re-upload the 5 screenshots from `screenshots/store/` in file order: `1-restore`, `2-how-it-works`, `3-tab-groups`, `4-safety-nets`, `5-search` (D17; the first two matter most).
-   - Store listing tab → paste the updated long description / features / FAQ from this file.
+   - Store listing tab → paste `docs/growth/listing-draft.txt` into Description (see **Long description**).
    - Privacy practices tab → if the permissions changed, add a justification for each new one (see **Privacy practices tab** below).
    - Save draft, then Submit for review.
 8. **Merge the release PR** to `main` once submitted.
@@ -74,93 +74,15 @@ Set by `description` in `wxt.config.ts`; changing it needs a release.
 
 ## Category
 
-Productivity
-
----
+Productivity › Workflow & Planning (already set in the dashboard).
 
 ## Long description
 
-SnapTabs saves every tab in your Chrome window with one click so you can close everything and bring it back later.
+The description lives in [`docs/growth/listing-draft.txt`](docs/growth/listing-draft.txt): plain ASCII, ready to paste into the dashboard's **Description** field as is. It is the only copy; edit it there (an older copy here went stale and was removed in v1.10). Copy it to the clipboard with a UTF-8 locale so nothing gets garbled:
 
-Open 40 tabs for a research session, save them, close them. Open 12 tabs for tomorrow's standup, save them, close them. Now your browser is quiet and nothing is lost. When you need them, one click restores every tab, pinned, grouped, and in the right window. Restored tabs sleep until you click them, so even a huge session opens instantly.
-
-Unlike other tab managers, SnapTabs keeps tab group names and colors intact, captures incognito tabs, and auto-saves your session when you quit Chrome — with a recovery-snapshot fallback so a crash or an aggressive browser shutdown doesn't cost you your work.
-
-Everything lives on your device. No accounts. No cloud sync. No network requests.
-
-## Features
-
-**One-click snapshot**
-Save the current window or every open window. Name the session, or let SnapTabs timestamp it. Restore from the popup or the right-click menu.
-
-**Duplicate snapshot warning**
-About to save tabs that match your most recent session? SnapTabs asks before creating a copy. Compares URL sets, ignoring order, fragments, and trailing slashes. Turn off in Settings if you'd rather every click save unconditionally.
-
-**Tab groups, preserved**
-Group names, group colors, collapsed state. All of it comes back exactly how you left it — on manual snapshots and on auto-saves when you quit the browser.
-
-**Incognito support**
-Flip the switch in Chrome to let SnapTabs run in incognito, and your private tabs are captured and restored to an incognito window automatically.
-
-**Auto-snapshot on browser close**
-Turn it on in Settings, and the next time you quit Chrome with Cmd+Q or close the last window, your tabs are captured as a "Browser close" session. Multi-window quits are combined into a single session. If the browser kills the extension during shutdown (more common in Brave than Chrome), SnapTabs falls back to a recovery snapshot kept on disk, so your tabs come back on next launch either way. Off by default so nothing is saved without your explicit opt-in.
-
-**Rolling backup**
-Turn it on and SnapTabs keeps one always-fresh backup of your open tabs, refreshed every 5, 15, 30, or 60 minutes. If Chrome crashes, or you close a big window by mistake, the previous backup is kept as its own session so you can bring those tabs back. Never includes incognito windows. Off by default.
-
-**Excluded domains**
-List domains you never want captured — banking, email, internal tools. Tabs from those domains are skipped in snapshots, recordings, and auto-saves. Subdomains match the parent rule, so adding `github.com` also excludes `api.github.com`.
-
-**Session pinning**
-Pin the sessions you rely on. Pinned sessions stay at the top of the list and are never pruned, even when storage fills up.
-
-**Live recording**
-Hit record, start browsing. Every new tab you open is captured in real time with URL dedup, so you can stop recording whenever the research trail ends and save the whole path.
-
-**Omnibox search**
-Type `st` in Chrome's address bar, press space, type a query. SnapTabs searches every tab across every saved session and opens the one you pick. No popup, no clicks.
-
-**Import and export**
-Download every session as a JSON file for backup or to move to another computer. Load the file on the other side and everything is restored, with duplicate-import handling built in.
-
-**Search and sort your sessions**
-Filter by session name, tab title, or URL — works across thousands of saved tabs. Reorder the list by newest, oldest, name, or most tabs from the sort menu next to the search box. Pinned sessions always stay on top.
-
-**Keyboard shortcut**
-`Alt+Shift+S` saves all tabs without opening the popup.
-
-**Flexible restore**
-Restore into the current window or a fresh one. Sessions saved from several windows come back as several windows. Background tabs sleep after restoring and wake when you click them, so big sessions don't slow Chrome down. Auto-delete the session after restore, or keep it. Incognito tabs go to an incognito window when the setting is on.
-
-**Storage built in**
-10 MB quota, visible progress bar, configurable session limit from 1 to 500. Oldest auto-saves are pruned first. Pinned sessions never get pruned.
-
-## Who it's for
-
-- Researchers saving topic-based browsing sessions and returning to them weeks later
-- Developers juggling three project workspaces in parallel
-- Students organizing readings by subject instead of by "which tab was I on"
-- Anyone who has 60+ tabs open right now and feels it
-
-## Privacy
-
-- All data stays on your device
-- No cloud sync, no backend service
-- No analytics, no tracking, no outbound requests
-- No account required
-- If you uninstall, an optional one-question feedback form opens. Nothing is sent with it
-- Open source. Every line of code is auditable on GitHub
-
-## Permissions (six, all minimum-necessary)
-
-- **tabs**: read the tabs you have open, create tabs when you restore a session
-- **tabGroups**: preserve and recreate tab group names and colors
-- **storage**: keep sessions and settings on your device
-- **contextMenus**: the "Save all tabs" item on the right-click icon menu
-- **alarms**: schedule the optional rolling backup
-- **favicon**: show your saved tabs' site icons from the browser's local icon cache, so no request leaves your browser
-
-No network permission. No history permission. No cookie or identity access.
+```bash
+LANG=en_US.UTF-8 pbcopy < docs/growth/listing-draft.txt
+```
 
 ## Privacy practices tab (developer dashboard)
 
@@ -184,31 +106,3 @@ Not shown on the listing. The dashboard's **Privacy practices** tab asks for a s
 
 **Data usage:** unchanged by this release. The extension still transmits no user data. The uninstall form is a Google Form the browser opens after uninstall; anything in it is typed and submitted voluntarily by the person, and the extension attaches nothing to it.
 
-## FAQ
-
-**Does SnapTabs send my browsing data anywhere?**
-No. Storage is local, and SnapTabs makes no network requests of its own: even the site icons in your saved sessions come from your browser's local icon cache. You can verify this in Chrome's network inspector, or in the source on GitHub.
-
-**What happens to my tabs if Chrome (or Brave) crashes?**
-Turn on "Save on browser close" in Settings (it's off by default). While it's on, every window's tabs land in a combined "Browser close" session when the last window closes — including the multi-window Cmd+Q case. If the browser kills the extension's service worker mid-shutdown before the save lands (Brave is more aggressive about this than Chrome), SnapTabs falls back to a continuously-updated snapshot it keeps in local storage. On the next browser start, that snapshot is promoted to a "Browser close (recovered)" session. Either way your tabs come back. You can also turn on the rolling backup, which keeps your open tabs saved every few minutes and holds on to the pre-crash copy after a restart. For critical tab sets, also take a manual snapshot (`Alt+Shift+S`) as belt-and-braces.
-
-**Will my tab groups come back?**
-Yes. Name, color, collapsed state — on manual snapshots and on browser-close auto-saves alike. Pinned tabs come back pinned. The only thing SnapTabs cannot restore is the exact window position, because Chrome does not expose that to extensions.
-
-**Can I sync my sessions across devices?**
-Not automatically. Use Settings > Data > Export to download a JSON file, then Import on the other machine.
-
-**How big can my library get?**
-10 MB local storage and up to 500 sessions, configurable. Expect to comfortably hold thousands of tabs across hundreds of sessions before hitting the cap. The Settings panel shows you a live usage bar.
-
-**Does it work in Chromium-based browsers like Brave or Arc?**
-Yes, any Chromium browser that supports Manifest V3. The v1.5.0 release specifically hardened browser-close reliability on Brave, where the extension's service worker can be terminated more aggressively during shutdown than in Chrome. Firefox requires a separate build that isn't shipped today.
-
-**Is it really free?**
-Yes. No paid tier. The code is MIT-licensed on GitHub.
-
-## Open source
-
-Source code: https://github.com/threatner/SnapTabs
-
-Bug reports and feature requests: https://github.com/threatner/SnapTabs/issues
