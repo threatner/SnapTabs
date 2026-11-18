@@ -33,6 +33,7 @@
 ### Decision log (v2.0)
 
 - 2026-11-18: User: "We will do a big release itself", "and call it 2.0.0 maybe", "after ui changes show me what all you changed". Built the whole UI review in one go (D20 to D25). Before/after renders of every popup state and the welcome page were compared before shipping.
+- 2026-11-18: User: "I want to let people know that this is open source. I want people to go to GitHub as well", "in the same release itself". GitHub icon back in the header (now to the repo, titled as open source), a first Help row in Settings, "Free and open source" in the Settings footer, a line on the welcome page (D26, replaces D23).
 - 2026-11-18: Welcome page: step numbers inline with headings and replicas on the right, so every card's text starts at the same edge (fixes the two-column misalignment on desktop and the narrow column on phones together).
 
 
