@@ -39,9 +39,10 @@ const NO_RATING_BANNER = { [KEYS.meta]: { statsBackfilled: true, ratingPromptDon
 async function waitForPopupReady(page: import('@playwright/test').Page) {
   await page.waitForSelector('.popup', { state: 'visible' });
   await page.waitForFunction(() => !document.querySelector('.loader'), { timeout: 10_000 });
-  // Park the mouse in an empty corner so no card is captured in its hover
-  // state (the previous step's click leaves it over a card).
-  await page.mouse.move(395, 595);
+  // Park the mouse in the header's top-left corner, which has no hover styles
+  // (the bottom-right corner lands on a card), so nothing is captured in its
+  // hover state (the previous step's click leaves it over a card).
+  await page.mouse.move(4, 4);
   // Small settle pause so animations land before screenshot
   await page.waitForTimeout(250);
 }
@@ -117,6 +118,8 @@ async function main() {
   await waitForPopupReady(popup);
   await popup.locator('.card').filter({ hasText: 'Project Phoenix' }).click();
   await popup.waitForSelector('.detail', { state: 'visible' });
+  // The click leaves the mouse over a tab row of the detail view.
+  await popup.mouse.move(4, 4);
   await popup.waitForTimeout(250);
   await popup.screenshot({ path: path.join(RAW_DIR, '3-tab-groups.png') });
 
