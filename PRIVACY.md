@@ -1,6 +1,6 @@
 # Privacy Policy for SnapTabs
 
-**Last updated:** September 25, 2026
+**Last updated:** November 18, 2026
 
 ## What SnapTabs Does
 
@@ -57,6 +57,7 @@ SnapTabs requests only the permissions necessary for its functionality:
 | `storage` | Persist sessions and settings locally |
 | `contextMenus` | Provide right-click "Save all tabs" option |
 | `alarms` | Schedule the optional rolling backup |
+| `favicon` | Show saved tabs' site icons from the browser's local icon cache, without any network request |
 
 ## Uninstall Feedback
 

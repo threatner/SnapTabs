@@ -34,7 +34,7 @@ async function freePort() {
   throw new Error('no free debugging port');
 }
 
-export async function launch({ port, ext = DEFAULT_EXT, userDataDir } = {}) {
+export async function launch({ port, ext = DEFAULT_EXT, userDataDir, args = [] } = {}) {
   port ??= await freePort();
   const dir = userDataDir ?? mkdtempSync(path.join(tmpdir(), 'snaptabs-cdp-'));
   const proc = spawn(process.env.BROWSER_PATH || chromium.executablePath(), [
@@ -45,6 +45,7 @@ export async function launch({ port, ext = DEFAULT_EXT, userDataDir } = {}) {
     '--no-sandbox',
     // HEADLESS=1: Chromium's new headless mode, which still runs extensions.
     ...(process.env.HEADLESS ? ['--headless=new', '--window-size=1280,800'] : []),
+    ...args,
     'about:blank',
   ], { stdio: 'ignore' });
   const base = `http://127.0.0.1:${port}`;

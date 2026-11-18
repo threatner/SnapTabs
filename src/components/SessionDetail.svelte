@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { localFaviconUrl } from '@/lib/favicon';
   import { tick } from 'svelte';
   import type { Session } from '@/lib/types';
   import { TAB_GROUP_COLORS } from '@/lib/types';
@@ -70,10 +71,9 @@
     return { groups, ungrouped };
   });
 
-  function faviconUrl(tab: { url: string; favIconUrl?: string }): string {
-    if (tab.favIconUrl?.startsWith('http')) return tab.favIconUrl;
-    try { return `https://www.google.com/s2/favicons?domain=${new URL(tab.url).hostname}&sz=16`; }
-    catch { return ''; }
+  // Local favicon cache only: no request leaves the browser (D14).
+  function faviconUrl(tab: { url: string }): string {
+    return localFaviconUrl(tab.url);
   }
 
   function openTab(url: string) { chrome.tabs.create({ url }); }

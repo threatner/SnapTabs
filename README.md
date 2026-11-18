@@ -18,7 +18,7 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 | Browser | Chrome 93+ |
 | Manifest | V3 |
 | Storage | Local only. No cloud sync |
-| Permissions | 5 (tabs, tabGroups, storage, contextMenus, alarms) |
+| Permissions | 6 (tabs, tabGroups, storage, contextMenus, alarms, favicon) |
 | Network requests | None |
 | Price | Free |
 | License | MIT |
@@ -75,7 +75,7 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 ### Is any of my data uploaded?
 
-No. Everything is stored in `chrome.storage.local` on your device. There is no cloud sync, no backend service, no analytics. The extension does not make outbound network requests.
+No. Everything is stored in `chrome.storage.local` on your device. There is no cloud sync, no backend service, no analytics. The extension does not make network requests of its own; even saved tabs' site icons come from the browser's local cache.
 
 ### What happens to my tabs if Chrome (or Brave) crashes?
 
@@ -204,6 +204,7 @@ e2e/                    # E2E tests (Playwright)
 | `storage` | Store sessions and settings on your device |
 | `contextMenus` | "Save all tabs" right-click item on the extension icon |
 | `alarms` | Schedule the optional rolling backup |
+| `favicon` | Show saved tabs' site icons from the browser's local cache (no network) |
 
 No network, no history, no cookies, no identity. Full detail in [PRIVACY.md](PRIVACY.md).
 

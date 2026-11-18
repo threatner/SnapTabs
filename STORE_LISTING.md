@@ -147,19 +147,20 @@ Restore into the current window or a fresh one. Sessions saved from several wind
 - If you uninstall, an optional one-question feedback form opens. Nothing is sent with it
 - Open source. Every line of code is auditable on GitHub
 
-## Permissions (five, all minimum-necessary)
+## Permissions (six, all minimum-necessary)
 
 - **tabs**: read the tabs you have open, create tabs when you restore a session
 - **tabGroups**: preserve and recreate tab group names and colors
 - **storage**: keep sessions and settings on your device
 - **contextMenus**: the "Save all tabs" item on the right-click icon menu
 - **alarms**: schedule the optional rolling backup
+- **favicon**: show your saved tabs' site icons from the browser's local icon cache, so no request leaves your browser
 
 No network permission. No history permission. No cookie or identity access.
 
 ## Privacy practices tab (developer dashboard)
 
-Not shown on the listing. The dashboard's **Privacy practices** tab asks for a single-purpose statement and a justification for every permission. v1.9.0 adds `alarms`; paste the text below. (`alarms` shows no install-time warning, so updating users are not asked to re-approve anything and the extension is not disabled.)
+Not shown on the listing. The dashboard's **Privacy practices** tab asks for a single-purpose statement and a justification for every permission. v1.9.0 added `alarms` and v1.10.0 adds `favicon`; paste the text below for any permission the dashboard asks about. (`alarms` shows no install-time warning, so updating users are not asked to re-approve anything and the extension is not disabled.)
 
 **Single purpose**
 > SnapTabs saves the user's open browser tabs as named sessions (including tab groups, pinned and incognito tabs) and restores them later, entirely on the user's device.
@@ -173,6 +174,7 @@ Not shown on the listing. The dashboard's **Privacy practices** tab asks for a s
 | `storage` | Store saved sessions and settings locally with chrome.storage. Nothing is synced or sent off the device. |
 | `contextMenus` | Adds a "Save all tabs with SnapTabs" item to the extension icon's right-click menu. |
 | `alarms` | Schedules the optional Rolling backup, which the user can turn on to refresh a local backup of their open tabs every 5 to 60 minutes. No network activity. |
+| `favicon` | Shows the site icons of saved tabs from Chrome's local favicon cache, so viewing saved sessions makes no network requests. Its warning is covered by `tabs`. |
 
 **Remote code:** No, I am not using remote code.
 
@@ -181,7 +183,7 @@ Not shown on the listing. The dashboard's **Privacy practices** tab asks for a s
 ## FAQ
 
 **Does SnapTabs send my browsing data anywhere?**
-No. Storage is local. The extension makes zero outbound requests. You can verify this in Chrome's network inspector, or in the source on GitHub.
+No. Storage is local, and SnapTabs makes no network requests of its own: even the site icons in your saved sessions come from your browser's local icon cache. You can verify this in Chrome's network inspector, or in the source on GitHub.
 
 **What happens to my tabs if Chrome (or Brave) crashes?**
 Turn on "Save on browser close" in Settings (it's off by default). While it's on, every window's tabs land in a combined "Browser close" session when the last window closes — including the multi-window Cmd+Q case. If the browser kills the extension's service worker mid-shutdown before the save lands (Brave is more aggressive about this than Chrome), SnapTabs falls back to a continuously-updated snapshot it keeps in local storage. On the next browser start, that snapshot is promoted to a "Browser close (recovered)" session. Either way your tabs come back. You can also turn on the rolling backup, which keeps your open tabs saved every few minutes and holds on to the pre-crash copy after a restart. For critical tab sets, also take a manual snapshot (`Alt+Shift+S`) as belt-and-braces.

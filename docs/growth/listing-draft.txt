@@ -45,7 +45,7 @@ PRIVATE BY DESIGN
 
 - Free. No paid tier, no account, no sign-in
 - Your sessions are stored on your device. No cloud sync, no analytics, no ads
-- Five permissions, listed below. SnapTabs does not request access to your browsing history, cookies or website content
+- Six permissions, listed below. SnapTabs does not request access to your browsing history, cookies or website content
 - If you uninstall, an optional one-question feedback form opens. Nothing is attached to it
 - Open source under the MIT license, so anyone can read the code on GitHub
 
@@ -56,6 +56,7 @@ PERMISSIONS
 - storage: keep sessions and settings on your device
 - contextMenus: the "Save all tabs" item on the toolbar icon menu
 - alarms: run the optional rolling backup on schedule
+- favicon: show your saved tabs' site icons from the browser's local icon cache, so no request leaves your browser
 
 WORKS IN
 
