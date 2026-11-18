@@ -148,7 +148,14 @@ export async function launch({ port, ext = DEFAULT_EXT, userDataDir, args = [] }
       const url = `chrome-extension://${extensionId}/${page}`;
       await fetch(`${base}/json/new?${encodeURIComponent(url)}`, { method: 'PUT' });
       const target = await waitForTarget((t) => t.type === 'page' && t.url === url);
-      return (body) => evaluate(target, body);
+      const run = (body) => evaluate(target, body);
+      // The target can show the URL before the extension context exists (seen
+      // on a slow CI runner: chrome.runtime undefined), so wait for its APIs.
+      await eventually(async () => {
+        const ready = await run(`return document.readyState === 'complete' && typeof chrome?.runtime?.sendMessage === 'function';`);
+        if (!ready) throw new Error(`${page} not ready`);
+      }, 15_000);
+      return run;
     },
     /** Quit the browser gracefully so the profile is flushed to disk. */
     async close() {
