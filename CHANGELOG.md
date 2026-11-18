@@ -4,18 +4,34 @@ All notable changes to SnapTabs are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.10.0] - 2026-11-18
+## [2.0.0] - 2026-11-18
+
+Planned as 1.10.0; the redesign below made it 2.0.0.
+
+### Redesigned
+
+- **Simpler Settings.** Four sections instead of seven: **Save automatically**, **Saving**, **Restoring**, **Storage & data**, plus **Help**. Each option says what happens ("When I quit the browser", "When I close a tab group", "Never save these sites"). The two incognito options only appear if SnapTabs is allowed in incognito. The version number moved to the bottom.
+- **Removed a setting that did nothing.** "Incognito save warning" never had any effect; the notice about incognito tabs in an All windows snapshot still shows.
+- **Session details** put the name on its own line (up to two lines), with a big **Restore N tabs** button and a "…" menu (Pin, Rename, Delete), the same menu as on the list.
+- **While recording**, **Stop & save** is the main button, Cancel is quieter, and there's only one way to stop.
+- **Calmer feedback.** Messages appear at the bottom on a dark card instead of covering the header, and your first snapshot shows only the "Saved!" tip instead of a tip and a message.
+- **Easier to read.** Dates read "Nov 4" instead of "11/4/2026", details are separated with dots, "1 tab" is no longer "1 tabs", muted text and buttons have stronger contrast, and wording is in plain sentence case ("This window", "All windows").
+- **The card "…" menu** no longer repeats Restore (it's already a button on every card).
+- **Keyboard and accessibility.** A visible focus ring everywhere, the "…" menu shows when a card has keyboard focus, menus close with Escape, the duplicate-snapshot dialog focuses "Save anyway" and closes with Escape, buttons have screen-reader labels, and animations stop when your system asks for reduced motion. Only recording still pulses.
+- **The popup header** shows just the guide (**?**) and Settings; "Report a problem" lives in Settings > Help.
+- **"Clear All Data"** is now "Delete all sessions…", which is what it does, and tells you how many sessions it will delete before you confirm.
+- **Welcome page** options use the same names as Settings, and every card's text lines up, on desktop and phone widths.
 
 ### Added
 
 - **"How SnapTabs works" guide.** The welcome page now opens with three one-line steps (save your tabs, close them, bring them back), each next to a replica of the real popup button.
-- **Reopen the guide any time.** A **?** button in the popup header and a "How to use SnapTabs" card in **Settings > Help & feedback** open it as "How to use SnapTabs". Users who installed before v1.9 can now find it too.
+- **Reopen the guide any time.** A **?** button in the popup header and a "How to use SnapTabs" link in **Settings > Help** open it as "How to use SnapTabs". Users who installed before v1.9 can now find it too.
 - **Two one-time tips.** After your first snapshot: "Saved! Your tabs are still open…". After your first restore, if it put tabs to sleep: "Restored tabs are asleep…" with a shortcut to Settings. Each shows once, can be dismissed, and takes the rating banner's place until then. Long-time users never get first-snapshot advice.
 
 - **Restore in one click from the list.** Every session card now has a visible **Restore** button (it used to be hidden in a hover menu).
 - **No duplicate tabs on restore.** Restoring into the current window skips tabs that are already open there. If every tab is already open, SnapTabs says so instead of opening copies.
 - **Site icons without the network.** Saved tabs' icons now come from the browser's local icon cache, so viewing a session makes no network requests (previously icons loaded from each site, with a Google fallback). Adds the `favicon` permission, which shows no new prompt.
-- **Save tab groups when you close them** (off by default, Settings > Auto-Save, also on the welcome page). Chrome doesn't let extensions see a group after it's closed, so SnapTabs keeps a copy at the moment you close a whole group, named "<group> (closed group)" with its colour. Ungrouping, closing tabs one by one, and closing the window don't count. Closing the same group again with the same tabs replaces the earlier copy. Works even if SnapTabs' background worker was asleep.
+- **Save tab groups when you close them** (off by default, Settings > Save automatically > "When I close a tab group", also on the welcome page). Chrome doesn't let extensions see a group after it's closed, so SnapTabs keeps a copy at the moment you close a whole group, named "<group> (closed group)" with its colour. Ungrouping, closing tabs one by one, and closing the window don't count. Closing the same group again with the same tabs replaces the earlier copy. Works even if SnapTabs' background worker was asleep.
 
 ### Changed
 
@@ -27,6 +43,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `npm run check` is the one gate (docs check, type check, unit tests, build); CI runs it. Specs live in `docs/<feature>/spec.md` and decisions in `docs/decisions/README.md`.
 - `npm run test:e2e:headless` and `test:e2e:cdp:headless` run the browser suites without opening windows.
 - `restoreSession` now returns how many tabs it put to sleep.
+- Shared design tokens (radii, type scale, `--primary-fill`, `--success`) and button, icon-button and menu classes in `style.css`; one `Banner` component for tips and the rating prompt; one `SessionMenu` for cards and session details; `src/lib/format.ts` for dates, plurals and sizes. Spec: `docs/ui-refresh/spec.md`.
 - The window cache records tab ids, refreshes after tab removals and group changes are delayed 300 ms, and grouping a tab now refreshes the cache (it didn't before).
 
 ## [1.9.0] - 2026-09-25

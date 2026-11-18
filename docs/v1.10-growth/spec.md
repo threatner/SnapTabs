@@ -1,6 +1,6 @@
 # v1.10 growth fixes
 
-Status: spec, as of 2026-11-18. Branch: `release/v1.10.0`. Ships in v1.10.0. Research: [ASO plan](../growth/aso-2026-11-18.md), [UX review](../growth/ux-review-2026-11-18.md).
+Status: spec, as of 2026-11-18. Branch: `release/v2.0.0`. Ships in v2.0.0 (first planned as v1.10.0, D25). Research: [ASO plan](../growth/aso-2026-11-18.md), [UX review](../growth/ux-review-2026-11-18.md).
 
 ## Why
 

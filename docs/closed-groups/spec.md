@@ -1,6 +1,6 @@
 # Save tab groups when they're closed
 
-Status: built (milestones 1 and 2 done), as of 2026-11-18. Awaiting the user's live check with a real **Close group** click. Branch: `release/v1.10.0`. Ships in v1.10.0.
+Status: built (milestones 1 and 2 done), as of 2026-11-18. Awaiting the user's live check with a real **Close group** click. Branch: `release/v2.0.0`. Ships in v2.0.0 (planned as v1.10.0, D25).
 
 ## Why
 
@@ -26,7 +26,7 @@ Chrome gives extensions no way to read a group after it's closed (documented: `c
 
 | Requirement | Acceptance criterion |
 | --- | --- |
-| R1. Opt-in setting | Settings > Auto-Save has "Save tab groups when you close them", off by default. The welcome page's auto-save step offers the same switch. |
+| R1. Opt-in setting | Settings > Save automatically has "When I close a tab group" (named "Save tab groups when you close them" before the v2.0 UI refresh), off by default. The welcome page's auto-save step offers the same switch. |
 | R2. Save on a whole-group close | With R1 on, closing a whole tab group in a normal window saves a session with exactly that group's tabs (URLs, titles, order) and the group's name, colour and collapsed state, named "<group name> (closed group)" ("Unnamed group (closed group)" if it had no name), marked Auto. |
 | R3. Only real closes | No session is saved when: the group is ungrouped (tabs stay open); its tabs are closed one at a time (the removals span more than 500 ms), or fewer than 2 tabs close together (D18); its window or the browser closes; the window is incognito; the setting is off. |
 | R4. Survives a sleeping service worker | Closing a group while SnapTabs' service worker is stopped still saves it. |
