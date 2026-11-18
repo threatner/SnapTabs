@@ -9,7 +9,7 @@ async function openWelcome(page: Page, extensionId: string) {
   await page.goto(`chrome-extension://${extensionId}/welcome.html`);
   await expect(page.locator('h1')).toHaveText('SnapTabs is installed');
   // Toggles are disabled until stored settings have loaded.
-  await expect(page.getByLabel('Save my tabs when I close the browser')).toBeEnabled();
+  await expect(page.getByLabel('When I quit the browser')).toBeEnabled();
 }
 
 async function storedSettings(page: Page) {
@@ -20,8 +20,8 @@ test.describe('Welcome page', () => {
   test('shows the two steps, with both safety options off by default', async ({ popupPage, extensionId }) => {
     await openWelcome(popupPage, extensionId);
     await expect(popupPage.locator('.step')).toHaveCount(2);
-    await expect(popupPage.getByLabel('Save my tabs when I close the browser')).not.toBeChecked();
-    await expect(popupPage.getByLabel('Keep a rolling backup')).not.toBeChecked();
+    await expect(popupPage.getByLabel('When I quit the browser')).not.toBeChecked();
+    await expect(popupPage.getByLabel('Rolling backup every 15 minutes')).not.toBeChecked();
   });
 
   test('explains how to pin, showing the extensions and pin icons', async ({ popupPage, extensionId }) => {
@@ -33,7 +33,7 @@ test.describe('Welcome page', () => {
 
   test('turning on save-on-close writes the setting', async ({ popupPage, extensionId }) => {
     await openWelcome(popupPage, extensionId);
-    await popupPage.getByLabel('Save my tabs when I close the browser').click();
+    await popupPage.getByLabel('When I quit the browser').click();
     await expect.poll(async () => (await storedSettings(popupPage)).autoSnapshotOnBrowserClose).toBe(true);
   });
 
@@ -42,7 +42,7 @@ test.describe('Welcome page', () => {
     await site.goto('https://example.com/?snaptabs=welcome');
     await openWelcome(popupPage, extensionId);
 
-    await popupPage.getByLabel('Keep a rolling backup').click();
+    await popupPage.getByLabel('Rolling backup every 15 minutes').click();
     await expect.poll(async () => (await storedSettings(popupPage)).autoBackupMinutes).toBe(15);
 
     const sw = await getServiceWorker(context);
@@ -51,15 +51,15 @@ test.describe('Welcome page', () => {
       return sessions.filter((s: { isBackup?: boolean }) => s.isBackup).length;
     }, KEYS.sessions)).toBe(1);
 
-    await popupPage.getByLabel('Keep a rolling backup').click();
+    await popupPage.getByLabel('Rolling backup every 15 minutes').click();
     await expect.poll(async () => (await storedSettings(popupPage)).autoBackupMinutes).toBe(0);
     await site.close();
   });
 
   test('toggling both options quickly keeps both', async ({ popupPage, extensionId }) => {
     await openWelcome(popupPage, extensionId);
-    await popupPage.getByLabel('Save my tabs when I close the browser').click();
-    await popupPage.getByLabel('Keep a rolling backup').click();
+    await popupPage.getByLabel('When I quit the browser').click();
+    await popupPage.getByLabel('Rolling backup every 15 minutes').click();
     await expect.poll(async () => {
       const s = await storedSettings(popupPage);
       return [s.autoSnapshotOnBrowserClose, s.autoBackupMinutes];
@@ -69,8 +69,8 @@ test.describe('Welcome page', () => {
   test('reflects settings that are already on', async ({ context, popupPage, extensionId }) => {
     await seedSettings(context, { autoSnapshotOnBrowserClose: true, autoBackupMinutes: 30 });
     await openWelcome(popupPage, extensionId);
-    await expect(popupPage.getByLabel('Save my tabs when I close the browser')).toBeChecked();
-    await expect(popupPage.getByLabel('Keep a rolling backup')).toBeChecked();
+    await expect(popupPage.getByLabel('When I quit the browser')).toBeChecked();
+    await expect(popupPage.getByLabel('Rolling backup every 15 minutes')).toBeChecked();
   });
 
   test('Done closes the tab', async ({ context, extensionId }) => {
@@ -120,14 +120,14 @@ test.describe('Help entry points', () => {
 
   test('Settings has a "How to use SnapTabs" card that opens the guide', async ({ context, popupPage, extensionId }) => {
     await popupPage.locator('button[aria-label="Settings"]').click();
-    await expect(popupPage.locator('.section-label').filter({ hasText: 'Help & feedback' })).toBeVisible();
+    await expect(popupPage.locator('.section-label').filter({ hasText: 'Help' })).toBeVisible();
     await popupPage.getByTestId('guide-link').click();
     await openedGuide(context, extensionId);
   });
 
-  test('turning on "Save tab groups when I close them" writes the setting', async ({ popupPage, extensionId }) => {
+  test('turning on "When I close a tab group" writes the setting', async ({ popupPage, extensionId }) => {
     await openWelcome(popupPage, extensionId);
-    const toggle = popupPage.getByLabel('Save tab groups when I close them');
+    const toggle = popupPage.getByLabel('When I close a tab group');
     await expect(toggle).not.toBeChecked();
     await toggle.click();
     await expect.poll(async () => (await storedSettings(popupPage)).saveClosedGroups).toBe(true);

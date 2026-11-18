@@ -17,8 +17,21 @@ test.describe('Popup Loading', () => {
     await expect(popupPage.locator('button[aria-label="Settings"]')).toBeVisible();
   });
 
-  test('scope defaults to Current Window', async ({ popupPage }) => {
-    await expect(popupPage.locator('.scope-btn')).toContainText('Current Window');
+  test('scope defaults to This window', async ({ popupPage }) => {
+    await expect(popupPage.locator('.scope-btn')).toContainText('This window');
+  });
+
+  test('header has only the guide and Settings buttons (D23)', async ({ popupPage }) => {
+    const actions = popupPage.locator('.header .actions').locator('a, button');
+    await expect(actions).toHaveCount(2);
+    await expect(popupPage.getByRole('link', { name: 'How to use SnapTabs' })).toBeVisible();
+    await expect(popupPage.locator('.header a[href*="github.com"]')).toHaveCount(0);
+  });
+
+  test('record button is labelled for screen readers', async ({ popupPage }) => {
+    const rec = popupPage.getByRole('button', { name: 'Record new tabs' });
+    await expect(rec).toBeVisible();
+    await expect(rec).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('snapshot button is visible and enabled', async ({ popupPage }) => {

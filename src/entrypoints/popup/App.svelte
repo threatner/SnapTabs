@@ -18,8 +18,7 @@
   import SessionDetail from '@/components/SessionDetail.svelte';
   import Settings from '@/components/Settings.svelte';
   import Toast from '@/components/Toast.svelte';
-  import RatingPrompt from '@/components/RatingPrompt.svelte';
-  import TipBanner from '@/components/TipBanner.svelte';
+  import Banner from '@/components/Banner.svelte';
 
   type View = 'main' | 'detail' | 'settings';
 
@@ -167,11 +166,16 @@
   }
 
   async function runSnapshot(windowId: number | undefined, name: string) {
+    const tipBefore = tip;
     await sendMessage({ action: 'snapshot', name: name || undefined, windowId });
     await refresh();
-    // A first snapshot queues the "Saved!" tip; show it right away.
+    // A first snapshot queues the "Saved!" tip; show it right away, in place
+    // of the toast (one confirmation per click, D22). Only the click that
+    // brings the tip up skips the toast; later saves get their toast even if
+    // the tip is still showing.
     try { applyMeta(await getMeta()); } catch {}
-    toast('Snapshot saved!');
+    const tipJustAppeared = tip === 'firstSnapshot' && tipBefore !== 'firstSnapshot';
+    if (!tipJustAppeared) toast('Snapshot saved!');
   }
 
   function handleDismissTip() {
@@ -304,8 +308,7 @@
       if (result.imported === 0) {
         toast('Nothing new to import', 'warning');
       } else {
-        const noun = result.imported === 1 ? 'snapshot' : 'snapshots';
-        toast(`${result.imported} ${noun} imported`);
+        toast(`Imported ${result.imported} ${result.imported === 1 ? 'session' : 'sessions'}`);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Import failed';
@@ -383,22 +386,28 @@
     view = 'detail';
   }
 
+  function focusOnMount(node: HTMLElement) {
+    node.focus();
+  }
+
   onMount(() => { loadData(); });
 </script>
+
+<svelte:window onkeydown={(e) => { if (dupModalOpen && e.key === 'Escape') { e.preventDefault(); cancelDuplicateSnapshot(); } }} />
 
 <Toast visible={toastVisible} message={toastMessage} type={toastType} />
 
 {#if dupModalOpen}
   <div class="modal-backdrop" role="presentation" onclick={cancelDuplicateSnapshot} onkeydown={() => {}}>
-    <div class="modal" role="dialog" tabindex="-1" aria-labelledby="dup-title" onclick={(e) => e.stopPropagation()} onkeydown={() => {}}>
+    <div class="modal" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="dup-title" aria-describedby="dup-body" onclick={(e) => e.stopPropagation()} onkeydown={() => {}}>
       <h3 id="dup-title" class="modal-title">Looks like a duplicate</h3>
-      <p class="modal-body">
+      <p class="modal-body" id="dup-body">
         These tabs match your last snapshot
         <span class="modal-emph">"{dupSessionName}"</span>. Save another copy?
       </p>
       <div class="modal-actions">
-        <button class="modal-btn modal-btn--ghost" onclick={cancelDuplicateSnapshot}>Cancel</button>
-        <button class="modal-btn modal-btn--primary" onclick={confirmDuplicateSnapshot}>Save anyway</button>
+        <button class="btn btn-ghost modal-btn modal-btn--ghost" onclick={cancelDuplicateSnapshot}>Cancel</button>
+        <button class="btn btn-primary modal-btn modal-btn--primary" onclick={confirmDuplicateSnapshot} use:focusOnMount>Save anyway</button>
       </div>
     </div>
   </div>
@@ -415,11 +424,12 @@
           <rect x="2" y="7" width="20" height="7" rx="1" />
         </svg>
       </div>
-      <p class="loader-text">Loading...</p>
+      <p class="loader-text">Loading…</p>
     </div>
   {:else if view === 'settings'}
     <Settings
       {settings}
+      sessionCount={sessions.length}
       {storageUsed}
       {storageTotal}
       onBack={() => view = 'main'}
@@ -460,15 +470,27 @@
     />
 
     {#if tip}
-      <TipBanner
+      <Banner
+        kind="tip"
         title={TIPS[tip].title}
         body={TIPS[tip].body}
         actionLabel={TIPS[tip].actionLabel}
         onAction={TIPS[tip].actionLabel ? handleTipAction : undefined}
         onDismiss={handleDismissTip}
+        dismissLabel="Dismiss tip"
+        dismissTitle="Got it"
       />
     {:else if showRatingPrompt}
-      <RatingPrompt onRate={handleRate} onDismiss={handleDismissRating} />
+      <Banner
+        kind="rating"
+        title="Enjoying SnapTabs?"
+        body="A quick rating helps other people find it."
+        actionLabel="Rate it"
+        onAction={handleRate}
+        onDismiss={handleDismissRating}
+        dismissLabel="Dismiss rating prompt"
+        dismissTitle="Don't ask again"
+      />
     {/if}
 
     <SessionList
@@ -506,7 +528,7 @@
   .loader-icon {
     width: 44px;
     height: 44px;
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     background: oklch(0.65 0.19 255 / 0.2);
     display: flex;
     align-items: center;
@@ -542,7 +564,7 @@
     width: 320px;
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--r-lg);
     padding: 16px;
     box-shadow: 0 12px 32px rgba(0,0,0,0.5);
     animation: modal-in 0.15s ease;
@@ -558,7 +580,7 @@
     margin-bottom: 6px;
   }
   .modal-body {
-    font-size: 12px;
+    font-size: var(--text-sm);
     color: var(--fg-muted);
     line-height: 1.5;
     margin-bottom: 14px;
@@ -572,27 +594,4 @@
     justify-content: flex-end;
     gap: 8px;
   }
-  .modal-btn {
-    padding: 7px 14px;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-    border: 1px solid var(--border);
-  }
-  .modal-btn--ghost {
-    background: none;
-    color: var(--fg-muted);
-  }
-  .modal-btn--ghost:hover {
-    background: var(--accent);
-    color: var(--fg);
-  }
-  .modal-btn--primary {
-    background: var(--primary);
-    color: var(--primary-fg);
-    border-color: var(--primary);
-  }
-  .modal-btn--primary:hover { filter: brightness(1.1); }
 </style>

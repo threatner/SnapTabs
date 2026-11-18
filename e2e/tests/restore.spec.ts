@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures/extension';
-import { reloadPopup, openCardContextMenu } from '../fixtures/extension';
+import { reloadPopup } from '../fixtures/extension';
 import { seedSessions, createMockSession, getServiceWorker } from '../helpers/storage';
 
 const RESTORE_TABS = [
@@ -35,7 +35,7 @@ test.describe('Restore', () => {
     }).toPass({ timeout: 15_000 });
   });
 
-  test('restore via context menu opens tabs', async ({ context, popupPage, extensionId }) => {
+  test('the card Restore button works from the keyboard (Enter restores, not opens)', async ({ context, popupPage, extensionId }) => {
     await seedSessions(context, [
       createMockSession({
         id: 'restore-ctx-1',
@@ -51,10 +51,11 @@ test.describe('Restore', () => {
 
     const pagesBefore = context.pages().length;
 
-    await openCardContextMenu(popupPage);
-    await popupPage.locator('.menu-item').filter({ hasText: 'Restore Session' }).click();
+    await popupPage.getByRole('button', { name: 'Restore Context restore', exact: true }).focus();
+    await popupPage.keyboard.press('Enter');
 
     await expect(popupPage.locator('.toast-text')).toContainText('Restored', { timeout: 5_000 });
+    await expect(popupPage.locator('.detail')).toHaveCount(0);
 
     await expect(async () => {
       expect(context.pages().length).toBeGreaterThanOrEqual(pagesBefore + 2);

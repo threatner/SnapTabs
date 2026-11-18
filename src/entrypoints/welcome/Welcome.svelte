@@ -76,52 +76,54 @@
     <h2 id="how-heading" class="how-heading">How SnapTabs works</h2>
     <ol class="how-list">
       <li class="how-row">
-        <div class="how-rep" aria-hidden="true">
-          <span class="rep rep-primary">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            Snapshot
-          </span>
-        </div>
         <div class="how-text">
           <p class="how-title">Save your tabs</p>
           <p class="how-desc">Click <strong>Snapshot</strong> in the SnapTabs popup. Every tab in the window is saved, and your tabs stay open.</p>
         </div>
+        <div class="how-rep" aria-hidden="true">
+          <span class="btn btn-primary rep rep-primary">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Snapshot
+          </span>
+        </div>
       </li>
       <li class="how-row">
+        <div class="how-text">
+          <p class="how-title">Close them</p>
+          <p class="how-desc">Close tabs whenever you like. They're safe in SnapTabs.</p>
+        </div>
         <div class="how-rep" aria-hidden="true">
           <span class="rep rep-tab">
             <span class="tab-title">Research…</span>
             <span class="tab-x"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
           </span>
         </div>
-        <div class="how-text">
-          <p class="how-title">Close them</p>
-          <p class="how-desc">Close tabs whenever you like. They're safe in SnapTabs.</p>
-        </div>
       </li>
       <li class="how-row">
-        <div class="how-rep" aria-hidden="true">
-          <span class="rep rep-secondary">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-            Restore
-          </span>
-        </div>
         <div class="how-text">
           <p class="how-title">Bring them back</p>
-          <p class="how-desc">Open a saved session in the popup and click <strong>Restore</strong>. Your tabs come back.</p>
+          <p class="how-desc">Open the popup and click <strong>Restore</strong> next to a saved session. Your tabs come back.</p>
+        </div>
+        <div class="how-rep" aria-hidden="true">
+          <span class="btn btn-sm btn-secondary rep rep-secondary">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            Restore
+          </span>
         </div>
       </li>
     </ol>
   </section>
 
   <section class="step" data-step="pin">
-    <div class="step-num" class:step-num--done={pinned === true}>
-      {#if pinned === true}
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-      {:else}1{/if}
-    </div>
     <div class="step-body">
-      <h2>Pin SnapTabs to your toolbar</h2>
+      <h2 class="step-heading">
+        <span class="step-num" class:step-num--done={pinned === true}>
+          {#if pinned === true}
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="Done"><polyline points="20 6 9 17 4 12" /></svg>
+          {:else}1{/if}
+        </span>
+        Pin SnapTabs to your toolbar
+      </h2>
       {#if pinned === true}
         <p class="step-text step-text--ok">Pinned. SnapTabs is one click away.</p>
       {:else}
@@ -141,37 +143,36 @@
   </section>
 
   <section class="step" data-step="autosave">
-    <div class="step-num">2</div>
     <div class="step-body">
-      <h2>Choose how SnapTabs keeps you safe</h2>
-      <p class="step-text">All are off until you turn them on. Everything stays on this device.</p>
+      <h2 class="step-heading"><span class="step-num">2</span>Choose what SnapTabs saves automatically</h2>
+      <p class="step-text">Off by default. Everything stays on this device. You can change these later in Settings.</p>
 
       <label class="option">
         <div class="option-text">
-          <p class="option-title">Save my tabs when I close the browser</p>
-          <p class="option-desc">Every window is saved when you quit, ready to restore next time.</p>
+          <p class="option-title">When I quit the browser</p>
+          <p class="option-desc">Saves all open windows as one session.</p>
         </div>
-        <input type="checkbox" class="tv-switch" aria-label="Save my tabs when I close the browser" disabled={!loaded}
+        <input type="checkbox" class="tv-switch" aria-label="When I quit the browser" disabled={!loaded}
           checked={settings.autoSnapshotOnBrowserClose}
           onchange={() => set({ autoSnapshotOnBrowserClose: !settings.autoSnapshotOnBrowserClose })} />
       </label>
 
       <label class="option">
         <div class="option-text">
-          <p class="option-title">Save tab groups when I close them</p>
-          <p class="option-desc">Closing a whole tab group keeps a copy of its tabs in SnapTabs.</p>
+          <p class="option-title">When I close a tab group</p>
+          <p class="option-desc">Keeps a copy of the group's tabs.</p>
         </div>
-        <input type="checkbox" class="tv-switch" aria-label="Save tab groups when I close them" disabled={!loaded}
+        <input type="checkbox" class="tv-switch" aria-label="When I close a tab group" disabled={!loaded}
           checked={settings.saveClosedGroups}
           onchange={() => set({ saveClosedGroups: !settings.saveClosedGroups })} />
       </label>
 
       <label class="option">
         <div class="option-text">
-          <p class="option-title">Keep a rolling backup</p>
-          <p class="option-desc">Saves a fresh copy of your open tabs every {WELCOME_BACKUP_MINUTES} minutes, in case the browser crashes.</p>
+          <p class="option-title">Rolling backup every {WELCOME_BACKUP_MINUTES} minutes</p>
+          <p class="option-desc">Keeps one up-to-date copy of your open tabs in case the browser crashes.</p>
         </div>
-        <input type="checkbox" class="tv-switch" aria-label="Keep a rolling backup" disabled={!loaded}
+        <input type="checkbox" class="tv-switch" aria-label="Rolling backup every {WELCOME_BACKUP_MINUTES} minutes" disabled={!loaded}
           checked={settings.autoBackupMinutes > 0}
           onchange={() => set({ autoBackupMinutes: settings.autoBackupMinutes > 0 ? 0 : WELCOME_BACKUP_MINUTES })} />
       </label>
@@ -179,7 +180,7 @@
   </section>
 
   <footer class="footer">
-    <button class="done-btn" onclick={closeTab}>Done</button>
+    <button class="btn btn-primary done-btn" onclick={closeTab}>Done</button>
   </footer>
 </main>
 
@@ -237,12 +238,14 @@
     align-items: center;
     gap: 16px;
   }
-  .how-rep {
-    flex: 0 0 132px;
-    display: flex;
-  }
   .how-text {
+    flex: 1;
     min-width: 0;
+  }
+  /* Fixed column so the three replicas line up. */
+  .how-rep {
+    flex: 0 0 120px;
+    display: flex;
   }
   .how-title {
     font-size: 13px;
@@ -259,31 +262,17 @@
     color: var(--fg);
     font-weight: 600;
   }
-  .rep {
+  /* Replicas use the popup's own button classes; they aren't clickable. */
+  .rep { cursor: default; pointer-events: none; }
+  .rep-tab {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 1;
-    white-space: nowrap;
-    border-radius: 6px;
-  }
-  .rep-primary {
-    padding: 7px 14px;
-    color: var(--primary-fg);
-    background: var(--primary);
-  }
-  .rep-secondary {
-    padding: 6px 12px;
-    color: var(--fg);
-    background: var(--secondary);
-    border: 1px solid var(--border);
-  }
-  .rep-tab {
     gap: 10px;
     padding: 6px 8px 6px 12px;
+    font-size: 12px;
     font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
     background: var(--secondary);
     border: 1px solid var(--border);
     border-bottom: none;
@@ -305,45 +294,41 @@
       align-items: flex-start;
       gap: 8px;
     }
-    .how-rep {
-      flex: none;
-    }
+    .how-rep { flex: none; }
   }
 
   .step {
-    display: flex;
-    gap: 14px;
     padding: 18px;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
   }
-  .step-num {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    flex-shrink: 0;
+  .step-heading {
     display: flex;
     align-items: center;
+    gap: 10px;
+  }
+  .step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     background: oklch(0.65 0.19 255 / 0.18);
     color: var(--primary);
   }
   .step-num--done {
     background: oklch(0.65 0.18 145 / 0.2);
-    color: oklch(0.72 0.17 145);
-  }
-  .step-body {
-    flex: 1;
-    min-width: 0;
+    color: var(--success);
   }
   h2 {
     font-size: 15px;
     font-weight: 600;
     color: var(--fg);
-    margin-top: 3px;
   }
   .step-text {
     margin-top: 6px;
@@ -351,23 +336,19 @@
     line-height: 1.55;
     color: var(--fg-muted);
   }
-  .step-text strong {
-    color: var(--fg);
-    font-weight: 600;
-  }
   .step-text--ok {
-    color: oklch(0.72 0.17 145);
+    color: var(--success);
   }
 
   .option {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-top: 12px;
+    margin-top: 10px;
     padding: 12px 14px;
     background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: var(--r-lg);
     cursor: pointer;
   }
   .option-text {
@@ -406,16 +387,5 @@
     border: 1px solid var(--border);
     border-radius: 6px;
   }
-  .done-btn {
-    padding: 9px 22px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--primary-fg);
-    background: var(--primary);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: filter 0.15s;
-  }
-  .done-btn:hover { filter: brightness(1.1); }
+  .done-btn { height: 36px; padding: 0 22px; font-size: 13px; }
 </style>

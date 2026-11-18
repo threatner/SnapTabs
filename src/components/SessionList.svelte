@@ -29,11 +29,12 @@
         type="text"
         value={searchQuery}
         oninput={(e) => onSearchChange((e.currentTarget as HTMLInputElement).value)}
-        placeholder="Search sessions or URLs..."
+        placeholder="Search sessions and tabs…"
+        aria-label="Search sessions and tabs"
         class="search-input"
       />
       {#if searchQuery}
-        <button onclick={() => onSearchChange('')} class="search-clear" aria-label="Clear">
+        <button onclick={() => onSearchChange('')} class="icon-btn search-clear" aria-label="Clear search">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
           </svg>
@@ -74,12 +75,12 @@
           </svg>
         {/if}
       </div>
-      <h3 class="empty-title">{searchQuery ? 'No results found' : 'Ready for your first snapshot'}</h3>
+      <h3 class="empty-title">{searchQuery ? 'No matches' : 'Ready for your first snapshot'}</h3>
       <p class="empty-desc">
         {#if searchQuery}
-          Try a different search term
+          Nothing matches "{searchQuery.trim()}". Try another word.
         {:else}
-          Tap <strong>Snapshot</strong> above to save your open tabs, or start <strong>Recording</strong> to capture new tabs as you browse.
+          Click <strong>Snapshot</strong> above to save your open tabs. They stay open until you close them.
         {/if}
       </p>
       {#if !searchQuery}
@@ -142,31 +143,21 @@
     color: var(--fg);
     background: oklch(0.22 0.008 280 / 0.5);
     border: 1px solid transparent;
-    border-radius: 6px;
-    outline: none;
-    transition: all 0.15s;
+    border-radius: var(--r);
+    transition: background 0.15s, border-color 0.15s;
   }
   .search-input::placeholder { color: var(--fg-muted); }
+  .search-input:focus-visible { outline-offset: -1px; }
   .search-input:focus {
     border-color: var(--border);
     background: var(--muted);
   }
   .search-clear {
     position: absolute;
-    right: 6px;
+    right: 4px;
     width: 24px;
     height: 24px;
-    border-radius: 4px;
-    border: none;
-    background: none;
-    color: var(--fg-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.1s;
   }
-  .search-clear:hover { color: var(--fg); background: var(--accent); }
 
   .sort-box {
     position: relative;
@@ -188,8 +179,7 @@
     color: var(--fg);
     background: oklch(0.22 0.008 280 / 0.5);
     border: 1px solid transparent;
-    border-radius: 6px;
-    outline: none;
+    border-radius: var(--r);
     cursor: pointer;
     appearance: none;
     transition: all 0.15s;
@@ -199,6 +189,7 @@
     background-position: right 8px center;
   }
   .sort-select:hover { background-color: var(--muted); }
+  .sort-select:focus-visible { outline-offset: -1px; }
   .sort-select:focus { border-color: var(--border); background-color: var(--muted); }
   .sort-select option { background: var(--card); color: var(--fg); }
 
@@ -235,14 +226,9 @@
   .empty-icon--cta {
     background: oklch(0.65 0.19 255 / 0.15);
     color: var(--primary);
-    animation: breathe 2.4s ease-in-out infinite;
-  }
-  @keyframes breathe {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.04); }
   }
   .empty-title {
-    font-size: 13px;
+    font-size: var(--text-md);
     font-weight: 600;
     color: var(--fg);
     margin-bottom: 6px;
@@ -260,11 +246,6 @@
   .empty-arrow {
     margin-top: 14px;
     color: var(--primary);
-    opacity: 0.6;
-    animation: nudge 1.6s ease-in-out infinite;
-  }
-  @keyframes nudge {
-    0%, 100% { transform: translateY(0); opacity: 0.5; }
-    50% { transform: translateY(-4px); opacity: 0.9; }
+    opacity: 0.7;
   }
 </style>

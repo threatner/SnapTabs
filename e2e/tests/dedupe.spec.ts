@@ -11,11 +11,7 @@ test.describe('Duplicate snapshot warning', () => {
 
     // First snapshot
     await popupPage.locator('.snap-btn').click();
-    await expect(popupPage.locator('.toast-text')).toHaveText('Snapshot saved!', { timeout: 5_000 });
-    await expect(popupPage.locator('.card')).toHaveCount(1);
-
-    // Wait for toast to dismiss so it doesn't block UI assertions
-    await expect(popupPage.locator('.toast-wrap')).not.toBeVisible({ timeout: 5_000 });
+    await expect(popupPage.locator('.card')).toHaveCount(1, { timeout: 5_000 });
 
     // Second snapshot with the same tabs — modal should appear
     await popupPage.locator('.snap-btn').click();
@@ -27,14 +23,30 @@ test.describe('Duplicate snapshot warning', () => {
     await expect(popupPage.locator('.card')).toHaveCount(1);
   });
 
+  test('the modal is accessible: focus on Save anyway, Escape cancels', async ({ context, popupPage }) => {
+    const page = await context.newPage();
+    await page.goto('https://example.com', { waitUntil: 'domcontentloaded' });
+    await popupPage.bringToFront();
+
+    await popupPage.locator('.snap-btn').click();
+    await expect(popupPage.locator('.card')).toHaveCount(1, { timeout: 5_000 });
+
+    await popupPage.locator('.snap-btn').click();
+    const dialog = popupPage.getByRole('dialog', { name: 'Looks like a duplicate' });
+    await expect(dialog).toHaveAttribute('aria-modal', 'true');
+    await expect(popupPage.locator('.modal-btn--primary')).toBeFocused();
+    await popupPage.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(popupPage.locator('.card')).toHaveCount(1);
+  });
+
   test('Cancel button dismisses modal without creating a session', async ({ context, popupPage }) => {
     const page = await context.newPage();
     await page.goto('https://example.com', { waitUntil: 'domcontentloaded' });
     await popupPage.bringToFront();
 
     await popupPage.locator('.snap-btn').click();
-    await expect(popupPage.locator('.toast-text')).toHaveText('Snapshot saved!', { timeout: 5_000 });
-    await expect(popupPage.locator('.toast-wrap')).not.toBeVisible({ timeout: 5_000 });
+    await expect(popupPage.locator('.card')).toHaveCount(1, { timeout: 5_000 });
 
     await popupPage.locator('.snap-btn').click();
     await expect(popupPage.locator('.modal')).toBeVisible();
@@ -50,8 +62,7 @@ test.describe('Duplicate snapshot warning', () => {
     await popupPage.bringToFront();
 
     await popupPage.locator('.snap-btn').click();
-    await expect(popupPage.locator('.toast-text')).toHaveText('Snapshot saved!', { timeout: 5_000 });
-    await expect(popupPage.locator('.toast-wrap')).not.toBeVisible({ timeout: 5_000 });
+    await expect(popupPage.locator('.card')).toHaveCount(1, { timeout: 5_000 });
 
     await popupPage.locator('.snap-btn').click();
     await expect(popupPage.locator('.modal')).toBeVisible();
@@ -68,8 +79,7 @@ test.describe('Duplicate snapshot warning', () => {
     await popupPage.bringToFront();
 
     await popupPage.locator('.snap-btn').click();
-    await expect(popupPage.locator('.toast-text')).toHaveText('Snapshot saved!', { timeout: 5_000 });
-    await expect(popupPage.locator('.toast-wrap')).not.toBeVisible({ timeout: 5_000 });
+    await expect(popupPage.locator('.card')).toHaveCount(1, { timeout: 5_000 });
 
     await popupPage.locator('.snap-btn').click();
     await expect(popupPage.locator('.modal')).toBeVisible();
@@ -86,8 +96,7 @@ test.describe('Duplicate snapshot warning', () => {
     await popupPage.bringToFront();
 
     await popupPage.locator('.snap-btn').click();
-    await expect(popupPage.locator('.toast-text')).toHaveText('Snapshot saved!', { timeout: 5_000 });
-    await expect(popupPage.locator('.toast-wrap')).not.toBeVisible({ timeout: 5_000 });
+    await expect(popupPage.locator('.card')).toHaveCount(1, { timeout: 5_000 });
 
     // Open an extra page so the tab set differs from the first snapshot
     const page2 = await context.newPage();
@@ -110,8 +119,7 @@ test.describe('Duplicate snapshot warning', () => {
     await popupPage.bringToFront();
 
     await popupPage.locator('.snap-btn').click();
-    await expect(popupPage.locator('.toast-text')).toHaveText('Snapshot saved!', { timeout: 5_000 });
-    await expect(popupPage.locator('.toast-wrap')).not.toBeVisible({ timeout: 5_000 });
+    await expect(popupPage.locator('.card')).toHaveCount(1, { timeout: 5_000 });
 
     // Second snapshot — modal should NOT appear, session created directly
     await popupPage.locator('.snap-btn').click();
@@ -120,11 +128,11 @@ test.describe('Duplicate snapshot warning', () => {
     await expect(popupPage.locator('.card')).toHaveCount(2, { timeout: 5_000 });
   });
 
-  test('Warn on duplicate snapshot toggle is present in settings', async ({ popupPage }) => {
+  test('"Ask before saving a duplicate" toggle is present in settings', async ({ popupPage }) => {
     await popupPage.locator('button[aria-label="Settings"]').click();
-    await expect(popupPage.locator('.section-label').filter({ hasText: 'Snapshot' })).toBeVisible();
+    await expect(popupPage.locator('.section-label').filter({ hasText: 'Saving' })).toBeVisible();
 
-    const toggleRow = popupPage.locator('.setting-row', { hasText: 'Warn on duplicate snapshot' });
+    const toggleRow = popupPage.locator('.setting-row', { hasText: 'Ask before saving a duplicate' });
     await expect(toggleRow).toBeVisible();
     const toggle = toggleRow.locator('.tv-switch');
     await expect(toggle).toBeChecked(); // default true
