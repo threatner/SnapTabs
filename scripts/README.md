@@ -22,11 +22,11 @@ You can run each step independently if needed (e.g. iterate on the compose step'
 
 | Output | View | Highlights |
 |---|---|---|
-| `1-main-view.png` | Main popup, 9 sessions seeded | Pinned session at top, Rolling backup with its Backup badge, tab-group chips, mix of manual + auto-save badges |
-| `2-session-detail.png` | Project Phoenix detail | Two colored tab groups (Specs purple, Code blue), real-looking tab titles |
-| `3-recording.png` | Live recording active | Red REC bar with elapsed timer, recent-tabs preview, session list visible below |
-| `4-settings.png` | Settings scrolled to Snapshot section | Excluded-domain chips visible (mail, bank, 1password, internal.acme.com), Restore section with Sleep restored tabs |
-| `5-auto-save.png` | Settings scrolled to the top | Save on browser close on, Rolling backup at 15 min |
+| `1-restore.png` | Main popup, 10 sessions seeded | Every card with its Restore button, pinned session on top, Rolling backup and a closed group |
+| `2-how-it-works.png` | Guide (`welcome.html?from=help`) at 400×600 | The three steps with replicas of the Snapshot and Restore buttons |
+| `3-tab-groups.png` | Project Phoenix detail | Two coloured tab groups (Specs purple, Code blue), favicons from the local cache |
+| `4-safety-nets.png` | Main popup with only the automatic saves | Rolling backup, "Work (closed group)", Browser close |
+| `5-search.png` | Main popup, search "phoenix" | Matches across sessions |
 
 ### Changing the demo content
 

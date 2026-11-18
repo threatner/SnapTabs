@@ -1,4 +1,4 @@
-# SnapTabs - Save and Restore Browser Tabs
+# SnapTabs - Save Tabs & Session Manager
 
 Save every tab in your Chrome window with one click, then bring them all back days or weeks later. SnapTabs keeps tab groups intact, handles incognito tabs, and stores everything on your own machine. No accounts, no sync, no tracking.
 
@@ -61,15 +61,15 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 ## Screenshots
 
-![Every session in one place — the main view with saved sessions including a pinned project session with two tab groups and the rolling backup](screenshots/store/1-main-view.png)
+![Close 40 tabs, get them back: the session list, each saved session with a Restore button](screenshots/store/1-restore.png)
 
-![Tab groups, intact — session detail showing Specs and Code groups expanded with real tab titles](screenshots/store/2-session-detail.png)
+![Save, close, restore: the three-step guide behind the ? button](screenshots/store/2-how-it-works.png)
 
-![Capture as you browse — live recording in progress with elapsed timer and recent-tabs preview](screenshots/store/3-recording.png)
+![Tab groups, intact: session detail with the Specs and Code groups](screenshots/store/3-tab-groups.png)
 
-![You decide what's saved — settings with excluded-domain chips for banking, mail, and internal tools](screenshots/store/4-settings.png)
+![Never lose your tabs: a rolling backup, a saved closed tab group and a browser-close session, all opt-in](screenshots/store/4-safety-nets.png)
 
-![Never lose your tabs — Auto-Save settings with save on browser close and a 15-minute rolling backup](screenshots/store/5-auto-save.png)
+![Find any tab you saved: searching every session from the popup](screenshots/store/5-search.png)
 
 ## FAQ
 
