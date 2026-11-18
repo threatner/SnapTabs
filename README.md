@@ -14,7 +14,7 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 | | |
 |---|---|
-| Latest version | 1.9.0 |
+| Latest version | 1.10.0 |
 | Browser | Chrome 93+ |
 | Manifest | V3 |
 | Storage | Local only. No cloud sync |
@@ -39,6 +39,10 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 ### Added in recent releases
 
+- **Onboarding.** A three-step "How SnapTabs works" guide on the welcome page, a **?** button in the popup and a Settings card to reopen it, and two one-time tips after your first snapshot and first restore.
+- **Save tab groups when you close them** (opt-in). Closing a whole tab group keeps a copy named after the group, in its colour.
+- **One-click Restore and no duplicates.** Every session card has a Restore button, and restoring skips tabs that are already open.
+- **No network for site icons.** Saved tabs' icons come from the browser's local cache.
 - **Multi-window restore.** Sessions saved from several windows come back as several windows, each in its original tab order, including sessions saved by older versions.
 - **Sleep restored tabs.** After a restore, background tabs unload once loaded and wake when you click them, so big sessions don't eat your memory. On by default; toggle in **Settings > Restore**.
 - **Rolling backup.** An optional, always-fresh backup of your open tabs, refreshed every 5 to 60 minutes. If a crash or a closed window would make it lose tabs, the previous backup is kept as its own session. Off by default; **Settings > Auto-Save**.
@@ -75,7 +79,7 @@ The point is not to keep 200 tabs open. The point is to close them without losin
 
 ### Is any of my data uploaded?
 
-No. Everything is stored in `chrome.storage.local` on your device. There is no cloud sync, no backend service, no analytics. The extension does not make network requests of its own; even saved tabs' site icons come from the browser's local cache.
+No. Everything is stored in `chrome.storage.local` on your device. There is no cloud sync, no backend service, no analytics. The extension does not make network requests of its own; even saved tabs' site icons come from the browser's local cache. (One exception you control: if you type `st` and a phrase in the address bar and press Enter without picking a saved tab, the phrase is searched on Google, like any address-bar search.)
 
 ### What happens to my tabs if Chrome (or Brave) crashes?
 
