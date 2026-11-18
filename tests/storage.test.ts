@@ -146,7 +146,15 @@ describe('Settings', () => {
     const settings = await getSettings();
     expect(settings.autoSnapshotOnClose).toBe(false);
     expect(settings.maxSessions).toBe(50);
-    expect(settings.showIncognitoWarning).toBe(true);
+  });
+
+  it('drops the removed showIncognitoWarning setting (D20) on read and on the next write', async () => {
+    await chrome.storage.local.set({ snaptabs_settings: { maxSessions: 30, showIncognitoWarning: false } });
+    expect(await getSettings()).not.toHaveProperty('showIncognitoWarning');
+    await updateSettings({ maxSessions: 40 });
+    const raw = (await chrome.storage.local.get('snaptabs_settings')).snaptabs_settings;
+    expect(raw).not.toHaveProperty('showIncognitoWarning');
+    expect(raw.maxSessions).toBe(40);
   });
 
   it('merges stored values with defaults', async () => {

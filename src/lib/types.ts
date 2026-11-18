@@ -37,7 +37,6 @@ export interface SnapTabsSettings {
   autoSnapshotOnBrowserClose: boolean;
   autoDeleteAfterRestore: boolean;
   maxSessions: number;
-  showIncognitoWarning: boolean;
   restoreIncognitoToIncognito: boolean;
   restoreInNewWindow: boolean;
   sleepRestoredTabs: boolean;
@@ -52,7 +51,6 @@ export const DEFAULT_SETTINGS: SnapTabsSettings = {
   autoSnapshotOnBrowserClose: false,
   autoDeleteAfterRestore: false,
   maxSessions: 50,
-  showIncognitoWarning: true,
   restoreIncognitoToIncognito: true,
   restoreInNewWindow: false,
   sleepRestoredTabs: true,

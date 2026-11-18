@@ -359,9 +359,14 @@ export async function deleteAllSessions(): Promise<void> {
 
 // ── Settings ──
 
+// Settings that no longer exist; dropped on read so the next write removes them.
+const REMOVED_SETTINGS = ['showIncognitoWarning'] as const; // D20, v2.0
+
 export async function getSettings(): Promise<SnapTabsSettings> {
   const result = await chrome.storage.local.get(KEYS.settings);
-  return { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
+  const stored: Record<string, unknown> = { ...result[KEYS.settings] };
+  for (const key of REMOVED_SETTINGS) delete stored[key];
+  return { ...DEFAULT_SETTINGS, ...stored };
 }
 
 export async function updateSettings(partial: Partial<SnapTabsSettings>): Promise<void> {
