@@ -39,6 +39,9 @@ const NO_RATING_BANNER = { [KEYS.meta]: { statsBackfilled: true, ratingPromptDon
 async function waitForPopupReady(page: import('@playwright/test').Page) {
   await page.waitForSelector('.popup', { state: 'visible' });
   await page.waitForFunction(() => !document.querySelector('.loader'), { timeout: 10_000 });
+  // Park the mouse in an empty corner so no card is captured in its hover
+  // state (the previous step's click leaves it over a card).
+  await page.mouse.move(395, 595);
   // Small settle pause so animations land before screenshot
   await page.waitForTimeout(250);
 }

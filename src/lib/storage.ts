@@ -307,13 +307,16 @@ export async function takeBackupRestartCheck(): Promise<boolean> {
   return true;
 }
 
-// Adds a session, first removing any existing session `isSame` matches.
+// Adds a session, first removing any existing session `isSame` matches. A pin
+// on a replaced session carries over, so replacing never unpins.
 export async function replaceOrAddSession(session: Session, isSame: (s: Session) => boolean): Promise<void> {
   await withLock(KEYS.sessions, async () => {
     const result = await chrome.storage.local.get([KEYS.sessions, KEYS.settings]);
-    const sessions: Session[] = (result[KEYS.sessions] ?? []).filter((s: Session) => !isSame(s));
+    const all: Session[] = result[KEYS.sessions] ?? [];
+    const replaced = all.filter(isSame);
+    const sessions = all.filter((s) => !isSame(s));
     const settings: SnapTabsSettings = { ...DEFAULT_SETTINGS, ...result[KEYS.settings] };
-    sessions.push(session);
+    sessions.push(replaced.some((s) => s.pinned) ? { ...session, pinned: true } : session);
     enforceLimit(sessions, settings.maxSessions);
     await chrome.storage.local.set({ [KEYS.sessions]: sessions });
   });

@@ -28,8 +28,10 @@ FIND AND ORGANIZE
 
 - Search every saved session by name, tab title or URL
 - Sort by newest, oldest, name or number of tabs
-- Address bar search: type st, a space, then a word to find any saved tab without opening the popup
+- Address bar search: type st, a space, then a word to find any saved tab without opening the popup (if you press Enter without picking a saved tab, the words are searched on Google)
 - Pin the sessions you rely on so they stay on top and are never cleaned up automatically
+- Every saved session has a Restore button right in the list
+- Restoring skips tabs that are already open, so you never get duplicates
 - Rename, delete, or delete a session automatically after restoring it
 
 MORE TOOLS
@@ -45,13 +47,13 @@ PRIVATE BY DESIGN
 
 - Free. No paid tier, no account, no sign-in
 - Your sessions are stored on your device. No cloud sync, no analytics, no ads
-- Six permissions, listed below. SnapTabs does not request access to your browsing history, cookies or website content
+- Six permissions, listed below. Chrome describes the tabs permission as "Read your browsing history"; SnapTabs uses it only to read the tabs you have open. It does not read your history list, cookies or page content
 - If you uninstall, an optional one-question feedback form opens. Nothing is attached to it
 - Open source under the MIT license, so anyone can read the code on GitHub
 
 PERMISSIONS
 
-- tabs: read your open tabs to save them, and open tabs when you restore
+- tabs: read your open tabs to save them, and open tabs when you restore (Chrome shows this as "Read your browsing history")
 - tabGroups: save and recreate group names and colors
 - storage: keep sessions and settings on your device
 - contextMenus: the "Save all tabs" item on the toolbar icon menu

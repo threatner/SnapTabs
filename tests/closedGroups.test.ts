@@ -48,11 +48,29 @@ describe('closed-group detection', () => {
 
   it('keeps groups apart and settles each once', () => {
     const t = createClosedGroupTracker();
-    t.tabRemoved(7, tab('https://a.com', 0, 7), 1, 1000);
-    t.tabRemoved(8, tab('https://x.com', 0, 8), 1, 1000);
-    expect(t.settle(7)?.length).toBe(1);
+    t.tabRemoved(7, tab('https://a.com', 0, 7), 2, 1000);
+    t.tabRemoved(8, tab('https://x.com', 0, 8), 2, 1000);
+    t.tabRemoved(7, tab('https://b.com', 1, 7), 2, 1001);
+    t.tabRemoved(8, tab('https://y.com', 1, 8), 2, 1001);
+    expect(t.settle(7)?.length).toBe(2);
     expect(t.settle(7)).toBeNull();
-    expect(t.settle(8)?.length).toBe(1);
+    expect(t.settle(8)?.length).toBe(2);
+  });
+
+  it('a group emptied slowly, one tab at a time, never saves its last tab', () => {
+    // The cache shrinks between removals, so the last tab looks like a
+    // whole 1-tab group closing (found in release review).
+    const t = createClosedGroupTracker();
+    t.tabRemoved(7, tab('https://a.com', 0), 3, 0);
+    t.tabRemoved(7, tab('https://b.com', 1), 2, 15_000);
+    t.tabRemoved(7, tab('https://c.com', 2), 1, 30_000);
+    expect(t.settle(7)).toBeNull();
+  });
+
+  it('closing the only tab of a 1-tab group is not a group close', () => {
+    const t = createClosedGroupTracker();
+    t.tabRemoved(7, tab('https://a.com', 0), 1, 0);
+    expect(t.settle(7)).toBeNull();
   });
 
   it('forgets stray removals after a while', () => {
@@ -112,4 +130,16 @@ describe('saveClosedGroup', () => {
     expect(ids).toContain('Mine (closed group)');
     expect(ids).not.toContain('Old (closed group)');
   });
+
+  it('replacing a pinned copy keeps it pinned', async () => {
+    await saveClosedGroup(closedGroupSession(group(), [tab('https://a.com', 0), tab('https://b.com', 1)], 1));
+    const [first] = await getSessions();
+    await chrome.storage.local.set({ snaptabs_sessions: [{ ...first, pinned: true }] });
+    await saveClosedGroup(closedGroupSession(group(), [tab('https://a.com', 0), tab('https://b.com', 1)], 2));
+    const sessions = await getSessions();
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].pinned).toBe(true);
+    expect(sessions[0].timestamp).toBe(2);
+  });
 });
+

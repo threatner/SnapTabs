@@ -10,6 +10,9 @@ import { replaceOrAddSession } from './storage';
 // spreads the removals out, and window closes are never reported here.
 
 export const CLOSE_BURST_MS = 500;
+// A lone tab closing is never "closing a group": it's also what the last
+// step of closing a group's tabs one by one looks like (D18).
+export const MIN_GROUP_TABS = 2;
 export const SETTLE_MS = 600;
 const FORGET_MS = 10_000;
 
@@ -37,7 +40,7 @@ export function createClosedGroupTracker() {
     settle(groupId: number): SavedTab[] | null {
       const p = pending.get(groupId);
       pending.delete(groupId);
-      if (!p || p.tabs.length < p.groupSize || p.last - p.first > CLOSE_BURST_MS) return null;
+      if (!p || p.tabs.length < MIN_GROUP_TABS || p.tabs.length < p.groupSize || p.last - p.first > CLOSE_BURST_MS) return null;
       return p.tabs;
     },
   };

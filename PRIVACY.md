@@ -8,7 +8,7 @@ SnapTabs is a Chrome extension that lets you snapshot and restore your browser t
 
 ## Data Collection
 
-SnapTabs collects the following information **only from your open browser tabs**, when you take a snapshot, record a session, or when an automatic save you have turned on runs (save on browser close, save incognito on close, or rolling backup):
+SnapTabs collects the following information **only from your open browser tabs**, when you take a snapshot, record a session, or when an automatic save you have turned on runs (save on browser close, save incognito on close, rolling backup, or save tab groups when you close them):
 
 - Tab URLs
 - Tab titles
@@ -39,8 +39,10 @@ All automatic saves are off until you turn them on, either in Settings or on the
 
 - **Save on browser close** saves your open tabs when you quit the browser.
 - **Rolling backup** keeps a single, periodically refreshed copy of your open tabs (every 5, 15, 30, or 60 minutes). It never includes incognito windows.
+- **Save tab groups when you close them** keeps a copy of a whole tab group's tabs, name and colour at the moment you close the group. It never includes incognito windows.
+- **Save incognito on close** saves an incognito window's tabs when you close it (only if SnapTabs is allowed in incognito).
 
-Both are stored locally, exactly like manual snapshots.
+All of them are stored locally, exactly like manual snapshots.
 
 ## Incognito Mode
 
