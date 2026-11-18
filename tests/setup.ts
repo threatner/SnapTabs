@@ -96,6 +96,7 @@ const chromeMock = {
   runtime: {
     sendMessage: vi.fn(async () => ({})),
     setUninstallURL: vi.fn(async () => {}),
+    getURL: vi.fn((path: string) => `chrome-extension://test-id${path.startsWith('/') ? '' : '/'}${path}`),
     onMessage: { addListener: vi.fn() },
     onInstalled: { addListener: vi.fn() },
   },

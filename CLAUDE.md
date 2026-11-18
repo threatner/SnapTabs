@@ -65,6 +65,7 @@ SnapTabs is a Chrome extension (Manifest V3) that snapshots and restores browser
 | `storage` | Persist sessions and settings locally |
 | `contextMenus` | Right-click "Save all tabs" option |
 | `alarms` | Schedule the optional rolling backup |
+| `favicon` | Show saved tabs' site icons from Chrome's local favicon cache via `/_favicon/` (`src/lib/favicon.ts`); never fetch icons from the network (D14). Warning superseded by `tabs` |
 
 Requires Chrome 93+ (`minimum_chrome_version`). Incognito mode: `"spanning"`.
 
