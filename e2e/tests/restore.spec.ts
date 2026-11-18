@@ -108,4 +108,36 @@ test.describe('Restore', () => {
     await popupPage.locator('.restore-btn').click();
     await expect(popupPage.locator('.toast-text')).toHaveText('Failed to restore');
   });
+
+  test('every card has a visible Restore button that restores the session', async ({ context, popupPage, extensionId }) => {
+    await seedSessions(context, [createMockSession({ id: 'card-restore', name: 'From the card', tabs: [
+      { url: 'https://example.com/?card=1', title: 'One', pinned: false, isIncognito: false, index: 0 },
+    ] })]);
+    await reloadPopup(popupPage, extensionId);
+    const button = popupPage.getByRole('button', { name: 'Restore From the card', exact: true });
+    await expect(button).toBeVisible();
+    await button.click();
+    await expect(popupPage.locator('.toast-text')).toContainText('Restored');
+    const sw = await getServiceWorker(context);
+    await expect.poll(async () => sw.evaluate(async () =>
+      (await chrome.tabs.query({})).some((t) => (t.url || t.pendingUrl) === 'https://example.com/?card=1'))).toBe(true);
+  });
+
+  test('tabs already open in the window are not opened again', async ({ context, popupPage, extensionId }) => {
+    // The popup page lives in the same window as these tabs.
+    const open = await context.newPage();
+    await open.goto('https://example.com/?dup=a', { waitUntil: 'domcontentloaded' });
+    await seedSessions(context, [createMockSession({ id: 'dup', name: 'Partly open', tabs: [
+      { url: 'https://example.com/?dup=a', title: 'A', pinned: false, isIncognito: false, index: 0 },
+      { url: 'https://example.com/?dup=b', title: 'B', pinned: false, isIncognito: false, index: 1 },
+    ] })]);
+    await reloadPopup(popupPage, extensionId);
+    await popupPage.bringToFront();
+    await popupPage.getByRole('button', { name: 'Restore Partly open', exact: true }).click();
+    await expect(popupPage.locator('.toast-text')).toHaveText('Restored 1 tab, 1 already open');
+    const sw = await getServiceWorker(context);
+    const count = await sw.evaluate(async () => (await chrome.tabs.query({})).filter((t) => (t.url || t.pendingUrl) === 'https://example.com/?dup=a').length);
+    expect(count).toBe(1);
+  });
 });
+

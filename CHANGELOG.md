@@ -12,6 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Reopen the guide any time.** A **?** button in the popup header and a "How to use SnapTabs" card in **Settings > Help & feedback** open it as "How to use SnapTabs". Users who installed before v1.9 can now find it too.
 - **Two one-time tips.** After your first snapshot: "Saved! Your tabs are still open…". After your first restore that put tabs to sleep: "Restored tabs are asleep…" with a shortcut to Settings. Each shows once, can be dismissed, and takes the rating banner's place until then. Long-time users never get first-snapshot advice.
 
+- **Restore in one click from the list.** Every session card now has a visible **Restore** button (it used to be hidden in a hover menu).
+- **No duplicate tabs on restore.** Restoring into the current window skips tabs that are already open there and says so ("Restored 18 tabs, 4 already open").
+- **Site icons without the network.** Saved tabs' icons now come from the browser's local icon cache, so viewing a session makes no network requests (previously icons loaded from each site, with a Google fallback). Adds the `favicon` permission, which shows no new prompt.
 - **Save tab groups when you close them** (off by default, Settings > Auto-Save, also on the welcome page). Chrome doesn't let extensions see a group after it's closed, so SnapTabs keeps a copy at the moment you close a whole group, named "<group> (closed group)" with its colour. Ungrouping, closing tabs one by one, and closing the window don't count. Closing the same group again with the same tabs replaces the earlier copy. Works even if SnapTabs' background worker was asleep.
 
 ### Internal
