@@ -822,8 +822,60 @@ describe('restoreSession (incognito window saved first)', () => {
     const s: Session = { id: 's', name: 'S', timestamp: 0, tabGroups: [], windowCount: 1, hasIncognitoTabs: false, isAutoSave: false,
       tabs: [t('https://a.com', 0), t('https://b.com', 1), t('https://c.com', 2)] };
 
-    expect(await restoreSession(s, true, false, true)).toBe(2);
-    expect(await restoreSession(s, true, false, false)).toBe(0);
+    expect((await restoreSession(s, true, false, true)).slept).toBe(2);
+    expect((await restoreSession(s, true, false, false)).slept).toBe(0);
+  });
+});
+
+describe('restoreSession skips tabs already open in the current window', () => {
+  beforeEach(() => {
+    resetChromeStorage();
+    vi.clearAllMocks();
+    vi.mocked(chrome.tabs.create).mockImplementation(async (opts) => ({ id: Math.floor(Math.random() * 1e6), windowId: opts.windowId ?? 1 }) as chrome.tabs.Tab);
+    vi.mocked(chrome.tabs.get).mockImplementation(async (id) => ({ id, windowId: 1 }) as chrome.tabs.Tab);
+    vi.mocked(chrome.windows.create).mockImplementation(async (opts) => ({ id: 50, incognito: false, tabs: [{ id: 999 }] }) as unknown as chrome.windows.Window);
+  });
+
+  const t = (url: string, index: number, windowId = 7): SavedTab => ({ url, title: url, pinned: false, isIncognito: false, index, windowId });
+  const session = (tabs: SavedTab[], windowCount = 1): Session =>
+    ({ id: 's', name: 'S', timestamp: 0, tabGroups: [], windowCount, hasIncognitoTabs: false, isAutoSave: false, tabs });
+  const openNow = (...urls: string[]) => vi.mocked(chrome.windows.getLastFocused).mockResolvedValue(
+    { id: 1, tabs: urls.map((url, i) => ({ id: i, url })) } as unknown as chrome.windows.Window);
+
+  it('opens only the tabs that are not open yet, ignoring trailing slashes and fragments', async () => {
+    openNow('https://a.com/', 'https://b.com#top');
+    const r = await restoreSession(session([t('https://a.com', 0), t('https://b.com', 1), t('https://c.com', 2)]), true, false);
+    expect(vi.mocked(chrome.tabs.create).mock.calls.map(([o]) => o.url)).toEqual(['https://c.com']);
+    expect(r).toEqual({ restored: 1, skipped: 2, slept: 0 });
+  });
+
+  it('opens nothing when every tab is already open', async () => {
+    openNow('https://a.com', 'https://b.com');
+    const r = await restoreSession(session([t('https://a.com', 0), t('https://b.com', 1)]), true, false);
+    expect(chrome.tabs.create).not.toHaveBeenCalled();
+    expect(r).toEqual({ restored: 0, skipped: 2, slept: 0 });
+  });
+
+  it('skips nothing when restoring into a new window', async () => {
+    openNow('https://a.com', 'https://b.com');
+    const r = await restoreSession(session([t('https://a.com', 0), t('https://b.com', 1)]), true, true);
+    expect(chrome.windows.create).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://a.com' }));
+    expect(r).toEqual({ restored: 2, skipped: 0, slept: 0 });
+  });
+
+  it('only checks the window that goes into the current window', async () => {
+    openNow('https://a.com', 'https://b.com');
+    const r = await restoreSession(session([t('https://a.com', 0, 7), t('https://b.com', 0, 3)], 2), true, false);
+    // a.com is already open here; b.com's saved window opens as a new window.
+    expect(chrome.tabs.create).not.toHaveBeenCalled();
+    expect(chrome.windows.create).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://b.com' }));
+    expect(r).toEqual({ restored: 1, skipped: 1, slept: 0 });
+  });
+
+  it('restores everything when the current window cannot be read', async () => {
+    vi.mocked(chrome.windows.getLastFocused).mockRejectedValueOnce(new Error('No window'));
+    const r = await restoreSession(session([t('https://a.com', 0)]), true, false);
+    expect(r.restored).toBe(1);
   });
 });
 

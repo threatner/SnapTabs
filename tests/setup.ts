@@ -75,6 +75,7 @@ const chromeMock = {
   },
   windows: {
     getAll: vi.fn(async () => []),
+    getLastFocused: vi.fn(async () => ({ id: 1, tabs: [] })),
     create: vi.fn(async (opts: Record<string, unknown>) => ({
       id: Math.floor(Math.random() * 1000),
       incognito: opts.incognito ?? false,

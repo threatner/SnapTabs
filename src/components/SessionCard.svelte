@@ -178,10 +178,21 @@
         </div>
       {/if}
     </div>
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="chevron">
-      <polyline points="9 18 15 12 9 6"/>
-    </svg>
   </div>
+
+  <!-- Always visible: restoring is the main thing to do with a session (D15). -->
+  <button
+    class="card-restore"
+    onclick={(e) => { e.stopPropagation(); onRestore(session); }}
+    onkeydown={(e) => e.stopPropagation()}
+    aria-label="Restore {session.name}"
+    title="Restore these tabs"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+    </svg>
+    Restore
+  </button>
 </div>
 
 <style>
@@ -205,7 +216,6 @@
     box-shadow: inset 3px 0 0 var(--primary);
   }
   .card:active { background: oklch(0.24 0.012 280 / 0.9); }
-  .card:hover .chevron { transform: translateX(2px); }
   .card-content {
     flex: 1;
     min-width: 0;
@@ -331,10 +341,25 @@
     transition: opacity 0.15s;
   }
   .card:hover .card-actions { opacity: 1; }
-  .chevron {
-    color: var(--fg-muted);
+  .card-restore {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 4px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--fg);
+    background: var(--secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
     flex-shrink: 0;
-    transition: transform 0.15s;
+    transition: all 0.15s;
+  }
+  .card-restore:hover {
+    border-color: var(--primary);
+    color: var(--primary);
   }
 
   .action-btn {

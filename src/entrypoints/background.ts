@@ -484,10 +484,10 @@ export default defineBackground(() => {
         const session = sessions.find((s) => s.id === msg.sessionId);
         if (!session) throw new Error('Session not found');
         const settings = await getSettings();
-        const sleptTabs = await restoreSession(session, settings.restoreIncognitoToIncognito, settings.restoreInNewWindow, settings.sleepRestoredTabs);
-        await track('restore', session, { sleptTabs });
+        const result = await restoreSession(session, settings.restoreIncognitoToIncognito, settings.restoreInNewWindow, settings.sleepRestoredTabs);
+        await track('restore', session, { sleptTabs: result.slept });
         if (settings.autoDeleteAfterRestore) await deleteSession(session.id);
-        return { success: true };
+        return { success: true, restored: result.restored, skipped: result.skipped };
       }
       case 'delete': {
         await deleteSession(msg.sessionId as string);

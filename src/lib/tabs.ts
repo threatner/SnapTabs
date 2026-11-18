@@ -161,15 +161,34 @@ export async function createSnapshot(name?: string, isAutoSave = false, windowId
 
 // ── Restore ──
 
+export interface RestoreResult {
+  restored: number; // tabs opened
+  skipped: number;  // already open in the current window, so not opened again
+  slept: number;    // background tabs put to sleep (feeds the one-time sleep tip)
+}
+
+// URLs open in the current (last-focused normal) window, normalised like
+// urlSetSignature so trivial differences still count as "already open".
+async function urlsOpenInCurrentWindow(): Promise<Set<string>> {
+  try {
+    const win = await chrome.windows.getLastFocused({ populate: true, windowTypes: ['normal'] });
+    return new Set((win.tabs ?? []).map((t) => normalizeUrlForSig(t.url || t.pendingUrl || '')));
+  } catch {
+    return new Set();
+  }
+}
+
 export async function restoreSession(
   session: Session,
   restoreIncognitoToIncognito: boolean,
   restoreInNewWindow: boolean,
   sleepRestoredTabs = false,
-): Promise<number> {
+): Promise<RestoreResult> {
   // Each saved window comes back as its own window. Only the first one may
   // land in the current window (when restoreInNewWindow is off).
   let usedCurrentWindow = false;
+  let opened = 0;
+  let skipped = 0;
   const backgroundTabIds: number[] = [];
   const regularWindows: SavedTab[][] = [];
   const incognitoWindows: SavedTab[][] = [];
@@ -187,20 +206,26 @@ export async function restoreSession(
   for (const tabs of regularWindows) {
     if (restoreInNewWindow || usedCurrentWindow) {
       backgroundTabIds.push(...await restoreInWindow(tabs, session.tabGroups, false));
+      opened += tabs.length;
     } else {
-      backgroundTabIds.push(...await restoreInCurrent(tabs, session.tabGroups));
+      // Don't open a second copy of tabs that are already open here (D15).
+      const open = await urlsOpenInCurrentWindow();
+      const fresh = tabs.filter((t) => !open.has(normalizeUrlForSig(t.url)));
+      skipped += tabs.length - fresh.length;
+      if (fresh.length > 0) backgroundTabIds.push(...await restoreInCurrent(fresh, session.tabGroups));
+      opened += fresh.length;
       usedCurrentWindow = true;
     }
   }
   for (const tabs of incognitoWindows) {
     backgroundTabIds.push(...await restoreInWindow(tabs, session.tabGroups, true));
+    opened += tabs.length;
   }
 
   // Not awaited: sleeping waits for each tab to finish loading, and the
   // restore itself is already done.
   if (sleepRestoredTabs && backgroundTabIds.length > 0) void sleepTabsWhenLoaded(backgroundTabIds);
-  // How many tabs were put to sleep (feeds the one-time sleep tip).
-  return sleepRestoredTabs ? backgroundTabIds.length : 0;
+  return { restored: opened, skipped, slept: sleepRestoredTabs ? backgroundTabIds.length : 0 };
 }
 
 // Splits a session's tabs into per-window lists, in the order windows were

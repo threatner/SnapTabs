@@ -208,8 +208,12 @@
 
   async function handleRestore(session: Session) {
     try {
-      await sendMessage({ action: 'restore', sessionId: session.id });
-      toast(`Restored: ${session.name}`);
+      const r = await sendMessage<{ restored?: number; skipped?: number }>({ action: 'restore', sessionId: session.id });
+      const skipped = r?.skipped ?? 0;
+      const restored = r?.restored ?? 0;
+      if (skipped > 0 && restored === 0) toast('All these tabs are already open', 'warning');
+      else if (skipped > 0) toast(`Restored ${restored} ${restored === 1 ? 'tab' : 'tabs'}, ${skipped} already open`);
+      else toast(`Restored: ${session.name}`);
       await refresh();
     } catch {
       toast('Failed to restore', 'error');

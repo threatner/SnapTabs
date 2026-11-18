@@ -39,5 +39,5 @@ Rows added to [the register](../decisions/README.md): D14 to D17.
 ## Milestones
 
 1. Favicons from the local cache (R1, R7). **Done 2026-11-18**: proxy check passes (0 requests to saved sites) and fails on the old code.
-2. Restore button and duplicate skipping (R2, R3).
+2. Restore button and duplicate skipping (R2, R3). **Done 2026-11-18**: 5 unit + 2 E2E tests; disabling the skip breaks 3 unit and 1 E2E test; card screenshot reviewed (long names truncate).
 3. Name, summary, gallery and promo tile (R4 to R6).
