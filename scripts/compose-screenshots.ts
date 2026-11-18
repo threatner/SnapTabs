@@ -45,39 +45,39 @@ interface Slide {
 
 const slides: Slide[] = [
   {
-    raw: '1-main.png',
-    out: '1-main-view.png',
-    eyebrow: 'Your tab library',
-    headline: 'Every session,\nin one place.',
-    subhead: 'Save 40 tabs for a research session, 12 for tomorrow’s standup, and the ones you pinned stay on top.',
+    raw: '1-restore.png',
+    out: '1-restore.png',
+    eyebrow: 'Session manager & tab saver',
+    headline: 'Close 40 tabs.\nGet them back.',
+    subhead: 'Save every open tab in one click, close them, and bring the whole session back later with one click on Restore.',
   },
   {
-    raw: '2-detail.png',
-    out: '2-session-detail.png',
+    raw: '2-how-it-works.png',
+    out: '2-how-it-works.png',
+    eyebrow: 'How it works',
+    headline: 'Save. Close.\nRestore.',
+    subhead: 'That is the whole idea. A short guide is always one click away behind the ? button.',
+  },
+  {
+    raw: '3-tab-groups.png',
+    out: '3-tab-groups.png',
     eyebrow: 'Inside a session',
     headline: 'Tab groups,\nintact.',
-    subhead: 'Group names, colors, and collapsed state come back exactly how you left them. One click restores the whole window.',
+    subhead: 'Group names, colours and collapsed state come back exactly the way you left them.',
   },
   {
-    raw: '3-recording.png',
-    out: '3-recording.png',
-    eyebrow: 'Live recording',
-    headline: 'Capture as\nyou browse.',
-    subhead: 'Hit record, follow the trail across tabs, then save the whole path — with URL dedup baked in.',
-  },
-  {
-    raw: '4-settings.png',
-    out: '4-settings.png',
-    eyebrow: 'Privacy controls',
-    headline: 'You decide\nwhat’s saved.',
-    subhead: 'Exclude domains you never want captured — banking, mail, internal tools. Subdomains match the parent rule.',
-  },
-  {
-    raw: '5-auto-save.png',
-    out: '5-auto-save.png',
-    eyebrow: 'Crash protection',
+    raw: '4-safety-nets.png',
+    out: '4-safety-nets.png',
+    eyebrow: 'Safety nets',
     headline: 'Never lose\nyour tabs.',
-    subhead: 'Save every window when you quit, plus a rolling backup every few minutes, so a crash or a closed window never costs you your work.',
+    subhead: 'Save when you quit, keep a rolling backup, save tab groups as you close them. All off until you turn them on.',
+  },
+  {
+    raw: '5-search.png',
+    out: '5-search.png',
+    eyebrow: 'Search',
+    headline: 'Find any tab\nyou saved.',
+    subhead: 'Search every session from the popup, or type st and a space in the address bar.',
   },
 ];
 
@@ -175,6 +175,9 @@ function backgroundSvg(slide: Slide): string {
     <!-- Subhead -->
     ${subheadSvg}
   </g>
+
+  <!-- Promise footer on every image (D17) -->
+  <text x="${TEXT_X}" y="${CANVAS_H - 56}" font-family="${FONT_FAMILY}" font-size="15" font-weight="500" fill="#71717a" letter-spacing="0.3">Free  ·  No account  ·  Stays on your device</text>
 </svg>`;
 }
 

@@ -22,7 +22,9 @@ try {
   await browser.evalSW(`await chrome.storage.local.set({ snaptabs_sessions: ${JSON.stringify([session])} });`);
   const popup = await browser.openExtensionPage('popup.html');
   const res = await popup(`return chrome.runtime.sendMessage({ action: 'restore', sessionId: 'cdp-sleep' });`);
-  assert.deepEqual(res, { success: true });
+  assert.equal(res.success, true);
+  assert.equal(res.restored, 5);
+  assert.equal(res.skipped, 0);
 
   const byUrl = async () => browser.evalSW(`
     const out = {};

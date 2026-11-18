@@ -194,6 +194,22 @@ export function buildDemoSessions(now: number = Date.now()): Session[] {
       hasIncognitoTabs: false,
       isAutoSave: true,
     },
+    // v1.10: a tab group saved when it was closed.
+    {
+      id: 'demo-closed-group',
+      name: 'Work (closed group)',
+      timestamp: now - 3 * HOUR,
+      tabs: withIndex([
+        tab('https://mail.example.com/inbox', 'Inbox — Work mail', { groupId: 9 }),
+        tab('https://calendar.google.com/calendar/u/0/r/week', 'Google Calendar — This week', { groupId: 9 }),
+        tab('https://linear.app/acme/team/PHX/active', 'Active issues · Phoenix', { groupId: 9 }),
+        tab('https://docs.google.com/document/d/1q2w3e/edit', 'Q3 planning — Google Docs', { groupId: 9 }),
+      ]),
+      tabGroups: [{ id: 9, title: 'Work', color: 'orange' as chrome.tabGroups.ColorEnum, collapsed: false }],
+      windowCount: 1,
+      hasIncognitoTabs: false,
+      isAutoSave: true,
+    },
   ];
 }
 

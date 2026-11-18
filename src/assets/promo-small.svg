@@ -1,9 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280">
   <!--
-    Layout: icon column 32-168 (136px tile), text column 188-396 (208px),
-    canvas margins: 32px left of icon, 44px right of text. The right margin
-    is intentionally a touch larger than the left so the eye reads the
-    composition as balanced (text is heavier visually than the solid icon).
+    Layout: 112px icon at x=36, text column from x=172. Three lines only,
+    large enough to read at half size in search results.
   -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="440" y2="280" gradientUnits="userSpaceOnUse">
@@ -23,10 +21,11 @@
   <rect width="440" height="280" fill="url(#bg)"/>
   <rect width="440" height="280" fill="url(#glow)"/>
 
-  <!-- Icon tile: 136x136, centered vertically at y=72 -->
-  <g transform="translate(32, 72)">
-    <rect width="136" height="136" rx="32" fill="url(#iconGrad)"/>
-    <g transform="translate(28, 28) scale(3.333)" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+  <!-- Search-result card (D17): icon, name and one short promise, nothing
+       else, so it still reads at half size (the store shows it small). -->
+  <g transform="translate(36, 84)">
+    <rect width="112" height="112" rx="26" fill="url(#iconGrad)"/>
+    <g transform="translate(23, 23) scale(2.75)" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
       <path d="M4 7V4h16v3"/>
       <path d="M9 20h6"/>
       <path d="M12 4v16"/>
@@ -34,26 +33,9 @@
     </g>
   </g>
 
-  <!-- Wordmark (x=188, font 38 keeps right edge near 388, well inside the 44px right margin) -->
-  <text x="188" y="124" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="38" font-weight="700" fill="#ffffff" letter-spacing="-1">SnapTabs</text>
-
-  <!-- Tagline -->
-  <text x="188" y="150" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#cbd5e1">Save &amp; Restore Browser Tabs</text>
-
-  <!-- Feature chips. Left edge x=188 (matches wordmark), right edge x=396
-       (44px right margin). Both rows share the same column. -->
-  <g font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="#cbd5e1">
-    <g>
-      <rect x="188" y="172" width="92" height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
-      <text x="234" y="187" text-anchor="middle">Tab groups</text>
-    </g>
-    <g>
-      <rect x="286" y="172" width="110" height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
-      <text x="341" y="187" text-anchor="middle">Incognito tabs</text>
-    </g>
-    <g>
-      <rect x="188" y="200" width="208" height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
-      <text x="292" y="215" text-anchor="middle">Crash-safe auto-save on browser close</text>
-    </g>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, Arial, sans-serif">
+    <text x="172" y="122" font-size="40" font-weight="700" fill="#ffffff" letter-spacing="-1">SnapTabs</text>
+    <text x="172" y="162" font-size="25" font-weight="600" fill="#e2e8f0">Save tabs.</text>
+    <text x="172" y="194" font-size="25" font-weight="600" fill="#93c5fd">Restore later.</text>
   </g>
 </svg>

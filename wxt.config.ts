@@ -4,8 +4,8 @@ export default defineConfig({
   srcDir: 'src',
   modules: ['@wxt-dev/module-svelte'],
   manifest: {
-    name: 'SnapTabs - Save & Restore Browser Tabs',
-    description: 'Save, restore, and manage browser tabs. Tab groups, incognito, session manager, live recording, crash-safe auto-save.',
+    name: 'SnapTabs - Save Tabs & Session Manager',
+    description: 'Session manager and tab saver: save all open tabs in one click, restore them later with tab groups intact. Free, no account, local.',
     permissions: ['tabs', 'tabGroups', 'storage', 'contextMenus', 'alarms', 'favicon'],
     omnibox: { keyword: 'st' },
     incognito: 'spanning',

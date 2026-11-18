@@ -13,7 +13,7 @@ The Chrome Web Store uses different images in different surfaces. Missing any of
 | Extension icon | 128×128 | `src/public/icon/128.png` | Manifest icon (auto) | Detail page, install button |
 | Small promo tile | **440×280** | `screenshots/store/promo-small-440x280.png` | "Small promo tile" | **Search autocomplete**, category lists, related items |
 | Marquee promo tile | 1400×560 | `screenshots/store/promo-marquee-1400x560.png` | "Marquee promo tile" | Featured placement, homepage carousel |
-| Screenshots (5) | 1280×800 | `screenshots/store/1-main-view.png` … `5-auto-save.png` | "Screenshots" | Detail page gallery |
+| Screenshots (5) | 1280×800 | `screenshots/store/1-restore.png` … `5-search.png` | "Screenshots" | Detail page gallery |
 
 **If your listing shows the name with no icon in search suggestions, the small promo tile is most likely missing.** Upload `promo-small-440x280.png` in the dashboard under *Store listing → Graphic assets → Small promo tile*.
 
@@ -52,7 +52,7 @@ Run through this for every CWS submission so the listing never lags the source a
 6. **Build the upload zip**: `npm run zip` → produces `.output/snaptabs-<version>-chrome.zip`.
 7. **Upload to the CWS Developer Dashboard**:
    - Item page → Package tab → upload the new zip.
-   - Store listing tab → Graphic assets → re-upload the 5 screenshots from `screenshots/store/`, in this order: `1-main-view`, `5-auto-save`, `2-session-detail`, `3-recording`, `4-settings` (the first two show in search results and matter most).
+   - Store listing tab → Graphic assets → re-upload the 5 screenshots from `screenshots/store/` in file order: `1-restore`, `2-how-it-works`, `3-tab-groups`, `4-safety-nets`, `5-search` (D17; the first two matter most).
    - Store listing tab → paste the updated long description / features / FAQ from this file.
    - Privacy practices tab → if the permissions changed, add a justification for each new one (see **Privacy practices tab** below).
    - Save draft, then Submit for review.
@@ -62,11 +62,15 @@ Run through this for every CWS submission so the listing never lags the source a
 
 ## Name (45 char max)
 
-SnapTabs - Save & Restore Browser Tabs
+SnapTabs - Save Tabs & Session Manager
+
+Set by `name` in `wxt.config.ts` (the store reads it from the package); changing it needs a release.
 
 ## Summary / short description (132 char max)
 
-Save, restore, and organize Chrome tabs. Tab groups, incognito, live recording, crash-safe auto-save. Local only.
+Session manager and tab saver: save all open tabs in one click, restore them later with tab groups intact. Free, no account, local.
+
+Set by `description` in `wxt.config.ts`; changing it needs a release.
 
 ## Category
 

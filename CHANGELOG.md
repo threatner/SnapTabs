@@ -17,6 +17,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Site icons without the network.** Saved tabs' icons now come from the browser's local icon cache, so viewing a session makes no network requests (previously icons loaded from each site, with a Google fallback). Adds the `favicon` permission, which shows no new prompt.
 - **Save tab groups when you close them** (off by default, Settings > Auto-Save, also on the welcome page). Chrome doesn't let extensions see a group after it's closed, so SnapTabs keeps a copy at the moment you close a whole group, named "<group> (closed group)" with its colour. Ungrouping, closing tabs one by one, and closing the window don't count. Closing the same group again with the same tabs replaces the earlier copy. Works even if SnapTabs' background worker was asleep.
 
+### Changed
+
+- **New store name and summary:** "SnapTabs - Save Tabs & Session Manager" / "Session manager and tab saver: save all open tabs in one click, restore them later with tab groups intact. Free, no account, local." (from the ASO research in `docs/growth/`).
+- **New store gallery and promo tile:** five screenshots led by the outcome (Restore from the list, how it works, tab groups, opt-in safety nets, search) with a "Free - No account - Stays on your device" footer, and a search-result tile that reads at half size.
+
 ### Internal
 
 - `npm run check` is the one gate (docs check, type check, unit tests, build); CI runs it. Specs live in `docs/<feature>/spec.md` and decisions in `docs/decisions/README.md`.

@@ -9,7 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { KEYS } from '../src/lib/storage';
-import { buildDemoSessions, demoSettings, buildDemoRecording } from './demo-data';
+import { buildDemoSessions, demoSettings } from './demo-data';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -24,10 +24,6 @@ async function getServiceWorker(context: BrowserContext) {
 
 async function seedLocal(sw: Awaited<ReturnType<typeof getServiceWorker>>, data: Record<string, unknown>) {
   await sw.evaluate((d) => chrome.storage.local.set(d), data);
-}
-
-async function seedSession(sw: Awaited<ReturnType<typeof getServiceWorker>>, data: Record<string, unknown>) {
-  await sw.evaluate((d) => chrome.storage.session.set(d), data);
 }
 
 async function clearAll(sw: Awaited<ReturnType<typeof getServiceWorker>>) {
@@ -77,77 +73,66 @@ async function main() {
   await popup.setViewportSize({ width: 400, height: 600 });
 
   const demoSessions = buildDemoSessions();
-  const demoRecording = buildDemoRecording();
+  
+  const seedDemo = async (sessions = demoSessions) => {
+    await clearAll(sw);
+    await seedLocal(sw, {
+      [KEYS.sessions]: sessions,
+      [KEYS.settings]: demoSettings,
+      ...NO_RATING_BANNER,
+    });
+  };
 
-  // ── 1. Main view: rich session list (8 sessions, pinned at top) ──
-  console.log('[capture] 1/5 main view');
-  await clearAll(sw);
-  await seedLocal(sw, {
-    [KEYS.sessions]: demoSessions,
-    [KEYS.settings]: demoSettings,
-    ...NO_RATING_BANNER,
-  });
+  // Gallery order follows the ASO plan (docs/growth/aso-2026-11-18.md, D17):
+  // outcome, how it works, tab groups, safety nets, search.
+
+  // ── 1. Outcome: the session list, each card with its Restore button ──
+  console.log('[capture] 1/5 sessions with Restore');
+  await seedDemo();
   await popup.goto(popupUrl);
   await waitForPopupReady(popup);
-  await popup.screenshot({ path: path.join(RAW_DIR, '1-main.png') });
+  await popup.screenshot({ path: path.join(RAW_DIR, '1-restore.png') });
 
-  // ── 2. Session detail: Phoenix, two tab groups visible ──
-  console.log('[capture] 2/5 session detail');
+  // ── 2. How it works: the guide's three steps (welcome page, help version) ──
+  console.log('[capture] 2/5 how it works');
+  const guide = await context.newPage();
+  await guide.setViewportSize({ width: 400, height: 600 });
+  await guide.goto(`chrome-extension://${extensionId}/welcome.html?from=help`);
+  await guide.waitForSelector('[data-step="how"]');
+  await guide.evaluate(() => {
+    const heading = document.querySelector('h1') as HTMLElement;
+    window.scrollTo(0, heading.getBoundingClientRect().top + window.scrollY - 12);
+  });
+  await guide.waitForTimeout(300);
+  await guide.screenshot({ path: path.join(RAW_DIR, '2-how-it-works.png') });
+  await guide.close();
+
+  // ── 3. Tab groups: Project Phoenix detail with two coloured groups ──
+  console.log('[capture] 3/5 tab groups');
+  await popup.bringToFront();
+  await popup.goto(popupUrl);
+  await waitForPopupReady(popup);
   await popup.locator('.card').filter({ hasText: 'Project Phoenix' }).click();
   await popup.waitForSelector('.detail', { state: 'visible' });
   await popup.waitForTimeout(250);
-  await popup.screenshot({ path: path.join(RAW_DIR, '2-detail.png') });
+  await popup.screenshot({ path: path.join(RAW_DIR, '3-tab-groups.png') });
 
-  // ── 3. Recording in progress: bar visible with elapsed timer ──
-  console.log('[capture] 3/5 recording');
-  await clearAll(sw);
-  await seedLocal(sw, {
-    [KEYS.sessions]: demoSessions,
-    [KEYS.settings]: demoSettings,
-    ...NO_RATING_BANNER,
-  });
-  await seedSession(sw, {
-    [KEYS.recording]: demoRecording,
-  });
+  // ── 4. Safety nets: the three kinds of automatic save in the list ──
+  console.log('[capture] 4/5 safety nets');
+  const safetyIds = ['demo-backup', 'demo-closed-group', 'demo-browser-close'];
+  await seedDemo(demoSessions.filter((s) => safetyIds.includes(s.id)));
   await popup.goto(popupUrl);
   await waitForPopupReady(popup);
-  // RecordingBar should render because getRecording() returns isActive:true
-  await popup.screenshot({ path: path.join(RAW_DIR, '3-recording.png') });
+  await popup.screenshot({ path: path.join(RAW_DIR, '4-safety-nets.png') });
 
-  // ── 4. Settings: scrolled to the Snapshot section so excluded-domain chips are visible ──
-  console.log('[capture] 4/5 settings');
-  await clearAll(sw);
-  await seedLocal(sw, {
-    [KEYS.sessions]: demoSessions,
-    [KEYS.settings]: demoSettings,
-    ...NO_RATING_BANNER,
-  });
+  // ── 5. Search: matches across every saved session ──
+  console.log('[capture] 5/5 search');
+  await seedDemo();
   await popup.goto(popupUrl);
   await waitForPopupReady(popup);
-  await popup.locator('button[aria-label="Settings"]').click();
-  await popup.waitForSelector('.settings-body', { state: 'visible' });
-  await popup.waitForTimeout(150);
-  // Scroll the settings body so Snapshot + Excluded domains are centered in view
-  await popup.evaluate(() => {
-    const body = document.querySelector('.settings-body') as HTMLElement | null;
-    const target = Array.from(document.querySelectorAll('.section-label')).find(
-      (el) => (el.textContent ?? '').trim() === 'Snapshot',
-    ) as HTMLElement | undefined;
-    if (body && target) {
-      body.scrollTop = target.offsetTop - 8;
-    }
-  });
-  await popup.waitForTimeout(250);
-  await popup.screenshot({ path: path.join(RAW_DIR, '4-settings.png') });
-
-  // ── 5. Auto-Save: top of Settings with save-on-close and rolling backup on ──
-  console.log('[capture] 5/5 auto-save');
-  await popup.evaluate(() => {
-    const body = document.querySelector('.settings-body') as HTMLElement | null;
-    if (body) body.scrollTop = 0;
-  });
-  await popup.waitForTimeout(250);
-  await popup.screenshot({ path: path.join(RAW_DIR, '5-auto-save.png') });
+  await popup.locator('input[placeholder^="Search"]').fill('phoenix');
+  await popup.waitForTimeout(300);
+  await popup.screenshot({ path: path.join(RAW_DIR, '5-search.png') });
 
   await context.close();
   console.log(`[capture] Done. Raw PNGs in ${path.relative(ROOT, RAW_DIR)}/`);
