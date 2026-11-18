@@ -49,7 +49,6 @@ describe('DEFAULT_SETTINGS', () => {
     expect(DEFAULT_SETTINGS.autoSnapshotOnBrowserClose).toBe(false);
     expect(DEFAULT_SETTINGS.autoDeleteAfterRestore).toBe(false);
     expect(DEFAULT_SETTINGS.maxSessions).toBe(50);
-    expect(DEFAULT_SETTINGS.showIncognitoWarning).toBe(true);
     expect(DEFAULT_SETTINGS.restoreIncognitoToIncognito).toBe(true);
     expect(DEFAULT_SETTINGS.restoreInNewWindow).toBe(false);
     expect(DEFAULT_SETTINGS.sleepRestoredTabs).toBe(true);
@@ -59,8 +58,8 @@ describe('DEFAULT_SETTINGS', () => {
     expect(DEFAULT_SETTINGS.saveClosedGroups).toBe(false);
   });
 
-  it('has all twelve settings', () => {
-    expect(Object.keys(DEFAULT_SETTINGS)).toHaveLength(12);
+  it('has all eleven settings', () => {
+    expect(Object.keys(DEFAULT_SETTINGS)).toHaveLength(11);
   });
 });
 
