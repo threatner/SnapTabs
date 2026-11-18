@@ -70,7 +70,7 @@ export function toSavedTab(t: chrome.tabs.Tab): SavedTab {
 
 // ── Capture ──
 
-export async function captureWindow(windowId: number): Promise<{ tabs: SavedTab[]; groups: SavedTabGroup[] }> {
+export async function captureWindow(windowId: number): Promise<{ tabs: SavedTab[]; groups: SavedTabGroup[]; tabIds: number[] }> {
   const [chromeTabs, chromeGroups] = await Promise.all([
     chrome.tabs.query({ windowId }),
     safeQueryTabGroups(windowId),
@@ -85,7 +85,10 @@ export async function captureWindow(windowId: number): Promise<{ tabs: SavedTab[
     collapsed: g.collapsed,
   }));
 
-  return { tabs, groups };
+  // Index-aligned with `tabs`, so a closing tab can be looked up by id.
+  const tabIds = chromeTabs.map((t) => t.id ?? -1);
+
+  return { tabs, groups, tabIds };
 }
 
 export async function captureAllWindows(): Promise<{

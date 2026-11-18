@@ -56,10 +56,11 @@ describe('DEFAULT_SETTINGS', () => {
     expect(DEFAULT_SETTINGS.warnOnDuplicateSnapshot).toBe(true);
     expect(DEFAULT_SETTINGS.excludedDomains).toEqual([]);
     expect(DEFAULT_SETTINGS.autoBackupMinutes).toBe(0);
+    expect(DEFAULT_SETTINGS.saveClosedGroups).toBe(false);
   });
 
-  it('has all nine settings', () => {
-    expect(Object.keys(DEFAULT_SETTINGS)).toHaveLength(11);
+  it('has all twelve settings', () => {
+    expect(Object.keys(DEFAULT_SETTINGS)).toHaveLength(12);
   });
 });
 

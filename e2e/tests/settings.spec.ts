@@ -121,4 +121,16 @@ test.describe('Settings', () => {
     await popupPage.locator('button[aria-label="Settings"]').click();
     await expect(popupPage.locator('.setting-row').filter({ hasText: 'Sleep restored tabs' }).locator('.tv-switch')).toBeChecked();
   });
+
+  test('"Save tab groups when you close them" is in Auto-Save, off by default, and persists', async ({ popupPage, extensionId }) => {
+    await popupPage.locator('button[aria-label="Settings"]').click();
+    const row = popupPage.locator('.setting-row').filter({ hasText: 'Save tab groups when you close them' });
+    const toggle = row.locator('.tv-switch');
+    await expect(toggle).not.toBeChecked();
+    await toggle.click();
+    await reloadPopup(popupPage, extensionId);
+    await popupPage.locator('button[aria-label="Settings"]').click();
+    await expect(popupPage.locator('.setting-row').filter({ hasText: 'Save tab groups when you close them' }).locator('.tv-switch')).toBeChecked();
+  });
 });
+
